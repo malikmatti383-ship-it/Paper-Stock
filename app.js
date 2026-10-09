@@ -150,9 +150,10 @@ window.pickSaleDD=id=>{
   $('sale-psearch').value=p.name;
   $('sale-dd').classList.add('hidden');
   $('sale-cost').value=p.cost.toFixed(2);
-  $('sale-total-in').value=(p.sell*($('sale-qty').value||1)).toFixed(0);
+  $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); // running bill total
 };
-$('sale-qty').oninput=()=>{ const p=DB.products.find(x=>x.id===salePickId); if(p) $('sale-total-in').value=(p.sell*($('sale-qty').value||1)).toFixed(0); };
+$('sale-qty').oninput=()=>{ const p=DB.products.find(x=>x.id===salePickId);
+  if(p) $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); };
 function cartGrand(){ return saleCart.reduce((s,i)=>s+i.total,0); }
 function renderSaleCart(){
   const box=$('sale-cart');
@@ -163,45 +164,68 @@ function renderSaleCart(){
     `<div class="cart-total"><span>Items total</span><b>${pkr(cartGrand())}</b></div></div>`;
 }
 window.rmCartItem=ix=>{ saleCart.splice(ix,1); renderSaleCart(); };
-function stageCurrentItem(){
+/* Staged product -> a sale line. Line total = bill field minus cart sum (item's share of the bill). */
+function stageLine(){
   const p=DB.products.find(x=>x.id===salePickId);
   if(!p||!$('sale-psearch').value.trim()) return null;
   const q=Math.max(1,parseInt($('sale-qty').value)||1);
   if(q>p.qty){ toast('Only '+p.qty+' in stock!'); return 'err'; }
-  const total=Math.max(0,parseFloat($('sale-total-in').value)||0)||q*p.sell;
-  return {productId:p.id,name:p.name,qty:q,unit:p.sell,total,cost:p.cost};
+  const bill=parseFloat($('sale-total-in').value)||0;
+  let lineTotal=bill-cartGrand();
+  if(!(lineTotal>0)) lineTotal=q*p.sell;
+  return {productId:p.id,name:p.name,qty:q,unit:p.sell,total:lineTotal,cost:p.cost};
 }
+function clearStaging(){ salePickId=null; $('sale-psearch').value=''; $('sale-cost').value=''; $('sale-qty').value=1;
+  $('sale-total-in').value=cartGrand().toFixed(0); }
 $('btn-add-item').onclick=()=>{
-  const it=stageCurrentItem();
+  const it=stageLine();
   if(it==='err') return;
   if(!it){ toast('Search karke product select karo'); return; }
-  saleCart.push(it);
-  salePickId=null; $('sale-psearch').value=''; $('sale-cost').value=''; $('sale-qty').value=1; $('sale-total-in').value='';
+  saleCart.push(it); clearStaging();
   renderSaleCart(); toast('✅ Added: '+it.name);
 };
 $('sale-add-cust').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden'); $('sale-cust').focus(); };
 $('btn-sold').onclick=()=>{
-  const cur=stageCurrentItem();
-  if(cur==='err') return;
-  if(cur) saleCart.push(cur);
-  if(!saleCart.length){ toast('Select a product first'); return; }
-  for(const i of saleCart){ const pr=DB.products.find(x=>x.id===i.productId);
-    if(!pr||i.qty>pr.qty){ toast('Out of stock: '+i.name); if(cur) saleCart.pop(); return; } }
-  const items=saleCart.map(i=>{
-    const pr=DB.products.find(x=>x.id===i.productId); pr.qty-=i.qty;
-    return {productId:i.productId,name:i.name,qty:i.qty,price:i.total/i.qty,cost:pr.cost};
+  const lines=[...saleCart];
+  const st=stageLine();
+  if(st==='err') return;
+  if(st) lines.push(st);
+  if(!lines.length){ toast('Select a product first'); return; }
+  for(const l of lines){ const pr=DB.products.find(x=>x.id===l.productId);
+    if(!pr||l.qty>pr.qty){ toast('Out of stock: '+l.name); return; } }
+  // Bill = whatever is typed in "Sold at (Total Price)" — divided across products by their rates
+  const rateSum=lines.reduce((s,l)=>s+l.qty*l.unit,0);
+  let bill=parseFloat($('sale-total-in').value);
+  if(!(bill>0)) bill=rateSum;
+  const base=rateSum>0?rateSum:1;
+  let acc=0;
+  const items=lines.map((l,ix)=>{
+    const pr=DB.products.find(x=>x.id===l.productId); pr.qty-=l.qty;
+    let share;
+    if(ix<lines.length-1){ share=Math.round(bill*(l.qty*l.unit/base)*100)/100; acc+=share; }
+    else share=Math.round((bill-acc)*100)/100; // last line absorbs rounding
+    return {productId:l.productId,name:l.name,qty:l.qty,price:share/l.qty,cost:pr.cost};
   });
-  const grand=items.reduce((s,i)=>s+i.qty*i.price,0);
-  const firstBrand=items.length===1?((DB.products.find(x=>x.id===items[0].productId)||{}).brand||''):'';
-  const sale={id:DB.seq.s++, productId:items.length===1?items[0].productId:null,
-    name:items.length===1?items[0].name:(items.length+' items'), brand:firstBrand,
-    qty:items.reduce((s,i)=>s+i.qty,0), total:grand,
+  const firstBrand=lines.length===1?((DB.products.find(x=>x.id===lines[0].productId)||{}).brand||''):'';
+  const sale={id:DB.seq.s++, productId:lines.length===1?lines[0].productId:null,
+    name:lines.length===1?lines[0].name:(lines.length+' items'), brand:firstBrand,
+    qty:lines.reduce((s,l)=>s+l.qty,0), total:bill,
     customer:$('sale-cust').value.trim(), date:saleDate, ts:new Date(saleDate+'T12:00').getTime(), items};
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
-  save(); saleCart=[]; renderSaleCart();
-  salePickId=null; $('sale-psearch').value=''; $('sale-cost').value=''; $('sale-qty').value=1; $('sale-total-in').value=''; $('sale-cust').value='';
-  renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(grand));
+  save(); saleCart=[]; renderSaleCart(); clearStaging(); $('sale-cust').value='';
+  renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
+};
+/* ---- Return a sale: stock wapas, sale removed ---- */
+window.returnSale=id=>{
+  const ix=DB.sales.findIndex(s=>s.id===id); if(ix<0) return;
+  const s=DB.sales[ix];
+  if(!confirm('↩️ Return this sale?\n'+s.name+' × '+s.qty+' — '+pkr(s.total)+'\nStock wapas aa jayega.')) return;
+  s.items.forEach(it=>{ const p=DB.products.find(x=>x.id===it.productId); if(p) p.qty+=it.qty; });
+  DB.sales.splice(ix,1);
+  DB.printQueue=DB.printQueue.filter(q=>q.saleId!==id);
+  save(); renderSales(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
+  toast('↩️ Returned — stock restored');
 };
 $('btn-exp-add').onclick=()=>{
   const a=Math.max(0,parseFloat($('exp-amt').value)||0);
@@ -220,6 +244,7 @@ function renderDaySales(){
   const saleRows=list.map(s=>`
     <div class="hist-row"><div><div class="d">${esc(s.name)} × ${s.qty}</div><div class="sub">${esc(s.customer||'')}</div></div>
     <div style="display:flex;align-items:center;gap:4px"><div class="a">${pkr(s.total)}</div>
+    <button class="printer-mini" onclick="event.stopPropagation();returnSale(${s.id})" title="Return">↩️</button>
     <button class="printer-mini" onclick="event.stopPropagation();printSale(${s.id})" title="Print">🖨️</button></div></div>`).join('');
   const expRows=exps.map(e=>`
     <div class="hist-row exp-row"><div><div class="d">📋 ${esc(e.title)}</div><div class="sub" style="color:var(--red)">Expense</div></div>
