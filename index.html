@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Paper Stock</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div id="app">
@@ -13,7 +13,9 @@
   <header class="topbar">
     <button id="btn-profile" class="icon-btn">👤</button>
     <div class="store-name" id="store-name">Paper Store</div>
-    <button id="btn-backup" class="icon-btn" title="Backup">☁️⬆️</button>
+    <button id="btn-bell" class="icon-btn bell-wrap">🔔<span id="bell-badge" class="badge-dot hidden"></span></button>
+    <button id="btn-printer" class="icon-btn bell-wrap">🖨️<span id="print-badge" class="badge-dot hidden"></span></button>
+    <button id="btn-backup" class="icon-btn" title="Backup">☁️</button>
   </header>
   <nav class="toptabs">
     <button class="tt active" data-view="view-add">➕<span>ADD</span></button>
@@ -77,10 +79,12 @@
           <h3>Expense details</h3>
           <input id="exp-title" placeholder="e.g. Shop rent, Transport">
           <input id="exp-amt" type="number" min="0" placeholder="Amount (PKR)">
+          <label class="fl">Date</label>
+          <input id="exp-date" type="date">
           <button id="btn-exp-add" class="btn-save blue">ADD EXPENSE</button>
         </div>
       </div>
-      <div class="row-between"><h3 id="sales-day-title">Today · 0 sales</h3></div>
+      <div class="row-between"><button class="nav-arrow" id="day-prev">‹</button><h3 id="sales-day-title">Today · 0 sales</h3><button class="nav-arrow" id="day-next">›</button></div>
       <div id="sales-day-list"></div>
     </div>
   </section>
@@ -136,7 +140,8 @@
   <!-- ============ SHEETS / MODALS ============ -->
   <div id="sheet" class="sheet hidden"><div class="sheet-box" id="sheet-box"></div></div>
   <div id="toast" class="toast hidden"></div>
+  <div id="print-area"></div>
 </div>
-<script src="app.js?v=1"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

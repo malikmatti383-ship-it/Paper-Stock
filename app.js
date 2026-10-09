@@ -8,8 +8,8 @@ const dstr = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMont
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.remove('hidden'); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.add('hidden'),2400); }
 
 /* ---------- Data ---------- */
-function defDB(){ return { profile:{name:'Paper Store',email:''}, products:[], sales:[], expenses:[], customers:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
-function load(){ try{ DB=JSON.parse(localStorage.getItem(DB_KEY))||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; }
+function defDB(){ return { profile:{name:'Paper Store',email:''}, products:[], sales:[], expenses:[], customers:[], printQueue:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
+function load(){ try{ DB=JSON.parse(localStorage.getItem(DB_KEY))||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; }
 function save(){ localStorage.setItem(DB_KEY,JSON.stringify(DB)); }
 
 /* ---------- Sheet / modal ---------- */
@@ -112,13 +112,15 @@ $('btn-add-save').onclick=()=>{
 };
 
 /* ================= SALES ================= */
-let saleMode='sale', salePickId=null, saleDate=dstr();
+let saleMode='sale', salePickId=null, saleDate=dstr(), saleDay=dstr();
+function grossProfit(){ return DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+i.qty*((i.price||0)-(i.cost||0)),0),0); }
 function renderSales(){
   const tot=DB.sales.reduce((s,x)=>s+x.total,0);
   const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
-  const profit=DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+i.qty*((i.price||0)-(i.cost||0)),0),0);
-  $('s-total').textContent=pkr(tot); $('s-exp').textContent=pkr(exp); $('s-profit').textContent=pkr(profit);
+  $('s-total').textContent=pkr(tot); $('s-exp').textContent=pkr(exp);
+  $('s-profit').textContent=pkr(grossProfit()-exp); // expense minus from profit
   $('sale-date-txt').textContent=fmtDate(saleDate);
+  if(!$('exp-date').value) $('exp-date').value=dstr();
   renderSalePick(''); renderDaySales();
 }
 function fmtDate(ds){ const d=new Date(ds+'T12:00'); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
@@ -145,24 +147,36 @@ $('btn-sold').onclick=()=>{
   if(q>p.qty){ toast('Only '+p.qty+' in stock!'); return; }
   const total=Math.max(0,parseFloat($('sale-total-in').value)||0);
   p.qty-=q;
-  DB.sales.push({id:DB.seq.s++, productId:p.id, name:p.name, brand:p.brand, qty:q, total,
+  const sale={id:DB.seq.s++, productId:p.id, name:p.name, brand:p.brand, qty:q, total,
     customer:$('sale-cust').value.trim(), date:saleDate, ts:new Date(saleDate+'T12:00').getTime(),
-    items:[{qty:q,price:total/q,cost:p.cost}]});
+    items:[{qty:q,price:total/q,cost:p.cost}]};
+  DB.sales.push(sale);
+  DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
   save(); salePickId=null; $('sale-psearch').value=''; $('sale-qty').value=1; $('sale-total-in').value=''; $('sale-cust').value='';
-  renderSales(); toast('✅ Sold! '+pkr(total));
+  renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(total));
 };
 $('btn-exp-add').onclick=()=>{
   const a=Math.max(0,parseFloat($('exp-amt').value)||0);
   if(!a){ toast('Enter amount'); return; }
-  DB.expenses.push({id:DB.seq.e++, title:$('exp-title').value.trim()||'Expense', amount:a, date:dstr(), ts:Date.now()});
-  save(); $('exp-title').value=''; $('exp-amt').value=''; renderSales(); toast('✅ Expense added');
+  const ed=$('exp-date').value||dstr();
+  DB.expenses.push({id:DB.seq.e++, title:$('exp-title').value.trim()||'Expense', amount:a, date:ed, ts:new Date(ed+'T12:00').getTime()});
+  save(); $('exp-title').value=''; $('exp-amt').value=''; renderSales(); toast('✅ Expense added (-'+pkr(a)+')');
 };
+$('day-prev').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()-1); saleDay=dstr(d); renderDaySales(); };
+$('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()+1); if(dstr(d)>dstr()){toast('Future nahi!');return;} saleDay=dstr(d); renderDaySales(); };
 function renderDaySales(){
-  const list=DB.sales.filter(s=>s.date===dstr()).reverse();
-  $('sales-day-title').textContent='Today · '+list.length+' sales';
-  $('sales-day-list').innerHTML=list.map(s=>`
+  const list=DB.sales.filter(s=>s.date===saleDay).reverse();
+  const exps=DB.expenses.filter(e=>e.date===saleDay).reverse();
+  const dlbl=saleDay===dstr()?'Today':fmtDate(saleDay);
+  $('sales-day-title').textContent=dlbl+' · '+list.length+' sales';
+  const saleRows=list.map(s=>`
     <div class="hist-row"><div><div class="d">${esc(s.name)} × ${s.qty}</div><div class="sub">${esc(s.customer||'')}</div></div>
-    <div class="a">${pkr(s.total)}</div></div>`).join('')||'<p class="note" style="color:#fff">No sales today yet</p>';
+    <div style="display:flex;align-items:center;gap:4px"><div class="a">${pkr(s.total)}</div>
+    <button class="printer-mini" onclick="event.stopPropagation();printSale(${s.id})" title="Print">🖨️</button></div></div>`).join('');
+  const expRows=exps.map(e=>`
+    <div class="hist-row exp-row"><div><div class="d">📋 ${esc(e.title)}</div><div class="sub" style="color:var(--red)">Expense</div></div>
+    <div class="a">− ${pkr(e.amount)}</div></div>`).join('');
+  $('sales-day-list').innerHTML=(saleRows+expRows)||'<p class="note" style="color:#fff">No records this day</p>';
 }
 
 /* ================= STOCK ================= */
@@ -186,14 +200,19 @@ function renderStock(){
   if(stockF==='out') list=list.filter(p=>p.qty<=0);
   $('stock-list').innerHTML=list.map(p=>{
     const cls=p.qty<=0?'out':(p.qty<=5?'low':'');
-    return `<div class="stock-card ${cls}" onclick="stockDetail(${p.id})">
-      <div class="sc-top">${pimg(p)}
-        <div class="sc-info"><span class="sc-brand">${esc(p.brand||'—')} ${p.itemId}</span> ${stockBadge(p)}
+    return `<div class="stock-card ${cls}">
+      <div class="sc-top" onclick="stockDetail(${p.id})">${pimg(p)}
+        <div class="sc-info"><span class="sc-brand">${esc(p.brand||'—')} · #${p.itemId}</span> ${stockBadge(p)}
           <div class="sc-name">${esc(p.name)}</div>
-          <div class="sc-prices">Cost <b>${pkr(p.cost)}</b> &nbsp; Sell <b>${pkr(p.sell)}</b></div></div>
-        <div class="sc-qty ${cls}"><div class="n">${p.qty}</div><div class="u">IN STOCK</div><div class="u">${esc(p.unit)}</div></div>
+          <div class="sc-prices">Cost <b>${pkr(p.cost)}</b> · Sell <b>${pkr(p.sell)}</b> <span class="sub">/${esc(p.unit)}</span></div>
+        </div></div>
+      <div class="sc-right">
+        <div class="stepper"><button onclick="event.stopPropagation();qstep(${p.id},-1)">−</button><span class="qv" style="${p.qty<=0?'color:var(--red)':''}">${p.qty}</span><button onclick="event.stopPropagation();qstep(${p.id},1)">+</button></div>
+        <button class="mini-btn" onclick="event.stopPropagation();stockDetail(${p.id})">Details</button>
       </div></div>`; }).join('')||'<p class="note" style="color:#fff">No items</p>';
 }
+window.qstep=(id,d)=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  if(p.qty+d<0){ toast('Out of stock!'); return; } p.qty+=d; save(); renderStock(); };
 window.stockDetail=id=>{
   const p=DB.products.find(x=>x.id===id); if(!p) return;
   const cls=p.qty<=0?'out':(p.qty<=5?'low':'');
@@ -239,7 +258,9 @@ function renderReport(){
   const sales=DB.sales.filter(s=>{ const d=new Date(s.ts); return d.getFullYear()===repY&&d.getMonth()===repM; });
   const prev=DB.sales.filter(s=>{ const d=new Date(s.ts); let pm=repM-1,py=repY; if(pm<0){pm=11;py--;} return d.getFullYear()===py&&d.getMonth()===pm; });
   const st=sales.reduce((a,s)=>a+s.total,0), pt=prev.reduce((a,s)=>a+s.total,0);
-  const profit=sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*((i.price||0)-(i.cost||0)),0),0);
+  const gross=sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*((i.price||0)-(i.cost||0)),0),0);
+  const pexp=DB.expenses.filter(e=>{ const d=new Date(e.ts); return d.getFullYear()===repY&&d.getMonth()===repM; }).reduce((a,e)=>a+e.amount,0);
+  const profit=gross-pexp;
   $('r-sales').textContent=st.toLocaleString('en-PK',{minimumFractionDigits:2});
   $('r-profit').textContent=profit.toLocaleString('en-PK',{minimumFractionDigits:2});
   $('r-margin').textContent=st>0?Math.round(profit/st*100)+'% margin':'';
@@ -306,28 +327,55 @@ function renderCredit(){
       ${c.promiseDate?`<div class="pd">⏰ Promise: ${fmtDate(c.promiseDate)}</div>`:''}
     </div>`; }).join('')||'<p class="note" style="color:#fff">No credit customers yet</p>';
 }
+let credPickId=null, credPickQ='';
 $('btn-add-credit').onclick=()=>{
-  const cid=DB.seq.c;
+  const cid=DB.seq.c; credPickId=null; credPickQ='';
   openSheet(`<h3>New Credit</h3>
     <div class="id-row"><input id="cc-id" value="${cid}"><button class="link-btn" onclick="$('cc-id').value=${DB.seq.c}">AUTO</button></div>
     <input id="cc-name" placeholder="Customer name">
     <input id="cc-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel">
+    <div class="search-wrap">🔍 <input id="cc-psearch" placeholder="Type product name..."></div>
+    <div id="cc-pick-list"></div>
     <input id="cc-product" placeholder="Product name (e.g. A4 Rim)">
     <div class="two-col"><div><input id="cc-rate" type="number" placeholder="Sale rate"></div>
     <div><input id="cc-disc" type="number" placeholder="Discount rate"></div></div>
-    <input id="cc-credit" type="number" placeholder="Credit amount (Udhaar) PKR">
-    <input id="cc-promise" type="date">
+    <div class="two-col"><div><input id="cc-qty" type="number" value="1" min="1" placeholder="Qty"></div>
+    <div><input id="cc-credit" type="number" placeholder="Credit amount PKR"></div></div>
+    <div class="sub" id="cc-cost-note"></div>
+    <div class="two-col"><div><label class="fl" style="margin-top:4px">Promise date</label><input id="cc-promise" type="date"></div>
+    <div><label class="fl" style="margin-top:4px">Promise time</label><input id="cc-ptime" type="time" value="10:00"></div></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button><button class="btn-go" onclick="saveCredit()">Save</button></div>`);
+  $('cc-psearch').oninput=e=>{ credPickQ=e.target.value.toLowerCase(); renderCredPick(); };
+  renderCredPick();
+  const calc=()=>{ const r=parseFloat($('cc-rate').value)||0, d=parseFloat($('cc-disc').value)||0, q=parseFloat($('cc-qty').value)||1;
+    $('cc-credit').value=Math.max(0,(r-d)*q).toFixed(0); };
+  $('cc-rate').oninput=calc; $('cc-disc').oninput=calc; $('cc-qty').oninput=calc;
 };
+function renderCredPick(){
+  const list=DB.products.filter(p=>p.name.toLowerCase().includes(credPickQ)||String(p.itemId).includes(credPickQ)).slice(0,6);
+  $('cc-pick-list').innerHTML=list.map(p=>`
+    <div class="pick-item ${credPickId===p.id?'sel':''}" onclick="pickCred(${p.id})">
+      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · Cost ${pkr(p.cost)} · left ${p.qty}</div></div>
+    </div>`).join('');
+}
+window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  credPickId=id; $('cc-product').value=p.name; $('cc-rate').value=p.sell;
+  $('cc-cost-note').textContent='Buy cost: '+pkr(p.cost)+' / '+p.unit+' · Profit: '+pkr(p.sell-p.cost);
+  const q=parseFloat($('cc-qty').value)||1, d=parseFloat($('cc-disc').value)||0;
+  $('cc-credit').value=Math.max(0,(p.sell-d)*q).toFixed(0);
+  renderCredPick(); };
 window.saveCredit=()=>{
   const name=$('cc-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
   const cid=parseInt($('cc-id').value)||DB.seq.c;
+  const camt=Math.max(0,parseFloat($('cc-credit').value)||0);
   DB.customers.push({ id:DB.seq.c++, custId:cid, name, phone:$('cc-phone').value.trim(),
     product:$('cc-product').value.trim(), saleRate:parseFloat($('cc-rate').value)||0, discount:parseFloat($('cc-disc').value)||0,
-    credit:Math.max(0,parseFloat($('cc-credit').value)||0), received:0,
-    promiseDate:$('cc-promise').value||'', log:[{t:'Credit',a:parseFloat($('cc-credit').value)||0,d:dstr()}] });
+    qty:parseFloat($('cc-qty').value)||1,
+    credit:camt, received:0,
+    promiseDate:$('cc-promise').value||'', promiseTime:$('cc-ptime').value||'',
+    log:[{t:'Credit',a:camt,d:dstr()}] });
   if(cid>=DB.seq.c) DB.seq.c=cid+1;
-  save(); closeSheet(); renderCredit(); toast('✅ Credit saved');
+  save(); closeSheet(); renderCredit(); updateBellBadge(); toast('✅ Credit saved');
 };
 window.creditDetail=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -340,7 +388,7 @@ window.creditDetail=id=>{
     <div class="kv"><span>💰 Credit (Udhaar)</span><b>${pkr(c.credit)}</b></div>
     <div class="kv"><span>💵 Received (Wusool)</span><b>${pkr(c.received)}</b></div>
     <div class="kv"><span>📌 Remaining (Baqaya)</span><b style="color:var(--red)">${pkr(b)}</b></div>
-    ${c.promiseDate?`<div class="kv"><span>⏰ Promise date</span><b>${fmtDate(c.promiseDate)}</b></div>`:''}
+    ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
     <div class="mrow">
       <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Wusool</button>
       <button class="btn-ghost" onclick="addCreditMore(${c.id})">➕ Udhaar</button>
@@ -379,10 +427,12 @@ window.sendMsg=(id,kind)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   if(!c.phone){ toast('No phone number saved'); return; }
   const b=custBal(c);
+  const cdate=(c.log&&c.log[0]&&c.log[0].d)?fmtDate(c.log[0].d):'';
   const msg=`Assalam-o-Alaikum ${c.name}!\n${DB.profile.name} se apka khata:\n`+
     `ID: ${c.custId}\n`+(c.product?`Item: ${c.product}\n`:'')+
-    `Udhaar: ${pkr(c.credit)}\nWusool: ${pkr(c.received)}\nBaqaya: ${pkr(b)}`+
-    (c.promiseDate?`\nPromise date: ${fmtDate(c.promiseDate)}`:'');
+    (cdate?`Date: ${cdate}\n`:'')+
+    `Diya (credit): ${pkr(c.credit)}\nWusool: ${pkr(c.received)}\nBaqaya balance: ${pkr(b)}`+
+    (c.promiseDate?`\nPromise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''}`:'');
   let num=c.phone.replace(/[^0-9]/g,'');
   if(num.startsWith('0')) num='92'+num.slice(1);
   if(kind==='wa') window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
@@ -391,3 +441,140 @@ window.sendMsg=(id,kind)=>{
 
 /* ---------- Init ---------- */
 load(); renderStoreName(); initAdd(); showView('view-add');
+updateBellBadge(); updatePrintBadge(); checkReminders();
+
+/* ================= BELL: reminders + bulk send ================= */
+function promiseDue(c){
+  if(!c.promiseDate || custBal(c)<=0) return false;
+  const dt=new Date(c.promiseDate+'T'+(c.promiseTime||'23:59'));
+  return dt<=new Date();
+}
+function updateBellBadge(){
+  const n=DB.customers.filter(promiseDue).length;
+  const b=$('bell-badge');
+  b.classList.toggle('hidden',!n); b.textContent=n;
+}
+$('btn-bell').onclick=()=>{
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission().then(()=>{});
+  }
+  const due=DB.customers.filter(promiseDue);
+  const withBal=DB.customers.filter(c=>custBal(c)>0);
+  openSheet(`<h3>🔔 Notifications</h3>
+    <div class="seg"><button class="seg-btn active" id="bell-t-rem">⏰ Reminders ${due.length?`(${due.length})`:''}</button>
+    <button class="seg-btn" id="bell-t-send">💬 Bulk Send</button></div>
+    <div id="bell-rem">
+      ${due.length?due.map(c=>`<div class="remind-card"><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span>
+        <div style="margin:6px 0">⏰ Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</div>
+        <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} lena hai</div>
+        <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button></div></div>`).join('')
+        :'<p class="note">Koi reminder nahi hai. Promise time guzarne par yahan ayega.</p>'}
+      <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>
+    </div>
+    <div id="bell-send" class="hidden">
+      <p class="note">Select customers, phir Send dabao — WhatsApp ek-ek karke khulega (message ready hoga).</p>
+      <label class="check-row"><input type="checkbox" id="bulk-all" onchange="bulkToggleAll(this.checked)"> <b>Select all</b></label>
+      <div id="bulk-list">${withBal.map(c=>`
+        <label class="check-row"><input type="checkbox" class="bulk-cb" value="${c.id}">
+        <span><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span><br><span style="color:var(--red);font-weight:700">${pkr(custBal(c))}</span></span></label>`).join('')||'<p class="note">Koi baqaya nahi</p>'}</div>
+      <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn-go" onclick="bulkSend()">💬 Send Selected</button></div>
+    </div>`);
+  $('bell-t-rem').onclick=()=>{ $('bell-t-rem').classList.add('active'); $('bell-t-send').classList.remove('active'); $('bell-rem').classList.remove('hidden'); $('bell-send').classList.add('hidden'); };
+  $('bell-t-send').onclick=()=>{ $('bell-t-send').classList.add('active'); $('bell-t-rem').classList.remove('active'); $('bell-send').classList.remove('hidden'); $('bell-rem').classList.add('hidden'); };
+};
+window.bulkToggleAll=on=>{ document.querySelectorAll('.bulk-cb').forEach(cb=>cb.checked=on); };
+let bulkQueue=[], bulkActive=false;
+window.bulkSend=()=>{
+  bulkQueue=[...document.querySelectorAll('.bulk-cb:checked')].map(cb=>parseInt(cb.value));
+  if(!bulkQueue.length){ toast('Koi customer select nahi!'); return; }
+  bulkActive=true; closeSheet(); toast('WhatsApp khul raha hai... ('+bulkQueue.length+')');
+  setTimeout(bulkNext,600);
+};
+function bulkNext(){
+  if(!bulkQueue.length){ bulkActive=false; toast('✅ Sab ko bhej diya!'); return; }
+  const id=bulkQueue.shift();
+  const c=DB.customers.find(x=>x.id===id);
+  if(c&&c.phone){ openWA(c); } else bulkNext();
+}
+function openWA(c){
+  const b=custBal(c);
+  const cdate=(c.log&&c.log[0]&&c.log[0].d)?fmtDate(c.log[0].d):'';
+  const msg=`Assalam-o-Alaikum ${c.name}!\n${DB.profile.name} se apka khata:\nID: ${c.custId}\n`+
+    (c.product?`Item: ${c.product}\n`:'')+(cdate?`Date: ${cdate}\n`:'')+
+    `Diya: ${pkr(c.credit)}\nWusool: ${pkr(c.received)}\nBaqaya: ${pkr(b)}`+
+    (c.promiseDate?`\nPromise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''}`:'');
+  let num=c.phone.replace(/[^0-9]/g,''); if(num.startsWith('0')) num='92'+num.slice(1);
+  window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&bulkActive&&bulkQueue.length) setTimeout(bulkNext,900);
+});
+/* Promise scheduler: checks every minute + on load */
+function checkReminders(){
+  const now=new Date();
+  DB.customers.forEach(c=>{
+    if(custBal(c)>0&&c.promiseDate){
+      const dt=new Date(c.promiseDate+'T'+(c.promiseTime||'09:00'));
+      const last=c.lastRemind?new Date(c.lastRemind):null;
+      const sameDay=last&&last.toDateString()===now.toDateString();
+      if(dt<=now&&!sameDay){
+        c.lastRemind=now.toISOString();
+        const msg=`⏰ ${c.name} se ${pkr(custBal(c))} wusool karna hai! (Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''})`;
+        if('Notification' in window&&Notification.permission==='granted'){ try{ new Notification('Paper Stock ⏰',{body:msg}); }catch(e){} }
+        toast(msg);
+      }
+    }
+  });
+  save(); updateBellBadge();
+}
+setInterval(checkReminders,60000);
+
+/* ================= PRINTER: receipts + queue ================= */
+function updatePrintBadge(){
+  const n=DB.printQueue.filter(q=>!q.done).length;
+  const b=$('print-badge'); b.classList.toggle('hidden',!n); b.textContent=n;
+}
+function receiptHtml(s){
+  const d=new Date(s.ts);
+  return `<div class="receipt"><h2>${esc(DB.profile.name)}</h2><div class="c">SALE RECEIPT</div><hr>
+  <table><tr><td>Date:</td><td class="r">${d.toLocaleString('en-GB')}</td></tr>
+  <tr><td>Receipt #:</td><td class="r">${s.id}</td></tr>
+  ${s.customer?`<tr><td>Customer:</td><td class="r">${esc(s.customer)}</td></tr>`:''}</table><hr>
+  <table>${s.items.map(i=>`<tr><td>${esc(i.name||s.name)} × ${i.qty}</td><td class="r">${pkr(i.qty*i.price)}</td></tr>`).join('')}</table><hr>
+  <table><tr><td class="tot">TOTAL</td><td class="r tot">${pkr(s.total)}</td></tr></table><hr>
+  <div class="c">Thank you! Visit again 🙏</div></div>`;
+}
+function doPrint(html){ $('print-area').innerHTML=html; setTimeout(()=>window.print(),300); }
+window.printSale=id=>{
+  const s=DB.sales.find(x=>x.id===id); if(!s) return;
+  doPrint(receiptHtml(s));
+  const q=DB.printQueue.find(q=>q.saleId===id&&!q.done); if(q) q.done=true;
+  save(); updatePrintBadge(); toast('🖨️ Printing...');
+};
+$('btn-printer').onclick=()=>{
+  const pend=DB.printQueue.filter(q=>!q.done).reverse();
+  const rows=pend.map(q=>{ const s=DB.sales.find(x=>x.id===q.saleId);
+    if(!s) return '';
+    return `<label class="check-row"><input type="checkbox" class="pq-cb" value="${q.qid}">
+    <span><b>#${s.id} ${esc(s.name)} × ${s.qty}</b><br><span class="sub">${fmtDate(s.date)} · ${pkr(s.total)}</span></span></label>`; }).join('');
+  openSheet(`<h3>🖨️ Pending Prints (${pend.length})</h3>
+    ${rows||'<p class="note">Koi pending print nahi!</p>'}
+    <div class="mrow"><button class="btn-ghost" onclick="pqSelectAll(true)">Select all</button>
+    <button class="btn-ghost" onclick="pqSelectAll(false)">Clear</button></div>
+    <div class="mrow"><button class="btn-go" onclick="pqPrintSel()">🖨️ Print Selected</button>
+    <button class="btn-ghost danger-t" onclick="pqDelSel()">Delete</button></div>
+    <div class="mrow"><button class="btn-ghost danger-t" onclick="pqDelAll()">🗑️ Delete All</button>
+    <button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
+};
+window.pqSelectAll=on=>{ document.querySelectorAll('.pq-cb').forEach(cb=>cb.checked=on); };
+window.pqPrintSel=()=>{
+  const ids=[...document.querySelectorAll('.pq-cb:checked')].map(cb=>parseFloat(cb.value));
+  if(!ids.length){ toast('Select prints first'); return; }
+  const html=ids.map(qid=>{ const q=DB.printQueue.find(x=>x.qid===qid); const s=q&&DB.sales.find(x=>x.id===q.saleId);
+    if(q) q.done=true; return s?receiptHtml(s):''; }).join('<div style="page-break-after:always"></div>');
+  save(); updatePrintBadge(); closeSheet(); doPrint(html); toast('🖨️ Printing '+ids.length+'...');
+};
+window.pqDelSel=()=>{ const ids=[...document.querySelectorAll('.pq-cb:checked')].map(cb=>parseFloat(cb.value));
+  DB.printQueue=DB.printQueue.filter(q=>!ids.includes(q.qid)); save(); updatePrintBadge(); $('btn-printer').click(); };
+window.pqDelAll=()=>{ if(confirm('Delete all pending prints?')){ DB.printQueue=DB.printQueue.filter(q=>q.done); save(); updatePrintBadge(); closeSheet(); } };
