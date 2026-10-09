@@ -12,6 +12,48 @@ function defDB(){ return { profile:{name:'Paper Store',email:'',logo:''}, produc
 function load(){ try{ DB=JSON.parse(localStorage.getItem(DB_KEY))||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; }
 function save(){ localStorage.setItem(DB_KEY,JSON.stringify(DB)); }
 
+/* ---------- Cloud sync (Gmail login) ---------- */
+let syncCtl=null, applyingRemote=false, syncedAt=0;
+try{ syncedAt=+(localStorage.getItem('ps_synced_at')||0); }catch(e){}
+const _saveLocal=save;
+save=function(){ _saveLocal(); if(syncCtl&&!applyingRemote) syncCtl.schedulePush(); };
+function applyRemote(data,updatedAt){
+  if(!data||!updatedAt||updatedAt<=syncedAt) return;
+  applyingRemote=true;
+  try{
+    DB=data; if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[];
+    _saveLocal();
+    syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){}
+    renderStoreName();
+    const av=document.querySelector('.view.active'); if(av) showView(av.id);
+  }finally{ applyingRemote=false; }
+  toast('☁️ Cloud sync ho gaya');
+}
+function authSection(){
+  if(!window.PaperAuth||!PaperAuth.isConfigured()) return '';
+  if(!PaperAuth.getToken())
+    return `<button class="btn-go" style="width:100%;margin-bottom:4px" onclick="PaperAuth.login()">🔐 Login with Gmail</button>
+    <div class="sub" style="text-align:center;margin-bottom:10px">Ek login — 5 devices par apna data sync</div>`;
+  let u=null; try{ u=JSON.parse(localStorage.getItem('ps_user')||'null'); }catch(e){}
+  const nm=u?(u.name||u.email):'...', em=u?(u.email||''):'' ;
+  const av=u&&u.picture?`<img src="${u.picture}">`:esc((nm||'G').charAt(0).toUpperCase());
+  return `<div class="mrow" style="align-items:center;margin-bottom:10px">
+    <div class="pavatar" style="width:44px;height:44px;font-size:18px;flex-shrink:0">${av}</div>
+    <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b><div class="sub">${esc(em)}</div></div>
+    <button class="btn-ghost" style="flex-shrink:0" onclick="doLogout()">Logout</button></div>`;
+}
+window.doLogout=()=>{ if(!window.PaperAuth) return;
+  PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); }catch(e){} location.reload(); });
+};
+function initAuth(){
+  if(!window.PaperAuth) return;
+  const fresh=PaperAuth.handleAuthRedirect();
+  if(!PaperAuth.isConfigured()||!PaperAuth.getToken()) return;
+  if(fresh||!localStorage.getItem('ps_user'))
+    PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} }).catch(()=>{});
+  syncCtl=PaperAuth.startAutoSync(()=>DB, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} });
+}
+
 /* ---------- Sheet / modal ---------- */
 function openSheet(html){ $('sheet-box').innerHTML=html; $('sheet').classList.remove('hidden'); }
 function closeSheet(){ $('sheet').classList.add('hidden'); $('sheet').classList.remove('center'); $('sheet-box').innerHTML=''; }
@@ -46,7 +88,7 @@ window.setStoreLogo=input=>{ readImg(input.files[0],url=>{ if(!url) return;
 $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
   const av=p.logo?`<img src="${p.logo}">`:esc(init);
-  openSheet(`<div class="profile-top"><div class="pav-wrap"><div class="pavatar">${av}</div>
+  openSheet(`${authSection()}<div class="profile-top"><div class="pav-wrap"><div class="pavatar">${av}</div>
     <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">📷</button></div>
     <div><b style="font-size:19px">${esc(p.name||'Paper Store')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">✏️</button><div class="sub">${esc(p.email||'')}</div></div></div>
     <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
@@ -569,7 +611,7 @@ window.sendMsg=(id,kind)=>{
 };
 
 /* ---------- Init ---------- */
-load(); renderStoreName(); initAdd(); showView('view-sales');
+load(); renderStoreName(); initAdd(); initAuth(); showView('view-sales');
 updateBellBadge(); updatePrintBadge(); checkReminders();
 
 /* ================= BELL: reminders + bulk send ================= */
