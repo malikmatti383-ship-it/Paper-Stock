@@ -16,7 +16,13 @@ function save(){ localStorage.setItem(DB_KEY,JSON.stringify(DB)); }
 let syncCtl=null, applyingRemote=false, syncedAt=0;
 try{ syncedAt=+(localStorage.getItem('ps_synced_at')||0); }catch(e){}
 const _saveLocal=save;
-save=function(){ _saveLocal(); if(syncCtl&&!applyingRemote) syncCtl.schedulePush(); };
+save=function(){ _saveLocal(); if(syncCtl&&!applyingRemote){ syncCtl.schedulePush(); setSyncPill('backing'); } };
+function setSyncPill(mode){
+  const p=$('sync-pill'); if(!p) return;
+  if(mode==='off'||!window.PaperAuth||!PaperAuth.getToken()){ p.classList.add('hidden'); return; }
+  p.classList.remove('hidden');
+  p.innerHTML = mode==='backing' ? '<span class="spin">↻</span> Backing up...' : '✓ Synced';
+}
 function applyRemote(data,updatedAt){
   if(!data||!updatedAt||updatedAt<=syncedAt) return;
   applyingRemote=true;
@@ -51,7 +57,8 @@ function initAuth(){
   if(!PaperAuth.isConfigured()||!PaperAuth.getToken()) return;
   if(fresh||!localStorage.getItem('ps_user'))
     PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} }).catch(()=>{});
-  syncCtl=PaperAuth.startAutoSync(()=>DB, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} });
+  syncCtl=PaperAuth.startAutoSync(()=>DB, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} setSyncPill('synced'); });
+    setSyncPill('synced');
 }
 
 /* ---------- Sheet / modal ---------- */
