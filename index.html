@@ -18,15 +18,15 @@
     <button id="btn-backup" class="icon-btn" title="Backup">☁️</button>
   </header>
   <nav class="toptabs">
-    <button class="tt active" data-view="view-add">➕<span>ADD</span></button>
-    <button class="tt" data-view="view-sales">🏷️<span>SALES</span></button>
+    <button class="tt" data-view="view-add">➕<span>ADD</span></button>
+    <button class="tt active" data-view="view-sales">🏷️<span>SALES</span></button>
     <button class="tt" data-view="view-stock">📦<span>STOCK</span></button>
     <button class="tt" data-view="view-report">📋<span>REPORT</span></button>
     <button class="tt" data-view="view-credit">📒<span>CREDIT</span></button>
   </nav>
 
   <!-- ============ ADD ============ -->
-  <section id="view-add" class="view active">
+  <section id="view-add" class="view">
     <div class="pad">
       <div class="form-card">
         <div class="photo-pick" id="add-photo-pick"><span>📷</span></div>
@@ -54,7 +54,7 @@
   </section>
 
   <!-- ============ SALES ============ -->
-  <section id="view-sales" class="view">
+  <section id="view-sales" class="view active">
     <div class="pad">
       <div class="white-card split-card">
         <div><div class="lbl">Total sale till now</div><div class="big-num" id="s-total">PKR 0.00</div></div>
@@ -147,6 +147,6 @@
   <div id="toast" class="toast hidden"></div>
   <div id="print-area"></div>
 </div>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

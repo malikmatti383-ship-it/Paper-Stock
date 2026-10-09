@@ -569,7 +569,7 @@ window.sendMsg=(id,kind)=>{
 };
 
 /* ---------- Init ---------- */
-load(); renderStoreName(); initAdd(); showView('view-add');
+load(); renderStoreName(); initAdd(); showView('view-sales');
 updateBellBadge(); updatePrintBadge(); checkReminders();
 
 /* ================= BELL: reminders + bulk send ================= */
