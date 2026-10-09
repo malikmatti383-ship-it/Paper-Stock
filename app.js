@@ -464,22 +464,36 @@ $('btn-bell').onclick=()=>{
     <div class="seg"><button class="seg-btn active" id="bell-t-rem">⏰ Reminders ${due.length?`(${due.length})`:''}</button>
     <button class="seg-btn" id="bell-t-send">💬 Bulk Send</button></div>
     <div id="bell-rem">
-      ${due.length?due.map(c=>`<div class="remind-card"><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span>
-        <div style="margin:6px 0">⏰ Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</div>
-        <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} lena hai</div>
-        <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button></div></div>`).join('')
-        :'<p class="note">Koi reminder nahi hai. Promise time guzarne par yahan ayega.</p>'}
+      <div class="search-wrap">🔍 <input id="rem-search" placeholder="Search ID or name..."></div>
+      <div id="rem-list"></div>
       <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>
     </div>
     <div id="bell-send" class="hidden">
       <p class="note">Select customers, phir Send dabao — WhatsApp ek-ek karke khulega (message ready hoga).</p>
+      <div class="search-wrap">🔍 <input id="bulk-search" placeholder="Search ID or name..."></div>
       <label class="check-row"><input type="checkbox" id="bulk-all" onchange="bulkToggleAll(this.checked)"> <b>Select all</b></label>
-      <div id="bulk-list">${withBal.map(c=>`
-        <label class="check-row"><input type="checkbox" class="bulk-cb" value="${c.id}">
-        <span><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span><br><span style="color:var(--red);font-weight:700">${pkr(custBal(c))}</span></span></label>`).join('')||'<p class="note">Koi baqaya nahi</p>'}</div>
+      <div id="bulk-list"></div>
       <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button>
       <button class="btn-go" onclick="bulkSend()">💬 Send Selected</button></div>
     </div>`);
+  const renderRemList=q=>{
+    const list=due.filter(c=>(c.name||'').toLowerCase().includes(q)||String(c.custId).includes(q));
+    $('rem-list').innerHTML=list.length?list.map(c=>`<div class="remind-card"><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span>
+      <div style="margin:6px 0">⏰ Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</div>
+      <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} lena hai</div>
+      <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button></div></div>`).join('')
+      :'<p class="note">Koi reminder nahi hai. Promise time guzarne par yahan ayega.</p>';
+  };
+  renderRemList('');
+  $('rem-search').oninput=e=>renderRemList(e.target.value.toLowerCase());
+  const renderBulkList=q=>{
+    const list=withBal.filter(c=>(c.name||'').toLowerCase().includes(q)||String(c.custId).includes(q));
+    $('bulk-list').innerHTML=list.map(c=>`
+      <label class="check-row"><input type="checkbox" class="bulk-cb" value="${c.id}">
+      <span><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span><br><span style="color:var(--red);font-weight:700">${pkr(custBal(c))}</span></span></label>`).join('')||'<p class="note">Koi baqaya nahi</p>';
+  };
+  renderBulkList('');
+  $('bulk-search').oninput=e=>renderBulkList(e.target.value.toLowerCase());
   $('bell-t-rem').onclick=()=>{ $('bell-t-rem').classList.add('active'); $('bell-t-send').classList.remove('active'); $('bell-rem').classList.remove('hidden'); $('bell-send').classList.add('hidden'); };
   $('bell-t-send').onclick=()=>{ $('bell-t-send').classList.add('active'); $('bell-t-rem').classList.remove('active'); $('bell-send').classList.remove('hidden'); $('bell-rem').classList.add('hidden'); };
 };
