@@ -67,10 +67,15 @@
           <h3>Sold details <button class="date-pill" id="sale-date-pill">📅 <span id="sale-date-txt"></span> ▾</button></h3>
           <input type="date" id="sale-date" class="hidden">
           <p class="note">Tap the date to back-date.</p>
-          <div class="search-wrap">🔍 <input id="sale-psearch" placeholder="Product ID / Name"></div>
-          <div id="sale-pick-list"></div>
-          <input id="sale-qty" type="number" min="1" value="1" placeholder="Quantity sold">
-          <input id="sale-total-in" type="number" min="0" placeholder="Sold at (Total Price)">
+          <div class="dd-wrap">
+            <div class="search-wrap">🔍 <input id="sale-psearch" placeholder="Product ID / Name" autocomplete="off"></div>
+            <div id="sale-dd" class="dd-list hidden"></div>
+          </div>
+          <div id="sale-cart"></div>
+          <div class="fld"><span class="fld-lbl">Cost per item</span><div class="fld-in"><input id="sale-cost" readonly tabindex="-1"><span class="pkr">PKR</span></div></div>
+          <div class="fld"><span class="fld-lbl">Quantity sold</span><input id="sale-qty" type="number" min="1" value="1"></div>
+          <button class="btn-addmore" id="btn-add-item">+ Add more items</button>
+          <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0"><span class="pkr">PKR</span></div></div>
           <button class="link-btn" id="sale-add-cust">+ Add customer name</button>
           <input id="sale-cust" class="hidden" placeholder="Customer name">
           <button id="btn-sold" class="btn-save blue">SOLD</button>
@@ -142,6 +147,6 @@
   <div id="toast" class="toast hidden"></div>
   <div id="print-area"></div>
 </div>
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
