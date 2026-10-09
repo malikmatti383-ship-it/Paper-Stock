@@ -464,11 +464,14 @@ $('btn-add-credit').onclick=()=>{
   $('cc-rate').oninput=calc; $('cc-disc').oninput=calc; $('cc-qty').oninput=calc;
 };
 function renderCredPick(){
-  const list=DB.products.filter(p=>p.name.toLowerCase().includes(credPickQ)||String(p.itemId).includes(credPickQ)).slice(0,6);
+  const q=(credPickQ||'').trim();
+  let list=[];
+  if(q) list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  else if(credPickId){ const sp=DB.products.find(p=>p.id===credPickId); if(sp) list=[sp]; }
   $('cc-pick-list').innerHTML=list.map(p=>`
     <div class="pick-item ${credPickId===p.id?'sel':''}" onclick="pickCred(${p.id})">
       ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · Cost ${pkr(p.cost)} · left ${p.qty}</div></div>
-    </div>`).join('');
+    </div>`).join('')||(q?'<p class="note">No product found</p>':'');
 }
 window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   credPickId=id; $('cc-product').value=p.name; $('cc-rate').value=p.sell;
