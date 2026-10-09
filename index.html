@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
 </head>
 <body>
@@ -20,6 +20,7 @@
   <header class="topbar">
     <button id="btn-profile" class="icon-btn">👤</button>
     <div class="store-name" id="store-name">Paper Store</div>
+    <span id="sync-pill" class="sync-pill hidden"><span class="spin">↻</span> Backing up...</span>
     <button id="btn-bell" class="icon-btn bell-wrap">🔔<span id="bell-badge" class="badge-dot hidden"></span></button>
     <button id="btn-printer" class="icon-btn bell-wrap">🖨️<span id="print-badge" class="badge-dot hidden"></span></button>
     <button id="btn-backup" class="icon-btn" title="Backup">☁️</button>
@@ -154,7 +155,7 @@
   <div id="toast" class="toast hidden"></div>
   <div id="print-area"></div>
 </div>
-<script src="app.js?v=15"></script>
+<script src="app.js?v=16"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
