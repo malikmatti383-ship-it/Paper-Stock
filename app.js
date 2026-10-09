@@ -8,7 +8,7 @@ const dstr = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMont
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.remove('hidden'); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.add('hidden'),2400); }
 
 /* ---------- Data ---------- */
-function defDB(){ return { profile:{name:'Paper Store',email:''}, products:[], sales:[], expenses:[], customers:[], printQueue:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
+function defDB(){ return { profile:{name:'Paper Store',email:'',logo:''}, products:[], sales:[], expenses:[], customers:[], printQueue:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
 function load(){ try{ DB=JSON.parse(localStorage.getItem(DB_KEY))||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; }
 function save(){ localStorage.setItem(DB_KEY,JSON.stringify(DB)); }
 
@@ -39,11 +39,17 @@ function showView(id){
 document.querySelectorAll('.tt').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 
 /* ---------- Profile / backup ---------- */
-function renderStoreName(){ $('store-name').textContent = DB.profile.name||'Paper Store'; }
+function renderStoreName(){ $('store-name').textContent = DB.profile.name||'Paper Store';
+  $('btn-profile').innerHTML = DB.profile.logo?`<img class="tb-logo" src="${DB.profile.logo}">`:'👤'; }
+window.setStoreLogo=input=>{ readImg(input.files[0],url=>{ if(!url) return;
+  DB.profile.logo=url; save(); renderStoreName(); $('btn-profile').click(); toast('✅ Store photo updated'); }); };
 $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
-  openSheet(`<div class="profile-top"><div class="pavatar">${esc(init)}</div>
-    <div><b style="font-size:19px">${esc(p.name||'Paper Store')}</b><div class="sub">${esc(p.email||'')}</div></div></div>
+  const av=p.logo?`<img src="${p.logo}">`:esc(init);
+  openSheet(`<div class="profile-top"><div class="pav-wrap"><div class="pavatar">${av}</div>
+    <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">📷</button></div>
+    <div><b style="font-size:19px">${esc(p.name||'Paper Store')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">✏️</button><div class="sub">${esc(p.email||'')}</div></div></div>
+    <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
     <div class="lbl" style="margin:10px 0">YOUR DATA</div>
     <div class="mrow" style="margin-bottom:6px">
       <button class="btn-ghost" onclick="cloudBackup()">☁️⬆️<br><b>Back up</b><br><small>Download file</small></button>
