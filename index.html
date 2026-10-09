@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Paper Stock</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ HEADER ============ -->
+  <header class="topbar">
+    <button id="btn-profile" class="icon-btn">👤</button>
+    <div class="store-name" id="store-name">Paper Store</div>
+    <button id="btn-backup" class="icon-btn" title="Backup">☁️⬆️</button>
+  </header>
+  <nav class="toptabs">
+    <button class="tt active" data-view="view-add">➕<span>ADD</span></button>
+    <button class="tt" data-view="view-sales">🏷️<span>SALES</span></button>
+    <button class="tt" data-view="view-stock">📦<span>STOCK</span></button>
+    <button class="tt" data-view="view-report">📋<span>REPORT</span></button>
+    <button class="tt" data-view="view-credit">📒<span>CREDIT</span></button>
+  </nav>
+
+  <!-- ============ ADD ============ -->
+  <section id="view-add" class="view active">
+    <div class="pad">
+      <div class="form-card">
+        <div class="photo-pick" id="add-photo-pick"><span>📷</span></div>
+        <input type="file" id="add-photo" accept="image/*" class="hidden">
+        <label class="fl">ITEM ID</label>
+        <div class="id-row"><input id="add-itemid" inputmode="numeric"><button class="link-btn" id="add-itemid-auto">AUTO</button></div>
+        <label class="fl">BRAND NAME</label>
+        <input id="add-brand" placeholder="e.g. Century Paper Mills">
+        <label class="fl">ITEM NAME</label>
+        <input id="add-name" placeholder="e.g. A4 Rim 80gsm">
+        <label class="fl">UNIT</label>
+        <select id="add-unit"><option>Rim</option><option>Ream</option><option>Kg</option><option>Bundle</option><option>Piece</option><option>Packet</option></select>
+        <label class="fl">QUANTITY</label>
+        <input id="add-qty" type="number" min="0" value="1">
+        <div class="two-col">
+          <div><label class="fl">COST PRICE</label><div class="pkr-wrap"><input id="add-cost" type="number" min="0" value="0"><span>PKR</span></div></div>
+          <div><label class="fl">SELLING PRICE</label><div class="pkr-wrap"><input id="add-sell" type="number" min="0" value="0"><span>PKR</span></div></div>
+        </div>
+        <label class="fl">Tax Percent</label>
+        <div class="pkr-wrap"><input id="add-tax" type="number" min="0" value="0"><span>%</span></div>
+        <p class="note">Ignore taxes if already included in cost price.</p>
+        <button id="btn-add-save" class="btn-save">SAVE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SALES ============ -->
+  <section id="view-sales" class="view">
+    <div class="pad">
+      <div class="white-card split-card">
+        <div><div class="lbl">Total sale till now</div><div class="big-num" id="s-total">PKR 0.00</div></div>
+        <div class="split-right"><div class="lbl">EXPENSES</div><div id="s-exp">PKR 0.00</div>
+        <div class="lbl" style="margin-top:8px">NET PROFIT</div><div class="green-num" id="s-profit">PKR 0.00</div></div>
+      </div>
+      <div class="white-card">
+        <div class="seg"><button class="seg-btn active" id="seg-sale">🛒 Sale</button><button class="seg-btn" id="seg-exp">📋 Expense</button></div>
+        <div id="sale-form">
+          <h3>Sold details <button class="date-pill" id="sale-date-pill">📅 <span id="sale-date-txt"></span> ▾</button></h3>
+          <input type="date" id="sale-date" class="hidden">
+          <p class="note">Tap the date to back-date.</p>
+          <div class="search-wrap">🔍 <input id="sale-psearch" placeholder="Product ID / Name"></div>
+          <div id="sale-pick-list"></div>
+          <input id="sale-qty" type="number" min="1" value="1" placeholder="Quantity sold">
+          <input id="sale-total-in" type="number" min="0" placeholder="Sold at (Total Price)">
+          <button class="link-btn" id="sale-add-cust">+ Add customer name</button>
+          <input id="sale-cust" class="hidden" placeholder="Customer name">
+          <button id="btn-sold" class="btn-save blue">SOLD</button>
+        </div>
+        <div id="exp-form" class="hidden">
+          <h3>Expense details</h3>
+          <input id="exp-title" placeholder="e.g. Shop rent, Transport">
+          <input id="exp-amt" type="number" min="0" placeholder="Amount (PKR)">
+          <button id="btn-exp-add" class="btn-save blue">ADD EXPENSE</button>
+        </div>
+      </div>
+      <div class="row-between"><h3 id="sales-day-title">Today · 0 sales</h3></div>
+      <div id="sales-day-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ STOCK ============ -->
+  <section id="view-stock" class="view">
+    <div class="pad">
+      <div class="white-card"><div class="lbl">Total stock cost</div><div class="big-num" id="st-cost">PKR 0.00</div><div class="sub" id="st-count">0 items</div></div>
+      <div class="search-row"><div class="search-wrap grow">🔍 <input id="stock-search" placeholder="Search by name or ID..."></div></div>
+      <div class="chips" id="stock-chips">
+        <button class="chip active" data-f="all">All</button>
+        <button class="chip" data-f="in">In stock</button>
+        <button class="chip" data-f="low">Low stock</button>
+        <button class="chip" data-f="out">Out</button>
+      </div>
+      <div id="stock-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ REPORT ============ -->
+  <section id="view-report" class="view">
+    <div class="pad">
+      <div class="rep-top">
+        <button class="period-btn" id="btn-period">📅 <span><small>PERIOD</small><b id="period-txt">Oct 2026</b></span> ▾</button>
+        <button class="export-btn" id="btn-export-csv">⬇ Export</button>
+      </div>
+      <div class="two-cards">
+        <div class="white-card"><div class="lbl">SALES</div><div class="big-num">PKR <span id="r-sales">0.00</span></div><div class="red-sub" id="r-vs"></div></div>
+        <div class="white-card"><div class="lbl">PROFIT ⓘ</div><div class="big-num green-num">PKR <span id="r-profit">0.00</span></div><div class="sub" id="r-margin"></div></div>
+      </div>
+      <div class="avg-line" id="r-avg"></div>
+      <div class="white-card">
+        <div class="row-between"><div class="lbl">DAILY SALES</div>
+          <div class="seg small"><button class="seg-btn active" id="ch-sales">Sales</button><button class="seg-btn" id="ch-profit">Profit</button></div></div>
+        <div class="lbl" id="chart-month"></div>
+        <div class="bar-chart" id="bar-chart"></div>
+      </div>
+      <div class="row-between"><h3>Sales history</h3><button class="link-btn" id="rep-show-all">Show all</button></div>
+      <div id="rep-history"></div>
+    </div>
+  </section>
+
+  <!-- ============ CREDIT ============ -->
+  <section id="view-credit" class="view">
+    <div class="pad">
+      <div class="white-card"><div class="lbl">Total credit remaining (Udhaar)</div><div class="big-num red-num" id="c-total">PKR 0.00</div><div class="sub" id="c-count"></div></div>
+      <div class="search-row"><div class="search-wrap grow">🔍 <input id="credit-search" placeholder="Search name or ID..."></div>
+        <button class="btn-add" id="btn-add-credit">＋</button></div>
+      <div id="credit-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ SHEETS / MODALS ============ -->
+  <div id="sheet" class="sheet hidden"><div class="sheet-box" id="sheet-box"></div></div>
+  <div id="toast" class="toast hidden"></div>
+</div>
+<script src="app.js?v=1"></script>
+</body>
+</html>
