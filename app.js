@@ -130,7 +130,9 @@ $('sale-date-pill').onclick=()=>$('sale-date').click();
 $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sale-date-txt').textContent=fmtDate(saleDate); } };
 $('sale-psearch').oninput=e=>renderSalePick(e.target.value.toLowerCase());
 function renderSalePick(q){
-  const list=DB.products.filter(p=>p.qty>0&&(p.name.toLowerCase().includes(q)||String(p.itemId).includes(q))).slice(0,8);
+  let list=[];
+  if(q) list=DB.products.filter(p=>p.qty>0&&(p.name.toLowerCase().includes(q)||String(p.itemId).includes(q))).slice(0,8);
+  else if(salePickId){ const sp=DB.products.find(p=>p.id===salePickId); if(sp) list=[sp]; }
   $('sale-pick-list').innerHTML=list.map(p=>`
     <div class="pick-item ${salePickId===p.id?'sel':''}" onclick="pickSale(${p.id})">
       ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">${pkr(p.sell)} / ${esc(p.unit)} • left: ${p.qty}</div></div>
