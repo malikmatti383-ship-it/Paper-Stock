@@ -14,7 +14,14 @@ function save(){ localStorage.setItem(DB_KEY,JSON.stringify(DB)); }
 
 /* ---------- Sheet / modal ---------- */
 function openSheet(html){ $('sheet-box').innerHTML=html; $('sheet').classList.remove('hidden'); }
-function closeSheet(){ $('sheet').classList.add('hidden'); $('sheet-box').innerHTML=''; }
+function closeSheet(){ $('sheet').classList.add('hidden'); $('sheet').classList.remove('center'); $('sheet-box').innerHTML=''; }
+function openDlg(html){ $('sheet-box').innerHTML=html; $('sheet').classList.add('center'); $('sheet').classList.remove('hidden'); }
+function confirmDlg(title,msg,okLabel,cb){
+  openDlg(`<div class="dlg"><h2>${title}</h2><p>${msg}</p>
+  <div class="dlg-btns"><button class="dlg-cancel" onclick="closeSheet()">CANCEL</button>
+  <button class="dlg-ok" id="dlg-ok">${okLabel}</button></div></div>`);
+  $('dlg-ok').onclick=()=>{ closeSheet(); cb(); };
+}
 $('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
 
 /* ---------- Nav ---------- */
@@ -216,16 +223,35 @@ $('btn-sold').onclick=()=>{
   save(); saleCart=[]; renderSaleCart(); clearStaging(); $('sale-cust').value='';
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
 };
-/* ---- Return a sale: stock wapas, sale removed ---- */
+/* ---- Return: single item or whole bundle (NADIR style) ---- */
+window.returnItem=(saleId,ix)=>{
+  const s=DB.sales.find(x=>x.id===saleId); if(!s) return;
+  const its=saleItems(s), it=its[ix]; if(!it) return;
+  confirmDlg('Return Item?','This will return the item to your inventory stock.','RETURN',()=>{
+    const p=DB.products.find(x=>x.id===it.productId); if(p) p.qty+=it.qty;
+    s.total=Math.round((s.total-it.qty*it.price)*100)/100;
+    s.qty-=it.qty;
+    if(s.items&&s.items.length){ s.items.splice(ix,1); }
+    if(!s.items||!s.items.length){
+      DB.sales=DB.sales.filter(x=>x.id!==saleId);
+      DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId);
+    } else {
+      const left=saleItems(s);
+      s.name=left.length===1?left[0].name:(left.length+' items');
+    }
+    save(); renderSales(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
+    toast('↩️ Item returned to stock');
+  });
+};
 window.returnSale=id=>{
-  const ix=DB.sales.findIndex(s=>s.id===id); if(ix<0) return;
-  const s=DB.sales[ix];
-  if(!confirm('↩️ Return this sale?\n'+s.name+' × '+s.qty+' — '+pkr(s.total)+'\nStock wapas aa jayega.')) return;
-  s.items.forEach(it=>{ const p=DB.products.find(x=>x.id===it.productId); if(p) p.qty+=it.qty; });
-  DB.sales.splice(ix,1);
-  DB.printQueue=DB.printQueue.filter(q=>q.saleId!==id);
-  save(); renderSales(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
-  toast('↩️ Returned — stock restored');
+  const s=DB.sales.find(x=>x.id===id); if(!s) return;
+  confirmDlg('Return Bundle?','This will return all items to your inventory stock.','RETURN',()=>{
+    saleItems(s).forEach(it=>{ const p=DB.products.find(x=>x.id===it.productId); if(p) p.qty+=it.qty; });
+    DB.sales=DB.sales.filter(x=>x.id!==id);
+    DB.printQueue=DB.printQueue.filter(q=>q.saleId!==id);
+    save(); renderSales(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
+    toast('↩️ Bundle returned — stock restored');
+  });
 };
 $('btn-exp-add').onclick=()=>{
   const a=Math.max(0,parseFloat($('exp-amt').value)||0);
@@ -236,16 +262,29 @@ $('btn-exp-add').onclick=()=>{
 };
 $('day-prev').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()-1); saleDay=dstr(d); renderDaySales(); };
 $('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()+1); if(dstr(d)>dstr()){toast('Future nahi!');return;} saleDay=dstr(d); renderDaySales(); };
+let expSaleId=null;
+window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales(); };
+function hhmm(ts){ try{ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
+function saleItems(s){ return (s.items&&s.items.length)?s.items:[{qty:s.qty||0,price:(s.total||0)/Math.max(1,s.qty||1),name:s.name,productId:s.productId}]; }
 function renderDaySales(){
   const list=DB.sales.filter(s=>s.date===saleDay).reverse();
   const exps=DB.expenses.filter(e=>e.date===saleDay).reverse();
   const dlbl=saleDay===dstr()?'Today':fmtDate(saleDay);
   $('sales-day-title').textContent=dlbl+' · '+list.length+' sales';
-  const saleRows=list.map(s=>`
-    <div class="hist-row"><div><div class="d">${esc(s.name)} × ${s.qty}</div><div class="sub">${esc(s.customer||'')}</div></div>
-    <div style="display:flex;align-items:center;gap:4px"><div class="a">${pkr(s.total)}</div>
-    <button class="printer-mini" onclick="event.stopPropagation();returnSale(${s.id})" title="Return">↩️</button>
-    <button class="printer-mini" onclick="event.stopPropagation();printSale(${s.id})" title="Print">🖨️</button></div></div>`).join('');
+  const saleRows=list.map(s=>{
+    const its=saleItems(s), open=expSaleId===s.id;
+    const sub=its.length>1?its.length+' items':'× '+s.qty;
+    const det=open?`<div class="sale-det">`+its.map((it,ix)=>`
+      <div class="sdet-row"><div><b>${esc(it.name||s.name)}</b><div class="sub">${it.qty} × ${pkr(it.price)}</div></div>
+      <div class="sdet-r"><b>${pkr(it.qty*it.price)}</b>
+      <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`).join('')+
+      `<button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
+       <button class="mini-act" onclick="event.stopPropagation();printSale(${s.id})">🖨️ Print receipt</button></div>`:'';
+    return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
+      <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}<span class="t">${hhmm(s.ts)}</span></div>
+      <div class="sub">${sub}${s.customer?' · '+esc(s.customer):''}</div></div>
+      <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
+  }).join('');
   const expRows=exps.map(e=>`
     <div class="hist-row exp-row"><div><div class="d">📋 ${esc(e.title)}</div><div class="sub" style="color:var(--red)">Expense</div></div>
     <div class="a">− ${pkr(e.amount)}</div></div>`).join('');
