@@ -453,14 +453,19 @@ $('btn-add-credit').onclick=()=>{
     <div><input id="cc-disc" type="number" placeholder="Discount rate"></div></div>
     <div class="two-col"><div><input id="cc-qty" type="number" value="1" min="1" placeholder="Qty"></div>
     <div><input id="cc-credit" type="number" placeholder="Credit amount PKR"></div></div>
+    <div class="red-sub hidden" id="cc-stock-warn"></div>
     <div class="sub" id="cc-cost-note"></div>
     <div class="two-col"><div><label class="fl" style="margin-top:4px">Promise date</label><input id="cc-promise" type="date"></div>
     <div><label class="fl" style="margin-top:4px">Promise time</label><input id="cc-ptime" type="time" value="10:00"></div></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button><button class="btn-go" onclick="saveCredit()">Save</button></div>`);
   $('cc-psearch').oninput=e=>{ credPickQ=e.target.value.toLowerCase(); renderCredPick(); };
   renderCredPick();
+  const stockWarn=()=>{ const w=$('cc-stock-warn'); if(!w) return;
+    const p=DB.products.find(x=>x.id===credPickId), q=parseFloat($('cc-qty').value)||1;
+    if(p&&q>p.qty){ w.textContent='⚠️ Only '+p.qty+' in stock!'; w.classList.remove('hidden'); }
+    else { w.textContent=''; w.classList.add('hidden'); } };
   const calc=()=>{ const r=parseFloat($('cc-rate').value)||0, d=parseFloat($('cc-disc').value)||0, q=parseFloat($('cc-qty').value)||1;
-    $('cc-credit').value=Math.max(0,(r-d)*q).toFixed(0); };
+    $('cc-credit').value=Math.max(0,(r-d)*q).toFixed(0); stockWarn(); };
   $('cc-rate').oninput=calc; $('cc-disc').oninput=calc; $('cc-qty').oninput=calc;
 };
 function renderCredPick(){
@@ -478,19 +483,22 @@ window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   $('cc-cost-note').textContent='Buy cost: '+pkr(p.cost)+' / '+p.unit+' · Profit: '+pkr(p.sell-p.cost);
   const q=parseFloat($('cc-qty').value)||1, d=parseFloat($('cc-disc').value)||0;
   $('cc-credit').value=Math.max(0,(p.sell-d)*q).toFixed(0);
-  renderCredPick(); };
+  stockWarn(); renderCredPick(); };
 window.saveCredit=()=>{
   const name=$('cc-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
   const cid=parseInt($('cc-id').value)||DB.seq.c;
   const camt=Math.max(0,parseFloat($('cc-credit').value)||0);
+  const qty=parseFloat($('cc-qty').value)||1;
+  const p=DB.products.find(x=>x.id===credPickId); // stock link: picked product
+  if(p){ if(qty>p.qty){ toast('⚠️ Only '+p.qty+' "'+p.name+'" in stock!'); return; } p.qty-=qty; }
   DB.customers.push({ id:DB.seq.c++, custId:cid, name, phone:$('cc-phone').value.trim(),
     product:$('cc-product').value.trim(), saleRate:parseFloat($('cc-rate').value)||0, discount:parseFloat($('cc-disc').value)||0,
-    qty:parseFloat($('cc-qty').value)||1,
+    qty,
     credit:camt, received:0,
     promiseDate:$('cc-promise').value||'', promiseTime:$('cc-ptime').value||'',
     log:[{t:'Credit',a:camt,d:dstr()}] });
   if(cid>=DB.seq.c) DB.seq.c=cid+1;
-  save(); closeSheet(); renderCredit(); updateBellBadge(); toast('✅ Credit saved');
+  save(); closeSheet(); renderCredit(); renderStock(); updateBellBadge(); toast('✅ Credit saved');
 };
 window.creditDetail=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
