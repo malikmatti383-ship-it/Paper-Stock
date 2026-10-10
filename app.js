@@ -94,25 +94,31 @@ window.setStoreLogo=input=>{ readImg(input.files[0],url=>{ if(!url) return;
   DB.profile.logo=url; save(); renderStoreName(); $('btn-profile').click(); toast('✅ Store photo updated'); }); };
 /* ================= APP THEMES ================= */
 const THEMES=[
- {id:'ocean',name:'Ocean Blue',g:'linear-gradient(135deg,#0a2463,#3b82f6)'},
- {id:'emerald',name:'Emerald Green',g:'linear-gradient(135deg,#0b5e3f,#12b76a)'},
- {id:'purple',name:'Royal Purple',g:'linear-gradient(135deg,#3b1470,#7c3aed)'},
- {id:'orange',name:'Sunset Orange',g:'linear-gradient(135deg,#7c2d12,#dd7a1f)'},
- {id:'midnight',name:'Midnight Gold',g:'linear-gradient(135deg,#0b1220,#344054)'},
- {id:'red',name:'Cherry Red',g:'linear-gradient(135deg,#450a0a,#dc2626)'},
- {id:'pink',name:'Rose Pink',g:'linear-gradient(135deg,#500f28,#db2777)'},
- {id:'brown',name:'Coffee Brown',g:'linear-gradient(135deg,#2b1a10,#8b5a2b)'},
- {id:'olive',name:'Olive Green',g:'linear-gradient(135deg,#1a2e05,#65a30d)'},
- {id:'wine',name:'Wine Burgundy',g:'linear-gradient(135deg,#2a060f,#b91c3a)'},
- {id:'sunset',name:'Sunset Glow',g:'linear-gradient(135deg,#6d28d9,#f59e0b)'},
- {id:'grey',name:'Slate Grey',g:'linear-gradient(135deg,#111827,#6b7280)'},
- {id:'cyan',name:'Aqua Cyan',g:'linear-gradient(135deg,#083344,#22d3ee)'},
- {id:'classic',name:'Classic Blue',g:'linear-gradient(135deg,#0c5da6,#0fa9cd)'},
+ {id:'ocean',name:'Ocean Blue',g:'linear-gradient(135deg,#102c6b,#4a86f5)'},
+ {id:'emerald',name:'Emerald Green',g:'linear-gradient(135deg,#0f6b49,#16c475)'},
+ {id:'purple',name:'Royal Purple',g:'linear-gradient(135deg,#471c7d,#875ff0)'},
+ {id:'orange',name:'Sunset Orange',g:'linear-gradient(135deg,#8a3a1c,#e5862c)'},
+ {id:'midnight',name:'Midnight Gold',g:'linear-gradient(135deg,#131c2e,#3e4c60)'},
+ {id:'red',name:'Cherry Red',g:'linear-gradient(135deg,#521010,#e03232)'},
+ {id:'pink',name:'Rose Pink',g:'linear-gradient(135deg,#5c1630,#e03283)'},
+ {id:'brown',name:'Coffee Brown',g:'linear-gradient(135deg,#362115,#976637)'},
+ {id:'olive',name:'Olive Green',g:'linear-gradient(135deg,#223a08,#70b012)'},
+ {id:'wine',name:'Wine Burgundy',g:'linear-gradient(135deg,#360b14,#c42544)'},
+ {id:'sunset',name:'Sunset Glow',g:'linear-gradient(135deg,#7933e0,#f7a716)'},
+ {id:'grey',name:'Slate Grey',g:'linear-gradient(135deg,#1a2332,#78828f)'},
+ {id:'cyan',name:'Aqua Cyan',g:'linear-gradient(135deg,#0d3d52,#2fd8f2)'},
+ {id:'classic',name:'Classic Blue',g:'linear-gradient(135deg,#1268b1,#14b2d6)'},
 ];
 function curTheme(){ const id=DB&&DB.profile&&DB.profile.theme; return THEMES.some(x=>x.id===id)?id:'ocean'; }
 function applyTheme(id){ document.body.dataset.theme=id; }
-window.setTheme=id=>{ if(!THEMES.some(x=>x.id===id)) return; DB.profile.theme=id; save(); applyTheme(id); $('btn-profile').click(); toast('🎨 Theme: '+THEMES.find(x=>x.id===id).name); };
-function themeDots(){ const c=curTheme(); return THEMES.map(x=>`<button class="theme-dot${x.id===c?' sel':''}" title="${x.name}" style="background:${x.g}" onclick="setTheme('${x.id}')">${x.id===c?'<span class="tk">✓</span>':''}</button>`).join(''); }
+function themeName(id){ const x=THEMES.find(y=>y.id===id); return x?x.name:'Ocean Blue'; }
+window.setTheme=id=>{ if(!THEMES.some(x=>x.id===id)) return; DB.profile.theme=id; save(); applyTheme(id); openThemePicker(); };
+window.openThemePicker=()=>{
+  const c=curTheme();
+  openSheet(`<h3>🎨 Colors Theme</h3><div class="sub" style="margin-bottom:8px">Pick a theme — it stays until you change it.</div>`+
+   THEMES.map(x=>`<div class="menu-row" onclick="setTheme('${x.id}')"><span class="ic"><span class="theme-dot sm" style="background:${x.g}"></span></span><span>${x.name}</span>${x.id===c?'<span class="arw" style="color:var(--teal)">✓</span>':'<span class="arw">›</span>'}</div>`).join('')+
+   `<div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
+};
 $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
   const av=p.logo?`<img src="${p.logo}">`:esc(init);
@@ -126,8 +132,7 @@ $('btn-profile').onclick=()=>{
       <button class="btn-ghost" onclick="$('import-file').click()">⬇️<br><b>Restore</b><br><small>From file</small></button>
     </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
-    <div class="lbl" style="margin:10px 0 2px">APP THEME</div>
-    <div class="theme-grid">${themeDots()}</div>
+    <div class="menu-row" onclick="openThemePicker()"><span class="ic">🎨</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">🗑️</span> Delete all data<span class="arw">›</span></div>
