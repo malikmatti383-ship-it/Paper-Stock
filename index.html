@@ -37,12 +37,23 @@
   <section id="view-add" class="view">
     <div class="pad">
       <div class="form-card">
-        <div class="photo-pick" id="add-photo-pick"><span>📷</span></div>
+        <div class="photo-row">
+          <div class="photo-pick" id="add-photo-pick"><span>📷</span></div>
+          <div class="photo-opts">
+            <button class="photo-opt" id="opt-cam">📷 Camera</button>
+            <button class="photo-opt" id="opt-gal">🖼️ Gallery</button>
+          </div>
+        </div>
         <input type="file" id="add-photo" accept="image/*" class="hidden">
-        <label class="fl">ITEM ID</label>
-        <div class="id-row"><input id="add-itemid" inputmode="numeric"><button class="link-btn" id="add-itemid-auto">AUTO</button></div>
-        <label class="fl">BRAND NAME</label>
-        <input id="add-brand" placeholder="e.g. Century Paper Mills">
+        <input type="file" id="add-photo-cam" accept="image/*" capture="environment" class="hidden">
+        <div class="two-col">
+          <div><label class="fl">ITEM ID</label>
+            <div class="id-row"><input id="add-itemid" inputmode="numeric"><button class="link-btn" id="add-itemid-auto">AUTO</button></div>
+          </div>
+          <div><label class="fl">BRAND NAME</label>
+            <input id="add-brand" placeholder="e.g. Century">
+          </div>
+        </div>
         <label class="fl">ITEM NAME</label>
         <input id="add-name" placeholder="e.g. A4 Rim 80gsm">
         <label class="fl">UNIT</label>
@@ -155,7 +166,7 @@
   <div id="toast" class="toast hidden"></div>
   <div id="print-area"></div>
 </div>
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
