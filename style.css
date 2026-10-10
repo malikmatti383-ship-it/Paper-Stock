@@ -327,3 +327,6 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 /* v23: theme glow on primary action buttons */
 .btn-save{box-shadow:0 6px 16px color-mix(in srgb, var(--pp-teal) 30%, transparent)}
 .btn-save.blue{background:linear-gradient(180deg,var(--pp-teal-l),var(--pp-teal));box-shadow:0 8px 22px color-mix(in srgb, var(--pp-teal) 55%, transparent)}
+
+/* v25: primary buttons = rounded pill, 80% width */
+.btn-save{width:80%;margin:14px auto 0;border-radius:999px}
