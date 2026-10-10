@@ -202,8 +202,9 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 /* Print area */
 #print-area{display:none}
 @media print{
+  html,body{background:#fff!important}
   #app{display:none!important}
-  #print-area{display:block!important;color:#000}
+  #print-area{display:block!important;color:#000;background:#fff}
   .receipt{font-family:monospace;width:72mm;margin:0 auto;padding:4mm 2mm;font-size:12px;line-height:1.5}
   .billprint{font-family:Arial,Helvetica,sans-serif;color:#000}
   .billprint .bp-banner{color:#fff;text-align:center;padding:16px 8px 14px;border-radius:0 0 18px 18px;margin-bottom:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
