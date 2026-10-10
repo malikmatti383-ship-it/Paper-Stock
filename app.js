@@ -281,7 +281,7 @@ $('btn-add-item').onclick=()=>{
   saleCart.push(it); clearStaging();
   renderSaleCart(); toast('✅ Added: '+it.name);
 };
-$('sale-add-cust').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden'); $('sale-cust').focus(); };
+$('sale-add-cust').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-cust-phone').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden'); $('sale-cust').focus(); };
 $('btn-sold').onclick=()=>{
   const lines=[...saleCart];
   const st=stageLine();
@@ -307,10 +307,10 @@ $('btn-sold').onclick=()=>{
   const sale={id:DB.seq.s++, productId:lines.length===1?lines[0].productId:null,
     name:lines.length===1?lines[0].name:(lines.length+' items'), brand:firstBrand,
     qty:lines.reduce((s,l)=>s+l.qty,0), total:bill,
-    customer:$('sale-cust').value.trim(), date:saleDate, ts:new Date(saleDate+'T12:00').getTime(), items};
+    customer:$('sale-cust').value.trim(), phone:$('sale-cust-phone').value.trim(), date:saleDate, ts:new Date(saleDate+'T12:00').getTime(), items};
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
-  save(); saleCart=[]; renderSaleCart(); clearStaging(); $('sale-cust').value='';
+  save(); saleCart=[]; renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
 };
 /* ---- Return: single item or whole bundle (NADIR style) ---- */
