@@ -33,7 +33,7 @@ function applyRemote(data,updatedAt){
     renderStoreName();
     const av=document.querySelector('.view.active'); if(av) showView(av.id);
   }finally{ applyingRemote=false; }
-  toast('☁️ Cloud sync ho gaya');
+  toast('☁️ Cloud synced');
 }
 function authSection(){
   if(!window.PaperAuth||!PaperAuth.isConfigured()) return '';
@@ -242,7 +242,7 @@ function clearStaging(){ salePickId=null; $('sale-psearch').value=''; $('sale-co
 $('btn-add-item').onclick=()=>{
   const it=stageLine();
   if(it==='err') return;
-  if(!it){ toast('Search karke product select karo'); return; }
+  if(!it){ toast('Search and select a product first'); return; }
   saleCart.push(it); clearStaging();
   renderSaleCart(); toast('✅ Added: '+it.name);
 };
@@ -316,7 +316,7 @@ $('btn-exp-add').onclick=()=>{
   save(); $('exp-title').value=''; $('exp-amt').value=''; renderSales(); toast('✅ Expense added (-'+pkr(a)+')');
 };
 $('day-prev').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()-1); saleDay=dstr(d); renderDaySales(); };
-$('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()+1); if(dstr(d)>dstr()){toast('Future nahi!');return;} saleDay=dstr(d); renderDaySales(); };
+$('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()+1); if(dstr(d)>dstr()){toast('Future date not allowed');return;} saleDay=dstr(d); renderDaySales(); };
 let expSaleId=null;
 window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales(); };
 function hhmm(ts){ try{ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
@@ -490,7 +490,7 @@ function renderCredit(){
     return `<div class="cust-card" onclick="creditDetail(${c.id})">
       <div class="nm">${esc(c.name)} <span class="sub">ID ${c.custId}</span></div>
       <div class="meta">📞 ${esc(c.phone||'—')}${c.product?' · 📄 '+esc(c.product):''}</div>
-      <div class="bal">Baqaya: ${pkr(b)}</div>
+      <div class="bal">Balance: ${pkr(b)}</div>
       ${c.promiseDate?`<div class="pd">⏰ Promise: ${fmtDate(c.promiseDate)}</div>`:''}
     </div>`; }).join('')||'<p class="note" style="color:#fff">No credit customers yet</p>';
 }
@@ -563,13 +563,13 @@ window.creditDetail=id=>{
     ${c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:''}
     ${c.saleRate?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
-    <div class="kv"><span>💰 Credit (Udhaar)</span><b>${pkr(c.credit)}</b></div>
-    <div class="kv"><span>💵 Received (Wusool)</span><b>${pkr(c.received)}</b></div>
-    <div class="kv"><span>📌 Remaining (Baqaya)</span><b style="color:var(--red)">${pkr(b)}</b></div>
+    <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
+    <div class="kv"><span>💵 Received</span><b>${pkr(c.received)}</b></div>
+    <div class="kv"><span>📌 Balance due</span><b style="color:var(--red)">${pkr(b)}</b></div>
     ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
     <div class="mrow">
-      <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Wusool</button>
-      <button class="btn-ghost" onclick="addCreditMore(${c.id})">➕ Udhaar</button>
+      <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Receive</button>
+      <button class="btn-ghost" onclick="addCreditMore(${c.id})">➕ Add credit</button>
     </div>
     <div class="msg-btns">
       <button class="msg-btn wa" onclick="sendMsg(${c.id},'wa')">💬 WhatsApp</button>
@@ -580,16 +580,16 @@ window.creditDetail=id=>{
 };
 window.addWusool=id=>{
   const c=DB.customers.find(x=>x.id===id);
-  openSheet(`<h3>💵 Wusool — ${esc(c.name)}</h3><div class="sub">Baqaya: ${pkr(custBal(c))}</div>
+  openSheet(`<h3>💵 Receive — ${esc(c.name)}</h3><div class="sub">Balance due: ${pkr(custBal(c))}</div>
     <input id="w-amt" type="number" placeholder="Amount received">
     <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveWusool(${id})">Save</button></div>`);
 };
 window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('w-amt').value)||0); if(!a){toast('Enter amount');return;}
-  c.received+=a; c.log.push({t:'Wusool',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
+  c.received+=a; c.log.push({t:'Received',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
 window.addCreditMore=id=>{
   const c=DB.customers.find(x=>x.id===id);
-  openSheet(`<h3>➕ More Udhaar — ${esc(c.name)}</h3>
+  openSheet(`<h3>➕ Add credit — ${esc(c.name)}</h3>
     <input id="m-amt" type="number" placeholder="Credit amount">
     <input id="m-prod" placeholder="Product (optional)" value="${esc(c.product||'')}">
     <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveCreditMore(${id})">Save</button></div>`);
@@ -597,7 +597,7 @@ window.addCreditMore=id=>{
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
   c.credit+=a; if($('m-prod').value.trim()) c.product=$('m-prod').value.trim();
-  c.log.push({t:'Credit',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ Udhaar added'); };
+  c.log.push({t:'Credit',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
 window.delCustomer=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(confirm('Delete "'+c.name+'"?')){ DB.customers=DB.customers.filter(x=>x.id!==id); save(); closeSheet(); renderCredit(); } };
 /* WhatsApp / SMS with balance message (per sketch) */
@@ -609,7 +609,7 @@ window.sendMsg=(id,kind)=>{
   const msg=`Assalam-o-Alaikum ${c.name}!\n${DB.profile.name} se apka khata:\n`+
     `ID: ${c.custId}\n`+(c.product?`Item: ${c.product}\n`:'')+
     (cdate?`Date: ${cdate}\n`:'')+
-    `Diya (credit): ${pkr(c.credit)}\nWusool: ${pkr(c.received)}\nBaqaya balance: ${pkr(b)}`+
+    `Credit given: ${pkr(c.credit)}\nReceived: ${pkr(c.received)}\nBalance due: ${pkr(b)}`+
     (c.promiseDate?`\nPromise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''}`:'');
   let num=c.phone.replace(/[^0-9]/g,'');
   if(num.startsWith('0')) num='92'+num.slice(1);
@@ -647,7 +647,7 @@ $('btn-bell').onclick=()=>{
       <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>
     </div>
     <div id="bell-send" class="hidden">
-      <p class="note">Select customers, phir Send dabao — WhatsApp ek-ek karke khulega (message ready hoga).</p>
+      <p class="note">Select customers, then tap Send — WhatsApp will open one by one (message will be ready).</p>
       <div class="search-wrap">🔍 <input id="bulk-search" placeholder="Search ID or name..."></div>
       <label class="check-row"><input type="checkbox" id="bulk-all" onchange="bulkToggleAll(this.checked)"> <b>Select all</b></label>
       <div id="bulk-list"></div>
@@ -660,7 +660,7 @@ $('btn-bell').onclick=()=>{
       <div style="margin:6px 0">⏰ Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</div>
       <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} lena hai</div>
       <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button></div></div>`).join('')
-      :'<p class="note">Koi reminder nahi hai. Promise time guzarne par yahan ayega.</p>';
+      :'<p class="note">No reminders. Overdue promises will appear here.</p>';
   };
   renderRemList('');
   $('rem-search').oninput=e=>renderRemList(e.target.value.toLowerCase());
@@ -668,7 +668,7 @@ $('btn-bell').onclick=()=>{
     const list=withBal.filter(c=>(c.name||'').toLowerCase().includes(q)||String(c.custId).includes(q));
     $('bulk-list').innerHTML=list.map(c=>`
       <label class="check-row"><input type="checkbox" class="bulk-cb" value="${c.id}">
-      <span><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span><br><span style="color:var(--red);font-weight:700">${pkr(custBal(c))}</span></span></label>`).join('')||'<p class="note">Koi baqaya nahi</p>';
+      <span><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span><br><span style="color:var(--red);font-weight:700">${pkr(custBal(c))}</span></span></label>`).join('')||'<p class="note">No pending dues</p>';
   };
   renderBulkList('');
   $('bulk-search').oninput=e=>renderBulkList(e.target.value.toLowerCase());
@@ -679,12 +679,12 @@ window.bulkToggleAll=on=>{ document.querySelectorAll('.bulk-cb').forEach(cb=>cb.
 let bulkQueue=[], bulkActive=false;
 window.bulkSend=()=>{
   bulkQueue=[...document.querySelectorAll('.bulk-cb:checked')].map(cb=>parseInt(cb.value));
-  if(!bulkQueue.length){ toast('Koi customer select nahi!'); return; }
-  bulkActive=true; closeSheet(); toast('WhatsApp khul raha hai... ('+bulkQueue.length+')');
+  if(!bulkQueue.length){ toast('Select a customer first'); return; }
+  bulkActive=true; closeSheet(); toast('Opening WhatsApp... ('+bulkQueue.length+')');
   setTimeout(bulkNext,600);
 };
 function bulkNext(){
-  if(!bulkQueue.length){ bulkActive=false; toast('✅ Sab ko bhej diya!'); return; }
+  if(!bulkQueue.length){ bulkActive=false; toast('✅ Sent to all!'); return; }
   const id=bulkQueue.shift();
   const c=DB.customers.find(x=>x.id===id);
   if(c&&c.phone){ openWA(c); } else bulkNext();
@@ -694,7 +694,7 @@ function openWA(c){
   const cdate=(c.log&&c.log[0]&&c.log[0].d)?fmtDate(c.log[0].d):'';
   const msg=`Assalam-o-Alaikum ${c.name}!\n${DB.profile.name} se apka khata:\nID: ${c.custId}\n`+
     (c.product?`Item: ${c.product}\n`:'')+(cdate?`Date: ${cdate}\n`:'')+
-    `Diya: ${pkr(c.credit)}\nWusool: ${pkr(c.received)}\nBaqaya: ${pkr(b)}`+
+    `Credit: ${pkr(c.credit)}\nReceived: ${pkr(c.received)}\nBalance due: ${pkr(b)}`+
     (c.promiseDate?`\nPromise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''}`:'');
   let num=c.phone.replace(/[^0-9]/g,''); if(num.startsWith('0')) num='92'+num.slice(1);
   window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
@@ -712,7 +712,7 @@ function checkReminders(){
       const sameDay=last&&last.toDateString()===now.toDateString();
       if(dt<=now&&!sameDay){
         c.lastRemind=now.toISOString();
-        const msg=`⏰ ${c.name} se ${pkr(custBal(c))} wusool karna hai! (Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''})`;
+        const msg=`⏰ Collect ${pkr(custBal(c))} from ${c.name}! (Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''})`;
         if('Notification' in window&&Notification.permission==='granted'){ try{ new Notification('Paper Stock ⏰',{body:msg}); }catch(e){} }
         toast(msg);
       }
@@ -751,7 +751,7 @@ $('btn-printer').onclick=()=>{
     return `<label class="check-row"><input type="checkbox" class="pq-cb" value="${q.qid}">
     <span><b>#${s.id} ${esc(s.name)} × ${s.qty}</b><br><span class="sub">${fmtDate(s.date)} · ${pkr(s.total)}</span></span></label>`; }).join('');
   openSheet(`<h3>🖨️ Pending Prints (${pend.length})</h3>
-    ${rows||'<p class="note">Koi pending print nahi!</p>'}
+    ${rows||'<p class="note">No pending prints!</p>'}
     <div class="mrow"><button class="btn-ghost" onclick="pqSelectAll(true)">Select all</button>
     <button class="btn-ghost" onclick="pqSelectAll(false)">Clear</button></div>
     <div class="mrow"><button class="btn-go" onclick="pqPrintSel()">🖨️ Print Selected</button>
