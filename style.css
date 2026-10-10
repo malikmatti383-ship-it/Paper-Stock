@@ -207,13 +207,13 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
   #print-area{display:block!important;color:#000;background:#fff}
   .receipt{font-family:monospace;width:72mm;margin:0 auto;padding:4mm 2mm;font-size:12px;line-height:1.5}
   .billprint{font-family:Arial,Helvetica,sans-serif;color:#000}
-  .billprint .bp-banner{color:#fff;text-align:center;padding:16px 8px 14px;border-radius:0 0 18px 18px;margin-bottom:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .billprint .bp-name{font-size:26px;font-weight:800;letter-spacing:2px}
+  .billprint .bp-banner{color:#fff;text-align:center;padding:26px 8px 24px;border-radius:0;margin:0 0 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .billprint .bp-name{font-size:30px;font-weight:800;letter-spacing:2px}
   .billprint .bp-sub{font-size:12px;margin-top:4px}
   .billprint .bp-meta{display:flex;justify-content:space-between;font-size:14px;margin:5px 0}
   .billprint .bp-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
-  .billprint .bp-table th{color:#fff;padding:7px 6px;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .billprint .bp-table td{border:1px solid #999;padding:6px 6px}
+  .billprint .bp-table th{color:#fff;padding:9px 8px;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .billprint .bp-table td{border:1px solid #999;padding:8px}
   .billprint .bp-table .r{text-align:right}
   .billprint .bp-table .tot td{font-weight:800;background:#eef1f6}
   .billprint .bp-table .words td{font-weight:700}
