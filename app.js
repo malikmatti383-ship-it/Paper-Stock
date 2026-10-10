@@ -112,6 +112,7 @@ const THEMES=[
 function curTheme(){ const id=DB&&DB.profile&&DB.profile.theme; return THEMES.some(x=>x.id===id)?id:'ocean'; }
 function applyTheme(id){ document.body.dataset.theme=id; }
 function themeName(id){ const x=THEMES.find(y=>y.id===id); return x?x.name:'Ocean Blue'; }
+function themeDot(id){ const x=THEMES.find(y=>y.id===id)||THEMES[0]; return `<span class="theme-dot sm" style="background:${x.g}"></span>`; }
 window.setTheme=id=>{ if(!THEMES.some(x=>x.id===id)) return; DB.profile.theme=id; save(); applyTheme(id); openThemePicker(); };
 window.openThemePicker=()=>{
   const c=curTheme();
@@ -132,7 +133,7 @@ $('btn-profile').onclick=()=>{
       <button class="btn-ghost" onclick="$('import-file').click()">⬇️<br><b>Restore</b><br><small>From file</small></button>
     </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
-    <div class="menu-row" onclick="openThemePicker()"><span class="ic">🎨</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
+    <div class="menu-row" onclick="openThemePicker()"><span class="ic">${themeDot(curTheme())}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">🗑️</span> Delete all data<span class="arw">›</span></div>
