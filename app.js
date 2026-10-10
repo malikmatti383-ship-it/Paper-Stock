@@ -156,6 +156,8 @@ function confirmDlg(title,msg,okLabel,cb){
   $('dlg-ok').onclick=()=>{ closeSheet(); cb(); };
 }
 $('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
+/* Clean trash icon used for every delete option */
+const TRASH='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 
 /* ---------- Nav ---------- */
 function showView(id){
@@ -220,7 +222,7 @@ $('btn-profile').onclick=()=>{
     <div class="menu-row" onclick="openThemePicker()"><span class="ic">${themeDot(curTheme())}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
-    <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">🗑️</span> Delete all data<span class="arw">›</span></div>
+    <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
 };
 $('btn-backup').onclick=()=>{ cloudBackup(); };
@@ -234,8 +236,8 @@ window.importBackup=function(inp){
   const f=inp.files[0]; if(!f) return;
   const r=new FileReader();
   r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.products||!d.seq) throw 0;
-    if(!confirm('Current data will be replaced. Continue?')) return;
-    DB=d; save(); renderStoreName(); showView('view-add'); toast('✅ Backup restored!');
+    confirmDlg('Replace data?','Current data will be replaced. Continue?','REPLACE',()=>{
+      DB=d; save(); renderStoreName(); showView('view-add'); toast('✅ Backup restored!'); });
   }catch(e){ toast('❌ Invalid backup file'); } };
   r.readAsText(f); inp.value='';
 };
@@ -248,7 +250,10 @@ window.editProfile=()=>{
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button><button class="btn-go" onclick="saveProfile()">Save</button></div>`);
 };
 window.saveProfile=()=>{ DB.profile.name=$('pf-name').value.trim()||'Paper Store'; DB.profile.phone=$('pf-phone').value.trim(); DB.profile.address=$('pf-addr').value.trim(); DB.profile.email=$('pf-email').value.trim(); save(); renderStoreName(); closeSheet(); toast('✅ Saved'); };
-window.resetAll=()=>{ if(confirm('Delete ALL data?')&&confirm('Final warning — really delete everything?')){ DB=defDB(); save(); renderStoreName(); closeSheet(); showView('view-add'); toast('🗑️ Cleared'); } };
+window.resetAll=()=>{
+  confirmDlg('Delete ALL data?','This will erase everything in the app. Are you sure?','DELETE',()=>{
+    confirmDlg('Final warning','Really delete everything? This cannot be undone.','YES, DELETE',()=>{
+      DB=defDB(); save(); renderStoreName(); closeSheet(); showView('view-add'); toast('Cleared'); }); }); };
 
 /* ---------- Image helper ---------- */
 function readImg(file,cb){
@@ -632,7 +637,7 @@ window.stockDetail=id=>{
     <div class="ret-card col act-list">
       <button class="act-row" onclick="addStockSheet(${p.id})"><span class="act-ico">\u2295</span><b>Add stock</b><span class="sc-chev">\u203A</span></button>
       <button class="act-row" onclick="editProduct(${p.id})"><span class="act-ico">\u270E</span><b>Edit item details</b><span class="sc-chev">\u203A</span></button>
-      <button class="act-row danger" onclick="delProduct(${p.id})"><span class="act-ico red">\uD83D\uDDD1</span><b>Delete item</b><span class="sc-chev">\u203A</span></button>
+      <button class="act-row danger" onclick="delProduct(${p.id})"><span class="act-ico red">${TRASH}</span><b>Delete item</b><span class="sc-chev">\u203A</span></button>
     </div>`);
 };
 
@@ -701,7 +706,7 @@ window.editProduct=id=>{
   };
   window.epDel=()=>delProduct(p.id);
   const cc=curCode();
-  openSheet(`<div class="edit-head"><button class="xh" onclick="closeSheet()">\u2715</button><b>EDIT ITEM</b><button class="xh" onclick="epDel()">\uD83D\uDDD1</button></div>
+  openSheet(`<div class="edit-head"><button class="xh" onclick="closeSheet()">\u2715</button><b>EDIT ITEM</b><button class="xh" onclick="epDel()">${TRASH}</button></div>
   <div class="id-pill">ITEM ID&nbsp;&nbsp;<b>${esc(p.brand||'')} ${esc(p.itemId)}</b></div>
   <div class="photo-card" onclick="document.getElementById('ep-file').click()">
     <span id="ep-photo">${E.photo?'<img src="'+E.photo+'">':'<span style="font-size:40px">\uD83D\uDCC4</span>'}</span>
@@ -724,7 +729,9 @@ window.editProduct=id=>{
 };
 
 window.delProduct=id=>{ const p=DB.products.find(x=>x.id===id);
-  if(confirm('Delete "'+p.name+'"?')){ DB.products=DB.products.filter(x=>x.id!==id); save(); closeSheet(); renderStock(); } };
+  if(!p) return;
+  confirmDlg('Delete item?','Are you sure you want to delete "'+p.name+'"?','DELETE',()=>{
+    DB.products=DB.products.filter(x=>x.id!==id); save(); closeSheet(); renderStock(); toast('Deleted'); }); };
 
 /* ================= REPORT ================= */
 let repY=new Date().getFullYear(), repM=new Date().getMonth(), chartMode='sales', repShowAll=false;
@@ -908,7 +915,9 @@ window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   c.credit+=a; if($('m-prod').value.trim()) c.product=$('m-prod').value.trim();
   c.log.push({t:'Credit',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
 window.delCustomer=id=>{ const c=DB.customers.find(x=>x.id===id);
-  if(confirm('Delete "'+c.name+'"?')){ DB.customers=DB.customers.filter(x=>x.id!==id); save(); closeSheet(); renderCredit(); } };
+  if(!c) return;
+  confirmDlg('Delete customer?','Are you sure you want to delete "'+c.name+'"?','DELETE',()=>{
+    DB.customers=DB.customers.filter(x=>x.id!==id); save(); closeSheet(); renderCredit(); toast('Deleted'); }); };
 /* WhatsApp / SMS with balance message (per sketch) */
 window.sendMsg=(id,kind)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -1078,7 +1087,7 @@ $('btn-printer').onclick=()=>{
     <button class="btn-ghost" onclick="pqSelectAll(false)">Clear</button></div>
     <div class="mrow"><button class="btn-go" onclick="pqPrintSel()">🖨️ Print Selected</button>
     <button class="btn-ghost danger-t" onclick="pqDelSel()">Delete</button></div>
-    <div class="mrow"><button class="btn-ghost danger-t" onclick="pqDelAll()">🗑️ Delete All</button>
+    <div class="mrow"><button class="btn-ghost danger-t" onclick="pqDelAll()">${TRASH} Delete All</button>
     <button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
 };
 window.pqSelectAll=on=>{ document.querySelectorAll('.pq-cb').forEach(cb=>cb.checked=on); };
@@ -1091,7 +1100,8 @@ window.pqPrintSel=()=>{
 };
 window.pqDelSel=()=>{ const ids=[...document.querySelectorAll('.pq-cb:checked')].map(cb=>parseFloat(cb.value));
   DB.printQueue=DB.printQueue.filter(q=>!ids.includes(q.qid)); save(); updatePrintBadge(); $('btn-printer').click(); };
-window.pqDelAll=()=>{ if(confirm('Delete all pending prints?')){ DB.printQueue=DB.printQueue.filter(q=>q.done); save(); updatePrintBadge(); closeSheet(); } };
+window.pqDelAll=()=>{ confirmDlg('Delete all pending prints?','Done prints will be kept. Continue?','DELETE',()=>{
+    DB.printQueue=DB.printQueue.filter(q=>q.done); save(); updatePrintBadge(); closeSheet(); }); };
 
 /* ================= PDF BILL + WHATSAPP SHARE (v27) ================= */
 function numToWords(n){

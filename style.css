@@ -442,3 +442,9 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 .btn-cancel-red{flex:1;background:#dc2626;color:#fff;border:none;border-radius:999px;padding:15px;font-size:17px;font-weight:800;letter-spacing:1px;cursor:pointer}
 .grow{flex:2!important}
 .white-card .lbl-c2:first-child{margin-top:0}
+
+/* ---- v39: trash svg sizing ---- */
+.act-ico svg{width:20px;height:20px}
+.xh svg{width:22px;height:22px;display:block}
+.ic svg{width:20px;height:20px;vertical-align:-4px}
+.btn-ghost svg{width:17px;height:17px;vertical-align:-3px}
