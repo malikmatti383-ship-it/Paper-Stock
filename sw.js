@@ -1,6 +1,6 @@
 /* Paper Stock offline support v13 */
-const CACHE='paper-stock-v19';
-const ASSETS=['./','./index.html','./app.js?v=19','./auth.js?v=1','./style.css','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='paper-stock-v20';
+const ASSETS=['./','./index.html','./app.js?v=20','./auth.js?v=1','./style.css','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });
