@@ -409,20 +409,22 @@ window.returnItem=(saleId,ix)=>{
     const inp=$('ret-n-in'); if(inp) inp.value=R.n;
     $('ret-refund').textContent=pkr(Math.round(R.n*unit*100)/100);
     $('ret-go').textContent=R.n>=maxQ?`Return all ${maxQ}`:`Return ${R.n} of ${maxQ}`;
-    $('ret-minus').classList.toggle('off',R.n<=1);
-    $('ret-plus').classList.toggle('off',R.n>=maxQ);
+    const mn=$('ret-minus'),pl=$('ret-plus');
+    if(mn) mn.classList.toggle('off',R.n<=1);
+    if(pl) pl.classList.toggle('off',R.n>=maxQ);
   };
   window.retStep=d=>{ R.n=Math.min(maxQ,Math.max(1,R.n+d)); paint(); };
   window.retSet=v=>{ R.n=Math.min(maxQ,Math.max(1,parseInt(v)||1)); paint(); };
   window.retGo=unpaid=>{ if(unpaid) markSaleUnpaid(saleId); else doReturn(saleId,ix,R.n); };
-  openSheet(`<h3>Return item <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
-  <div class="ret-card"><div><b>${esc(it.name||s.name)}</b><div class="sub">${tstr} · Qty ${maxQ}</div></div><b>${pkr(unit*maxQ)}</b></div>
-  <div class="ret-card col"><div class="lbl-c">HOW MANY TO RETURN</div>
+  const stepHtml=maxQ>1?`<div class="ret-card col"><div class="lbl-c">HOW MANY TO RETURN</div>
     <div class="ret-step"><button id="ret-minus" class="step-btn" onclick="retStep(-1)">−</button>
     <input id="ret-n-in" type="number" min="1" max="${maxQ}" value="${R.n}" oninput="retSet(this.value)">
     <button id="ret-plus" class="step-btn" onclick="retStep(1)">+</button></div>
     <div class="sub-c">of ${maxQ} sold</div>
-    <div class="ret-quick"><button class="chip-btn" onclick="retSet(1)">Return 1</button><button class="chip-btn" onclick="retSet(${maxQ})">Return all ${maxQ}</button></div></div>
+    <div class="ret-quick"><button class="chip-btn" onclick="retSet(1)">Return 1</button><button class="chip-btn" onclick="retSet(${maxQ})">Return all ${maxQ}</button></div></div>`:'';
+  openSheet(`<h3>Return item <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
+  <div class="ret-card"><div><b>${esc(it.name||s.name)}</b><div class="sub">${tstr} · Qty ${maxQ}</div></div><b>${pkr(unit*maxQ)}</b></div>
+  ${stepHtml}
   <div class="ret-refund"><span>Refund</span><b id="ret-refund"></b></div>
   <p class="note">Returned quantity goes back into stock.</p>
   <button class="btn-unpaid" onclick="retGo(true)">Mark as unpaid</button>
@@ -457,16 +459,63 @@ window.unmarkPaid=id=>{
   });
 };
 
+/* ---- Return from bundle: checkbox select sheet (reference style) ---- */
 window.returnSale=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
-  confirmDlg('Return Bundle?','This will return all items to your inventory stock.','RETURN',()=>{
-    saleItems(s).forEach(it=>{ const p=DB.products.find(x=>x.id===it.productId); if(p) p.qty+=it.qty; });
-    DB.sales=DB.sales.filter(x=>x.id!==id);
-    DB.printQueue=DB.printQueue.filter(q=>q.saleId!==id);
-    save(); renderSales(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
-    toast('↩️ Bundle returned — stock restored');
-  });
+  const its=saleItems(s); if(!its.length) return;
+  const sel=new Set(its.map((_,i)=>i));
+  const paint=()=>{
+    const arr=[...sel];
+    const refund=Math.round(arr.reduce((tt,i)=>tt+(its[i].qty*(its[i].price||0)),0)*100)/100;
+    $('bun-count').textContent=sel.size+' of '+its.length+' selected';
+    $('bun-toggle').textContent=sel.size===its.length?'Clear all':'Select all';
+    $('bun-refund').textContent=pkr(refund);
+    $('bun-note').textContent=sel.size?'Returned quantity goes back into stock.':"This sale isn't linked to an inventory item, so no stock will be restored.";
+    const go=$('bun-go');
+    go.textContent=sel.size===its.length?'Return whole bundle':'Return '+sel.size+' item'+(sel.size===1?'':'s');
+    go.classList.toggle('off',!sel.size);
+    its.forEach((it,i)=>{ const c=$('bun-chk-'+i); if(c) c.classList.toggle('sel',sel.has(i)); });
+  };
+  window.bunTog=i=>{ sel.has(i)?sel.delete(i):sel.add(i); paint(); };
+  window.bunTogAll=()=>{ if(sel.size===its.length) sel.clear(); else its.forEach((_,i)=>sel.add(i)); paint(); };
+  window.bunGo=()=>{ if(!sel.size) return; doReturnBundle(id,[...sel]); };
+  window.bunUnpaid=()=>markSaleUnpaid(id);
+  openSheet(`<h3>Return from bundle <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
+  <div class="bun-head"><div style="display:flex;align-items:center;gap:10px"><span class="bun-ico">\uD83D\uDCE6</span><span>Bundle \u00B7 ${its.length} items</span></div><b>${pkr(s.total)}</b></div>
+  <div class="bun-selrow"><span id="bun-count"></span><button class="link-btn" id="bun-toggle" onclick="bunTogAll()"></button></div>
+  <div class="ret-card col bun-list">${its.map((it,i)=>`
+    <div class="bun-item" onclick="bunTog(${i})"><span class="bun-check sel" id="bun-chk-${i}">\u2713</span>
+    <div class="bun-nm">${esc(it.name||s.name)}<div class="sub">Qty ${it.qty}</div></div>
+    <b>${pkr(Math.round(it.qty*(it.price||0)*100)/100)}</b></div>`).join('')}</div>
+  <div class="ret-refund"><span>Refund</span><b id="bun-refund"></b></div>
+  <p class="note" id="bun-note"></p>
+  <button class="btn-unpaid" onclick="bunUnpaid()">Mark bundle as unpaid</button>
+  <button class="btn-return" id="bun-go" onclick="bunGo()"></button>`);
+  paint();
 };
+function doReturnBundle(saleId,selIx){
+  const s=DB.sales.find(x=>x.id===saleId); if(!s){ closeSheet(); return; }
+  const its=saleItems(s);
+  let refund=0;
+  [...selIx].sort((a,b)=>b-a).forEach(ix=>{
+    const it=its[ix]; if(!it) return;
+    refund=Math.round((refund+it.qty*(it.price||0))*100)/100;
+    const pr=DB.products.find(x=>x.id===it.productId); if(pr) pr.qty+=it.qty;
+    if(s.items&&s.items.length) s.items.splice(ix,1);
+  });
+  if(s.items&&s.items.length){
+    const left=saleItems(s);
+    s.qty=left.reduce((tt,it)=>tt+it.qty,0);
+    s.total=Math.round((s.total-refund)*100)/100;
+    s.name=left.length===1?left[0].name:(left.length+' items');
+  } else {
+    DB.sales=DB.sales.filter(x=>x.id!==saleId);
+    DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId);
+  }
+  save(); closeSheet(); renderSales(); renderStock(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
+  toast('\u21A9\uFE0F Returned '+selIx.length+' item(s) \u2014 back to stock');
+}
+
 $('btn-exp-add').onclick=()=>{
   const a=Math.max(0,parseFloat($('exp-amt').value)||0);
   if(!a){ toast('Enter amount'); return; }
