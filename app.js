@@ -414,7 +414,7 @@ window.returnItem=(saleId,ix)=>{
   };
   window.retStep=d=>{ R.n=Math.min(maxQ,Math.max(1,R.n+d)); paint(); };
   window.retSet=v=>{ R.n=Math.min(maxQ,Math.max(1,parseInt(v)||1)); paint(); };
-  window.retGo=unpaid=>doReturn(saleId,ix,R.n,unpaid);
+  window.retGo=unpaid=>{ if(unpaid) markSaleUnpaid(saleId); else doReturn(saleId,ix,R.n); };
   openSheet(`<h3>Return item <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
   <div class="ret-card"><div><b>${esc(it.name||s.name)}</b><div class="sub">${tstr} · Qty ${maxQ}</div></div><b>${pkr(unit*maxQ)}</b></div>
   <div class="ret-card col"><div class="lbl-c">HOW MANY TO RETURN</div>
@@ -429,7 +429,7 @@ window.returnItem=(saleId,ix)=>{
   <button class="btn-return" id="ret-go" onclick="retGo(false)"></button>`);
   paint();
 };
-function doReturn(saleId,ix,n,unpaid){
+function doReturn(saleId,ix,n){
   const s=DB.sales.find(x=>x.id===saleId); if(!s){ closeSheet(); return; }
   const its=saleItems(s), it=its[ix]; if(!it){ closeSheet(); return; }
   n=Math.min(Math.max(1,n||1),it.qty||1);
@@ -440,22 +440,22 @@ function doReturn(saleId,ix,n,unpaid){
   else { empty=((s.qty||0)-n)<=0; }
   s.qty=Math.max(0,(s.qty||0)-n);
   s.total=Math.round(((s.total||0)-refund)*100)/100;
-  if(unpaid) markUnpaid(s,refund);
   if(empty){ DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId); }
   else { const left=saleItems(s); s.name=left.length===1?left[0].name:(left.length+' items'); }
   save(); closeSheet(); renderSales(); renderStock(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
   toast('↩️ Returned '+n+' × '+(it.name||'')+' — back to stock');
 }
-function markUnpaid(s,refund){
-  const nm=(s.customer||'').trim();
-  if(!nm||refund<=0){ if(!nm) toast('⚠️ Add customer name to mark unpaid'); return; }
-  let c=DB.customers.find(x=>(x.name||'').toLowerCase()===nm.toLowerCase());
-  if(!c){ c={id:DB.seq.c++,custId:DB.seq.c,name:nm,phone:s.phone||'',product:'',saleRate:0,discount:0,qty:0,credit:0,received:0,promiseDate:'',promiseTime:'',log:[]}; DB.customers.push(c); if(c.custId>=DB.seq.c)DB.seq.c=c.custId+1; }
-  c.received=Math.round(((c.received||0)+refund)*100)/100;
-  c.log.push({t:'Return refund (unpaid)',a:refund,d:dstr()});
-  if(typeof renderCredit==='function') renderCredit(); if(typeof updateBellBadge==='function') updateBellBadge();
-  toast('📒 '+pkr(refund)+' marked unpaid for '+nm);
+function markSaleUnpaid(saleId){
+  const s=DB.sales.find(x=>x.id===saleId); if(!s){ closeSheet(); return; }
+  s.unpaid=true; save(); closeSheet(); renderSales();
+  toast('\uD83D\uDD34 Marked as unpaid');
 }
+window.unmarkPaid=id=>{
+  const s=DB.sales.find(x=>x.id===id); if(!s||!s.unpaid) return;
+  confirmDlg('Mark as paid?','This sale will no longer show as unpaid.','PAID',()=>{
+    s.unpaid=false; save(); renderSales(); toast('\u2705 Marked as paid');
+  });
+};
 
 window.returnSale=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
@@ -495,7 +495,7 @@ function renderDaySales(){
       `<button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
-      <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}<span class="t">${hhmm(s.ts)}</span></div>
+      <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
       <div class="sub">${sub}${s.customer?' · '+esc(s.customer):''}</div></div>
       <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
   }).join('');
