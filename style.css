@@ -448,3 +448,6 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 .xh svg{width:22px;height:22px;display:block}
 .ic svg{width:20px;height:20px;vertical-align:-4px}
 .btn-ghost svg{width:17px;height:17px;vertical-align:-3px}
+
+/* ---- v41: mark-as-paid button (green twin of btn-unpaid) ---- */
+.btn-paid{width:100%;background:#fff;border:1.5px solid var(--pp-teal);color:#16a34a;font-weight:800;font-size:16px;border-radius:14px;padding:13px;margin:6px 0 10px;cursor:pointer;letter-spacing:.5px}

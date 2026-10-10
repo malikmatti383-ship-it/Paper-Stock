@@ -421,6 +421,7 @@ window.returnItem=(saleId,ix)=>{
   window.retStep=d=>{ R.n=Math.min(maxQ,Math.max(1,R.n+d)); paint(); };
   window.retSet=v=>{ R.n=Math.min(maxQ,Math.max(1,parseInt(v)||1)); paint(); };
   window.retGo=unpaid=>{ if(unpaid) markSaleUnpaid(saleId); else doReturn(saleId,ix,R.n); };
+  window.retPaid=()=>sheetMarkPaid(saleId);
   const stepHtml=maxQ>1?`<div class="ret-card col"><div class="lbl-c">HOW MANY TO RETURN</div>
     <div class="ret-step"><button id="ret-minus" class="step-btn" onclick="retStep(-1)">−</button>
     <input id="ret-n-in" type="number" min="1" max="${maxQ}" value="${R.n}" oninput="retSet(this.value)">
@@ -432,7 +433,7 @@ window.returnItem=(saleId,ix)=>{
   ${stepHtml}
   <div class="ret-refund"><span>Refund</span><b id="ret-refund"></b></div>
   <p class="note">Returned quantity goes back into stock.</p>
-  <button class="btn-unpaid" onclick="retGo(true)">Mark as unpaid</button>
+  ${s.unpaid?'<button class="btn-paid" onclick="retPaid()">Mark as paid</button>':'<button class="btn-unpaid" onclick="retGo(true)">Mark as unpaid</button>'}
   <button class="btn-return" id="ret-go" onclick="retGo(false)"></button>`);
   paint();
 };
@@ -463,6 +464,8 @@ window.unmarkPaid=id=>{
     s.unpaid=false; save(); renderSales(); toast('\u2705 Marked as paid');
   });
 };
+window.sheetMarkPaid=saleId=>{ const s=DB.sales.find(x=>x.id===saleId); if(!s||!s.unpaid) return;
+  s.unpaid=false; save(); closeSheet(); renderSales(); toast('\u2705 Marked as paid'); };
 
 /* ---- Return from bundle: checkbox select sheet (reference style) ---- */
 window.returnSale=id=>{
@@ -499,6 +502,7 @@ window.returnSale=id=>{
   window.bunAll=i=>setQ(i,its[i].qty||1);
   window.bunGo=()=>{ const list=[...sel].map(i=>({ix:i,n:rq[i]})).filter(x=>x.n>0); if(!list.length) return; doReturnBundle(id,list); };
   window.bunUnpaid=()=>markSaleUnpaid(id);
+  window.bunPaid=()=>sheetMarkPaid(id);
   openSheet(`<h3>Return from bundle <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
   <div class="bun-head"><div style="display:flex;align-items:center;gap:10px"><span class="bun-ico">\uD83D\uDCE6</span><span>Bundle \u00B7 ${its.length} items</span></div><b>${pkr(s.total)}</b></div>
   <div class="bun-selrow"><span id="bun-count"></span><button class="link-btn" id="bun-toggle" onclick="bunTogAll()"></button></div>
@@ -516,7 +520,7 @@ window.returnSale=id=>{
     </div><b>${pkr(Math.round(it.qty*(it.price||0)*100)/100)}</b></div>`).join('')}</div>
   <div class="ret-refund"><span id="bun-rlabel">Whole bundle</span><b id="bun-refund"></b></div>
   <p class="note" id="bun-note"></p>
-  <button class="btn-unpaid" onclick="bunUnpaid()">Mark bundle as unpaid</button>
+  ${s.unpaid?'<button class="btn-paid" onclick="bunPaid()">Mark bundle as paid</button>':'<button class="btn-unpaid" onclick="bunUnpaid()">Mark bundle as unpaid</button>'}
   <button class="btn-return" id="bun-go" onclick="bunGo()"></button>`);
   paint();
 };
