@@ -30,7 +30,7 @@ function applyRemote(data,updatedAt){
     DB=data; if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[];
     _saveLocal();
     syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){}
-    renderStoreName();
+    renderStoreName(); applyTheme(curTheme());
     const av=document.querySelector('.view.active'); if(av) showView(av.id);
   }finally{ applyingRemote=false; }
   toast('☁️ Cloud synced');
@@ -92,6 +92,26 @@ function renderStoreName(){ $('store-name').textContent = DB.profile.name||'Pape
   $('btn-profile').innerHTML = DB.profile.logo?`<img class="tb-logo" src="${DB.profile.logo}">`:'👤'; }
 window.setStoreLogo=input=>{ readImg(input.files[0],url=>{ if(!url) return;
   DB.profile.logo=url; save(); renderStoreName(); $('btn-profile').click(); toast('✅ Store photo updated'); }); };
+/* ================= APP THEMES ================= */
+const THEMES=[
+ {id:'ocean',name:'Ocean Blue',g:'linear-gradient(135deg,#0a2463,#3b82f6)'},
+ {id:'emerald',name:'Emerald Green',g:'linear-gradient(135deg,#0b5e3f,#12b76a)'},
+ {id:'purple',name:'Royal Purple',g:'linear-gradient(135deg,#3b1470,#7c3aed)'},
+ {id:'orange',name:'Sunset Orange',g:'linear-gradient(135deg,#7c2d12,#dd7a1f)'},
+ {id:'midnight',name:'Midnight Gold',g:'linear-gradient(135deg,#0b1220,#344054)'},
+ {id:'red',name:'Cherry Red',g:'linear-gradient(135deg,#450a0a,#dc2626)'},
+ {id:'pink',name:'Rose Pink',g:'linear-gradient(135deg,#500f28,#db2777)'},
+ {id:'brown',name:'Coffee Brown',g:'linear-gradient(135deg,#2b1a10,#8b5a2b)'},
+ {id:'olive',name:'Olive Green',g:'linear-gradient(135deg,#1a2e05,#65a30d)'},
+ {id:'wine',name:'Wine Burgundy',g:'linear-gradient(135deg,#2a060f,#b91c3a)'},
+ {id:'sunset',name:'Sunset Glow',g:'linear-gradient(135deg,#6d28d9,#f59e0b)'},
+ {id:'grey',name:'Slate Grey',g:'linear-gradient(135deg,#111827,#6b7280)'},
+ {id:'cyan',name:'Aqua Cyan',g:'linear-gradient(135deg,#083344,#22d3ee)'},
+];
+function curTheme(){ const id=DB&&DB.profile&&DB.profile.theme; return THEMES.some(x=>x.id===id)?id:'ocean'; }
+function applyTheme(id){ document.body.dataset.theme=id; }
+window.setTheme=id=>{ if(!THEMES.some(x=>x.id===id)) return; DB.profile.theme=id; save(); applyTheme(id); $('btn-profile').click(); toast('🎨 Theme: '+THEMES.find(x=>x.id===id).name); };
+function themeDots(){ const c=curTheme(); return THEMES.map(x=>`<button class="theme-dot${x.id===c?' sel':''}" title="${x.name}" style="background:${x.g}" onclick="setTheme('${x.id}')">${x.id===c?'<span class="tk">✓</span>':''}</button>`).join(''); }
 $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
   const av=p.logo?`<img src="${p.logo}">`:esc(init);
@@ -105,6 +125,8 @@ $('btn-profile').onclick=()=>{
       <button class="btn-ghost" onclick="$('import-file').click()">⬇️<br><b>Restore</b><br><small>From file</small></button>
     </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
+    <div class="lbl" style="margin:10px 0 2px">APP THEME</div>
+    <div class="theme-grid">${themeDots()}</div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">🗑️</span> Delete all data<span class="arw">›</span></div>
@@ -622,7 +644,7 @@ window.sendMsg=(id,kind)=>{
 };
 
 /* ---------- Init ---------- */
-load(); renderStoreName(); initAdd(); initAuth(); showView('view-sales');
+load(); applyTheme(curTheme()); renderStoreName(); initAdd(); initAuth(); showView('view-sales');
 updateBellBadge(); updatePrintBadge(); checkReminders();
 
 /* ================= BELL: reminders + bulk send ================= */
