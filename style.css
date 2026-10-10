@@ -11,6 +11,7 @@ body{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:var
 .icon-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.22);backdrop-filter:blur(4px)}
 .icon-btn svg{width:21px;height:21px}
 .icon-btn:active{transform:scale(.92)}
+.top-icons{display:flex;gap:12px;align-items:center}
 .toptabs{position:sticky;top:52px;z-index:20;display:flex;background:rgba(255,255,255,.14);backdrop-filter:blur(4px)}
 .tt{flex:1;background:none;border:none;color:#d7ecf5;font-size:20px;padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border-bottom:3px solid transparent}
 .tt span{font-size:12px;font-weight:700;letter-spacing:.5px}
