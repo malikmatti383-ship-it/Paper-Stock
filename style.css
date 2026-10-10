@@ -318,8 +318,12 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 
 /* Theme picker dots in profile sheet */
 .theme-grid{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 4px}
-.theme-dot{width:44px;height:44px;border-radius:50%;border:3px solid transparent;cursor:pointer;position:relative;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.theme-dot{width:44px;height:44px;border-radius:50%;border:3px solid transparent;cursor:pointer;position:relative;flex:none;display:inline-block;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .theme-dot.sel{border-color:#1c2733;transform:scale(1.08)}
 .theme-dot .tk{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,.5)}
 
 .theme-dot.sm{width:32px;height:32px;border-width:2px}
+
+/* v23: theme glow on primary action buttons */
+.btn-save{box-shadow:0 6px 16px color-mix(in srgb, var(--pp-teal) 30%, transparent)}
+.btn-save.blue{background:linear-gradient(180deg,var(--pp-teal-l),var(--pp-teal));box-shadow:0 8px 22px color-mix(in srgb, var(--pp-teal) 55%, transparent)}
