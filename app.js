@@ -588,66 +588,141 @@ document.querySelectorAll('#stock-chips .chip').forEach(c=>c.onclick=()=>{
 });
 $('stock-search').oninput=e=>{ stockQ=e.target.value.toLowerCase(); renderStock(); };
 function stockBadge(p){ if(p.qty<=0) return '<span class="badge out">OUT</span>'; if(p.qty<=5) return '<span class="badge low">Low</span>'; return ''; }
+let stockSort=0;
+const SORT_LBL=['Default order','Name A–Z','Qty: high to low','Cost: high to low'];
+window.cycleStockSort=()=>{ stockSort=(stockSort+1)%4; renderStock(); toast('\u21C5 '+SORT_LBL[stockSort]); };
+function stockStatus(p){ return p.qty<=0?'out':(p.qty<=5?'low':'in'); }
 function renderStock(){
   const cost=DB.products.reduce((s,p)=>s+p.qty*p.cost,0);
   const units=DB.products.reduce((s,p)=>s+p.qty,0);
   $('st-cost').textContent=pkr(cost); $('st-count').textContent=units+' items';
   const cAll=DB.products.length, cIn=DB.products.filter(p=>p.qty>5).length, cLow=DB.products.filter(p=>p.qty>0&&p.qty<=5).length, cOut=DB.products.filter(p=>p.qty<=0).length;
   const chips=document.querySelectorAll('#stock-chips .chip');
-  chips[0].textContent='All · '+cAll; chips[1].textContent='In stock · '+cIn; chips[2].textContent='Low stock · '+cLow; chips[3].textContent='Out · '+cOut;
+  chips[0].textContent='All ('+cAll+')'; chips[1].textContent='In stock ('+cIn+')'; chips[2].textContent='Low ('+cLow+')'; chips[3].textContent='Out ('+cOut+')';
   let list=DB.products.filter(p=>p.name.toLowerCase().includes(stockQ)||String(p.itemId).includes(stockQ)||(p.brand||'').toLowerCase().includes(stockQ));
   if(stockF==='in') list=list.filter(p=>p.qty>5);
   if(stockF==='low') list=list.filter(p=>p.qty>0&&p.qty<=5);
   if(stockF==='out') list=list.filter(p=>p.qty<=0);
+  if(stockSort===1) list=[...list].sort((a,b)=>a.name.localeCompare(b.name));
+  if(stockSort===2) list=[...list].sort((a,b)=>b.qty-a.qty);
+  if(stockSort===3) list=[...list].sort((a,b)=>b.cost-a.cost);
   $('stock-list').innerHTML=list.map(p=>{
-    const cls=p.qty<=0?'out':(p.qty<=5?'low':'');
-    return `<div class="stock-card ${cls}">
-      <div class="sc-top" onclick="stockDetail(${p.id})">${pimg(p)}
-        <div class="sc-info"><span class="sc-brand">${esc(p.brand||'—')} · #${p.itemId}</span> ${stockBadge(p)}
-          <div class="sc-name">${esc(p.name)}</div>
-          <div class="sc-prices">Cost <b>${pkr(p.cost)}</b> · Sell <b>${pkr(p.sell)}</b> <span class="sub">/${esc(p.unit)}</span></div>
-        </div></div>
-      <div class="sc-right">
-        <div class="stepper"><button onclick="event.stopPropagation();qstep(${p.id},-1)">−</button><span class="qv" style="${p.qty<=0?'color:var(--red)':''}">${p.qty}</span><button onclick="event.stopPropagation();qstep(${p.id},1)">+</button></div>
-        <button class="mini-btn" onclick="event.stopPropagation();stockDetail(${p.id})">Details</button>
+    const st=stockStatus(p);
+    const lbl=st==='out'?'OUT OF STOCK':(st==='low'?'LOW STOCK':'IN STOCK');
+    const pill=st==='out'?'<span class="st-pill out">OUT</span>':(st==='low'?'<span class="st-pill low">LOW</span>':'');
+    return `<div class="stock-card ${st}" onclick="stockDetail(${p.id})">
+      <div class="sc-idrow"><span class="sc-brand">${esc(p.brand||'\u2014')} \u00B7 #${p.itemId}</span>${pill}</div>
+      <div class="sc-main">${pimg(p)}
+        <div class="sc-info"><div class="sc-name">${esc(p.name)}</div>
+          <div class="sc-prices">Cost <b>${pkr(p.cost)}</b> \u00B7 Sell <b>${pkr(p.sell)}</b> <span class="sub">/${esc(p.unit)}</span></div>
+        </div>
+        <div class="sc-qty ${st}"><b>${p.qty}</b><span>${lbl}</span></div>
+        <span class="sc-chev">\u203A</span>
       </div></div>`; }).join('')||'<p class="note" style="color:#fff">No items</p>';
 }
-window.qstep=(id,d)=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
-  if(p.qty+d<0){ toast('Out of stock!'); return; } p.qty+=d; save(); renderStock(); };
+
+
 window.stockDetail=id=>{
   const p=DB.products.find(x=>x.id===id); if(!p) return;
-  const cls=p.qty<=0?'out':(p.qty<=5?'low':'');
-  openSheet(`<div class="sc-top">${pimg(p)}<div class="sc-info">
-    <span class="sc-brand">${esc(p.brand||'—')} ${p.itemId}</span> ${stockBadge(p)}
-    <div class="sc-name">${esc(p.name)}</div>
-    <div class="sc-prices">Cost <b>${pkr(p.cost)}</b> · Sell <b>${pkr(p.sell)}</b> · Tax ${p.tax||0}%</div></div></div>
-    <div class="kv"><span>In stock</span><b>${p.qty} ${esc(p.unit)}</b></div>
-    <div class="kv"><span>Stock value (cost)</span><b>${pkr(p.qty*p.cost)}</b></div>
-    <div class="mrow">
-      <button class="btn-ghost" onclick="chQty(${p.id},-1)">− 1</button>
-      <button class="btn-ghost" onclick="chQty(${p.id},1)">+ 1</button>
-    </div>
-    <div class="mrow">
-      <button class="btn-ghost" onclick="editProduct(${p.id})">✏️ Edit</button>
-      <button class="btn-ghost danger-t" onclick="delProduct(${p.id})">🗑️ Delete</button>
-    </div>
-    <div class="mrow"><button class="btn-go" onclick="closeSheet()">Close</button></div>`);
+  openSheet(`<div class="sheet-head"><button class="link-btn" onclick="closeSheet()">Cancel</button><b>Item</b><span style="width:52px"></span></div>
+    <div class="ret-card"><div style="display:flex;gap:12px;align-items:center;flex:1">${pimg(p)}
+      <div style="min-width:0"><span class="sc-brand">${esc(p.brand||'\u2014')} \u00B7 #${p.itemId}</span>
+      <div class="sc-name" style="margin:4px 0 2px">${esc(p.name)}</div>
+      <div class="sub">${p.qty} in stock \u00B7 ${pkr(p.cost)} avg cost</div></div></div></div>
+    <div class="ret-card col act-list">
+      <button class="act-row" onclick="addStockSheet(${p.id})"><span class="act-ico">\u2295</span><b>Add stock</b><span class="sc-chev">\u203A</span></button>
+      <button class="act-row" onclick="editProduct(${p.id})"><span class="act-ico">\u270E</span><b>Edit item details</b><span class="sc-chev">\u203A</span></button>
+      <button class="act-row danger" onclick="delProduct(${p.id})"><span class="act-ico red">\uD83D\uDDD1</span><b>Delete item</b><span class="sc-chev">\u203A</span></button>
+    </div>`);
 };
-window.chQty=(id,d)=>{ const p=DB.products.find(x=>x.id===id); if(p.qty+d<0){toast('Out of stock!');return;} p.qty+=d; save(); stockDetail(id); renderStock(); };
+
+/* ---- Add stock sheet (reference style) ---- */
+window.addStockSheet=id=>{
+  const p=DB.products.find(x=>x.id===id); if(!p) return;
+  const A={n:1,cost:p.cost||0,sell:p.sell||0,showP:false,exp:false};
+  const paint=()=>{
+    const nIn=$('as-n'); if(nIn&&document.activeElement!==nIn) nIn.value=A.n;
+    $('as-becomes').innerHTML='Stock becomes <b><u>'+((p.qty||0)+A.n)+' units</u></b>';
+    $('as-go').textContent='Add '+A.n+' unit'+(A.n===1?'':'s');
+    const batch=Math.round(A.cost*A.n*100)/100;
+    $('as-eff').textContent=pkr(A.cost);
+    $('as-batch').textContent=pkr(batch);
+    $('as-exp-lbl').textContent='Also record '+pkr(batch)+' as an expense';
+    $('as-prices').style.display=A.showP?'block':'none';
+    $('as-pt').classList.toggle('open',A.showP);
+    $('as-exp').classList.toggle('on',A.exp);
+  };
+  window.asStep=d=>{ A.n=Math.max(1,A.n+d); paint(); };
+  window.asSet=v=>{ A.n=Math.max(1,parseInt(v)||1); paint(); };
+  window.asAdd=v=>{ A.n+=v; paint(); };
+  window.asPrices=()=>{ A.showP=!A.showP; paint(); };
+  window.asCost=v=>{ A.cost=Math.max(0,parseFloat(v)||0); paint(); };
+  window.asSell=v=>{ A.sell=Math.max(0,parseFloat(v)||0); };
+  window.asExp=()=>{ A.exp=!A.exp; paint(); };
+  window.asGo=()=>{
+    p.qty=(p.qty||0)+A.n;
+    if(A.showP){ p.cost=A.cost; p.sell=A.sell; }
+    if(A.exp){ const amt=Math.round(A.cost*A.n*100)/100;
+      DB.expenses.push({id:DB.seq.e++,title:'Stock: '+p.name+' (+'+A.n+')',amount:amt,date:dstr(),ts:Date.now()}); }
+    save(); closeSheet(); renderStock(); if(typeof renderReport==='function') renderReport();
+    toast('\u2705 Added '+A.n+' \u2014 stock now '+p.qty);
+  };
+  openSheet(`<h3>Add stock \u2014 ${esc(p.itemId)} <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
+  <div class="ret-card col"><div class="lbl-c">HOW MANY ARRIVED</div>
+    <div class="ret-step"><button class="step-btn" onclick="asStep(-1)">\u2212</button>
+    <input id="as-n" type="number" min="1" value="1" oninput="asSet(this.value)" style="width:76px;text-align:center;font-size:34px;font-weight:800;border:none;background:transparent;color:#1c2733">
+    <button class="step-btn" onclick="asStep(1)">+</button></div>
+    <div class="ret-quick"><button class="chip-btn" onclick="asAdd(5)">+5</button><button class="chip-btn" onclick="asAdd(10)">+10</button><button class="chip-btn" onclick="asAdd(25)">+25</button></div>
+    <div class="as-becomes" id="as-becomes"></div></div>
+  <button class="price-toggle" id="as-pt" onclick="asPrices()"><span>Prices changed? Tap to update</span><span>\u203A</span></button>
+  <div class="ret-card col" id="as-prices" style="display:none">
+    <div class="lbl-c2">COST PRICE (${curCode()})</div><input id="as-cost" type="number" value="${p.cost||0}" oninput="asCost(this.value)">
+    <div class="lbl-c2">SELLING PRICE (${curCode()})</div><input id="as-sell" type="number" value="${p.sell||0}" oninput="asSell(this.value)">
+  </div>
+  <div class="ret-card col"><div class="kv"><span>Effective cost / unit</span><b id="as-eff"></b></div>
+  <div class="kv"><span>Batch cost</span><b id="as-batch"></b></div></div>
+  <label class="exp-row"><span id="as-exp-lbl"></span><span class="switch" id="as-exp" onclick="asExp()"></span></label>
+  <button class="btn-go" id="as-go" onclick="asGo()"></button>`);
+  paint();
+};
+
 window.editProduct=id=>{
-  const p=DB.products.find(x=>x.id===id);
-  openSheet(`<h3>Edit item</h3>
-    <input id="ep-brand" value="${esc(p.brand||'')}" placeholder="Brand name">
-    <input id="ep-name" value="${esc(p.name)}" placeholder="Item name">
-    <input id="ep-qty" type="number" value="${p.qty}" placeholder="Quantity">
-    <input id="ep-cost" type="number" value="${p.cost}" placeholder="Cost price">
-    <input id="ep-sell" type="number" value="${p.sell}" placeholder="Selling price">
-    <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button><button class="btn-go" onclick="saveEditProduct(${p.id})">Save</button></div>`);
+  const p=DB.products.find(x=>x.id===id); if(!p) return;
+  const E={photo:p.image||null};
+  window.epPick=inp=>{ readImg(inp.files[0],url=>{ if(url){ E.photo=url; $('ep-photo').innerHTML='<img src="'+url+'">'; } inp.value=''; }); };
+  window.epSave=()=>{
+    p.brand=$('ep-brand').value.trim(); p.name=$('ep-name').value.trim()||p.name;
+    p.qty=Math.max(0,parseInt($('ep-qty').value)||0);
+    p.cost=Math.max(0,parseFloat($('ep-cost').value)||0);
+    p.sell=Math.max(0,parseFloat($('ep-sell').value)||0);
+    p.tax=Math.max(0,parseFloat($('ep-tax').value)||0);
+    p.image=E.photo;
+    save(); closeSheet(); renderStock(); toast('\u2705 Updated');
+  };
+  window.epDel=()=>delProduct(p.id);
+  const cc=curCode();
+  openSheet(`<div class="edit-head"><button class="xh" onclick="closeSheet()">\u2715</button><b>EDIT ITEM</b><button class="xh" onclick="epDel()">\uD83D\uDDD1</button></div>
+  <div class="id-pill">ITEM ID&nbsp;&nbsp;<b>${esc(p.brand||'')} ${esc(p.itemId)}</b></div>
+  <div class="photo-card" onclick="document.getElementById('ep-file').click()">
+    <span id="ep-photo">${E.photo?'<img src="'+E.photo+'">':'<span style="font-size:40px">\uD83D\uDCC4</span>'}</span>
+    <div class="sub">Tap to change photo</div></div>
+  <input type="file" id="ep-file" accept="image/*" style="display:none" onchange="epPick(this)">
+  <div class="white-card">
+    <div class="lbl-c2">ITEM NAME</div><input id="ep-name" value="${esc(p.name)}">
+    <div class="lbl-c2">BRAND</div><input id="ep-brand" value="${esc(p.brand||'')}">
+    <div class="lbl-c2">QUANTITY</div><input id="ep-qty" type="number" value="${p.qty}">
+    <div class="two-col"><div><div class="lbl-c2">COST PRICE</div><div class="in-suf"><input id="ep-cost" type="number" value="${p.cost}"><span>${cc}</span></div></div>
+    <div><div class="lbl-c2">SELLING PRICE</div><div class="in-suf"><input id="ep-sell" type="number" value="${p.sell}"><span>${cc}</span></div></div></div>
+    <div class="lbl-c2">TAX PERCENT</div><div class="in-suf"><input id="ep-tax" type="number" value="${p.tax||0}"><span>%</span></div>
+    <div class="sub" id="ep-ctax" style="margin-top:8px"></div>
+    <div class="note" style="margin-top:4px">\u24D8 Ignore taxes if already included in cost price.</div>
+  </div>
+  <div class="mrow"><button class="btn-cancel-red" onclick="closeSheet()">Cancel</button><button class="btn-go grow" onclick="epSave()">UPDATE</button></div>`);
+  const upd=()=>{ const c=parseFloat($('ep-cost').value)||0, tx=parseFloat($('ep-tax').value)||0;
+    $('ep-ctax').textContent='Cost + tax / unit: '+pkr(Math.round(c*(1+tx/100)*100)/100); };
+  $('ep-cost').oninput=upd; $('ep-tax').oninput=upd; upd();
 };
-window.saveEditProduct=id=>{ const p=DB.products.find(x=>x.id===id);
-  p.brand=$('ep-brand').value.trim(); p.name=$('ep-name').value.trim()||p.name;
-  p.qty=Math.max(0,parseInt($('ep-qty').value)||0); p.cost=Math.max(0,parseFloat($('ep-cost').value)||0); p.sell=Math.max(0,parseFloat($('ep-sell').value)||0);
-  save(); closeSheet(); renderStock(); toast('✅ Updated'); };
+
 window.delProduct=id=>{ const p=DB.products.find(x=>x.id===id);
   if(confirm('Delete "'+p.name+'"?')){ DB.products=DB.products.filter(x=>x.id!==id); save(); closeSheet(); renderStock(); } };
 

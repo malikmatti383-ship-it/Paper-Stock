@@ -119,8 +119,8 @@
   <!-- ============ STOCK ============ -->
   <section id="view-stock" class="view">
     <div class="pad">
-      <div class="white-card"><div class="lbl">Total stock cost</div><div class="big-num" id="st-cost">PKR 0.00</div><div class="sub" id="st-count">0 items</div></div>
-      <div class="search-row"><div class="search-wrap grow">🔍 <input id="stock-search" placeholder="Search by name or ID..."></div></div>
+      <div class="white-card st-cost-card"><div class="lbl">Total stock cost <span class="info-i" onclick="toast('Cost = quantity × cost price of all items')">ⓘ</span></div><div class="big-num theme-t" id="st-cost">PKR 0.00</div><div class="sub" id="st-count">0 items</div></div>
+      <div class="search-row"><div class="search-wrap grow">🔍 <input id="stock-search" placeholder="Search by name or ID..."></div><button class="icon-sq" onclick="cycleStockSort()" title="Sort">⇅</button></div>
       <div class="chips" id="stock-chips">
         <button class="chip active" data-f="all">All</button>
         <button class="chip" data-f="in">In stock</button>
@@ -170,7 +170,7 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js?v=37"></script>
+    <script src="app.js?v=38"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
