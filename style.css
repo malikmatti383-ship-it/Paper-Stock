@@ -238,9 +238,12 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 /* ================= v16: PaperPilot signature theme =================
    BusinessX-style layout language, PaperPilot's own identity:
    deep-blue gradient, floating pill nav, sync pill in header. */
-:root{
-  --pp-grad:linear-gradient(165deg,#0c5da6 0%,#0b83b8 55%,#0fa9cd 100%);
-  --pp-teal:#0b83b8; --pp-teal-d:#095f86;
+/* Default theme = Ocean Blue (can be changed in Profile settings) */
+:root, body[data-theme="ocean"]{
+  --pp-grad:linear-gradient(165deg,#0a2463 0%,#1e40af 55%,#3b82f6 100%);
+  --pp-teal:#2563eb; --pp-teal-l:#60a5fa; --pp-teal-d:#1e40af; --pp-teal-dd:#0a2463;
+  --pp-soft:#dbeafe; --pp-btn-ink:#fff;
+  --teal:#2563eb; --teal-d:#1e40af;
   --pp-ink:#1c2733; --pp-sub:#8a94a3;
 }
 body,#app{background:var(--pp-grad);background-attachment:fixed}
@@ -249,7 +252,7 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 .topbar{background:transparent;padding:14px 16px 8px;position:sticky;top:0;z-index:20}
 .store-name{text-align:left;font-size:21px;margin-left:10px;text-shadow:0 1px 3px rgba(0,0,0,.2)}
 .icon-btn{font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
-.sync-pill{background:#fff;color:#095f86;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);margin-left:auto;white-space:nowrap}
+.sync-pill{background:#fff;color:var(--pp-teal-d);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);margin-left:auto;white-space:nowrap}
 .sync-pill .spin{display:inline-block;animation:pprot 1s linear infinite;font-size:14px}
 @keyframes pprot{to{transform:rotate(360deg)}}
 
@@ -259,7 +262,7 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
   border-radius:32px;padding:8px 6px;box-shadow:0 10px 28px rgba(4,40,70,.35)}
 .tt{color:#5f7b8d;border-bottom:none;padding:8px 2px 7px;border-radius:24px}
 .tt span{font-size:11px}
-.tt.active{color:#095f86;background:#ddf1f9}
+.tt.active{color:var(--pp-teal-d);background:var(--pp-soft)}
 .view{padding-bottom:112px}
 
 /* Cards */
@@ -273,15 +276,15 @@ h3{font-size:19px}
 .sheet-box input,.sheet-box select{background:#f2f6fa;border:none;border-radius:14px;padding:13px 14px}
 
 /* Buttons */
-.btn-go{background:linear-gradient(180deg,#12a5cc,#0b7cae);border-radius:999px;padding:15px;font-size:17px;font-weight:800;letter-spacing:1.5px;box-shadow:0 5px 14px rgba(11,124,174,.45);border:none;color:#fff;width:100%;cursor:pointer}
+.btn-go{background:linear-gradient(180deg,var(--pp-teal-l),var(--pp-teal));border-radius:999px;padding:15px;font-size:17px;font-weight:800;letter-spacing:1.5px;box-shadow:0 5px 14px rgba(0,0,0,.3);border:none;color:var(--pp-btn-ink);width:100%;cursor:pointer}
 .btn-go:active{transform:scale(.98)}
 .btn-ghost{background:#eef3f7;color:var(--pp-ink);border-radius:999px;padding:12px 18px;border:none;font-weight:700;cursor:pointer}
-.btn-outline{display:block;width:100%;background:#e9f6fb;border:1.5px solid var(--pp-teal);color:#0b7cae;border-radius:999px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.btn-outline{display:block;width:100%;background:var(--pp-soft);border:1.5px solid var(--pp-teal);color:var(--pp-teal-d);border-radius:999px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px}
 
 /* Segmented */
 .seg{background:#e6edf3;border-radius:999px;padding:4px}
 .seg-btn{border-radius:999px;padding:10px}
-.seg-btn.active{color:#095f86}
+.seg-btn.active{color:var(--pp-teal-d)}
 
 /* Sale/product rows */
 .sc-row,.p-row{border-radius:16px}
@@ -289,11 +292,31 @@ h3{font-size:19px}
 
 /* Bell/print badges stay visible on gradient */
 .badge-dot{box-shadow:0 0 0 2px rgba(255,255,255,.7)}
-.topbar{background:linear-gradient(180deg,#0c5da6 0%,rgba(12,93,166,0) 130%)}
+.topbar{background:linear-gradient(180deg,var(--pp-teal-dd) 0%,transparent 130%)}
 
 /* v20: photo row with separate Camera/Gallery options (BusinessX-style) */
 .photo-row{display:flex;align-items:center;gap:14px;margin:2px 0 8px}
 .photo-row .photo-pick{margin:0;border-radius:22px;width:84px;height:84px;flex:none}
 .photo-opts{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-.photo-opt{background:none;border:none;color:#0b7cae;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 2px}
+.photo-opt{background:none;border:none;color:var(--pp-teal-d);font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 2px}
 .photo-opt:active{opacity:.6}
+
+/* ================= Theme variants (Profile → App theme) ================= */
+body[data-theme="emerald"]{--pp-grad:linear-gradient(165deg,#0b5e3f 0%,#0e8a54 55%,#12b76a 100%);--pp-teal:#0c8a52;--pp-teal-l:#15b96d;--pp-teal-d:#0b5e3f;--pp-teal-dd:#073d29;--pp-soft:#dcf5e7;--pp-btn-ink:#fff;--teal:#0c8a52;--teal-d:#0b5e3f}
+body[data-theme="purple"]{--pp-grad:linear-gradient(165deg,#3b1470 0%,#5b21b6 55%,#7c3aed 100%);--pp-teal:#6d28d9;--pp-teal-l:#8b5cf6;--pp-teal-d:#5b21b6;--pp-teal-dd:#3b1470;--pp-soft:#ede9fe;--pp-btn-ink:#fff;--teal:#6d28d9;--teal-d:#5b21b6}
+body[data-theme="orange"]{--pp-grad:linear-gradient(165deg,#7c2d12 0%,#b45309 55%,#dd7a1f 100%);--pp-teal:#c2570b;--pp-teal-l:#e8930c;--pp-teal-d:#9a3412;--pp-teal-dd:#7c2d12;--pp-soft:#fef0dc;--pp-btn-ink:#fff;--teal:#c2570b;--teal-d:#9a3412}
+body[data-theme="midnight"]{--pp-grad:linear-gradient(165deg,#0b1220 0%,#1d2939 60%,#344054 100%);--pp-teal:#b98a1f;--pp-teal-l:#e3b93e;--pp-teal-d:#8a6d1b;--pp-teal-dd:#0b1220;--pp-soft:#faf3dd;--pp-btn-ink:#231a04;--teal:#b98a1f;--teal-d:#8a6d1b}
+body[data-theme="red"]{--pp-grad:linear-gradient(165deg,#450a0a 0%,#991b1b 55%,#dc2626 100%);--pp-teal:#b91c1c;--pp-teal-l:#ef4444;--pp-teal-d:#991b1b;--pp-teal-dd:#450a0a;--pp-soft:#fee2e2;--pp-btn-ink:#fff;--teal:#b91c1c;--teal-d:#991b1b}
+body[data-theme="pink"]{--pp-grad:linear-gradient(165deg,#500f28 0%,#9d174d 55%,#db2777 100%);--pp-teal:#be185d;--pp-teal-l:#ec4899;--pp-teal-d:#9d174d;--pp-teal-dd:#500f28;--pp-soft:#fce7f3;--pp-btn-ink:#fff;--teal:#be185d;--teal-d:#9d174d}
+body[data-theme="brown"]{--pp-grad:linear-gradient(165deg,#2b1a10 0%,#5b3a24 55%,#8b5a2b 100%);--pp-teal:#6f4a26;--pp-teal-l:#a06a35;--pp-teal-d:#5b3a24;--pp-teal-dd:#2b1a10;--pp-soft:#f3e9dc;--pp-btn-ink:#fff;--teal:#6f4a26;--teal-d:#5b3a24}
+body[data-theme="olive"]{--pp-grad:linear-gradient(165deg,#1a2e05 0%,#3f6212 55%,#65a30d 100%);--pp-teal:#4d7c0f;--pp-teal-l:#84cc16;--pp-teal-d:#3f6212;--pp-teal-dd:#1a2e05;--pp-soft:#eef7da;--pp-btn-ink:#fff;--teal:#4d7c0f;--teal-d:#3f6212}
+body[data-theme="wine"]{--pp-grad:linear-gradient(165deg,#2a060f 0%,#7f1d2d 55%,#b91c3a 100%);--pp-teal:#9f1d33;--pp-teal-l:#d43a52;--pp-teal-d:#7f1d2d;--pp-teal-dd:#2a060f;--pp-soft:#fbe4e8;--pp-btn-ink:#fff;--teal:#9f1d33;--teal-d:#7f1d2d}
+body[data-theme="sunset"]{--pp-grad:linear-gradient(165deg,#6d28d9 0%,#c2417a 50%,#f59e0b 100%);--pp-teal:#c2417a;--pp-teal-l:#f59e0b;--pp-teal-d:#9d174d;--pp-teal-dd:#6d28d9;--pp-soft:#fce7f3;--pp-btn-ink:#fff;--teal:#c2417a;--teal-d:#9d174d}
+body[data-theme="grey"]{--pp-grad:linear-gradient(165deg,#111827 0%,#374151 55%,#6b7280 100%);--pp-teal:#4b5563;--pp-teal-l:#9ca3af;--pp-teal-d:#374151;--pp-teal-dd:#111827;--pp-soft:#e5e7eb;--pp-btn-ink:#fff;--teal:#4b5563;--teal-d:#374151}
+body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#083344 0%,#0e7490 55%,#22d3ee 100%);--pp-teal:#0e7490;--pp-teal-l:#22d3ee;--pp-teal-d:#155e75;--pp-teal-dd:#083344;--pp-soft:#cffafe;--pp-btn-ink:#fff;--teal:#0e7490;--teal-d:#155e75}
+
+/* Theme picker dots in profile sheet */
+.theme-grid{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 4px}
+.theme-dot{width:44px;height:44px;border-radius:50%;border:3px solid transparent;cursor:pointer;position:relative;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.theme-dot.sel{border-color:#1c2733;transform:scale(1.08)}
+.theme-dot .tk{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,.5)}
