@@ -290,3 +290,10 @@ h3{font-size:19px}
 /* Bell/print badges stay visible on gradient */
 .badge-dot{box-shadow:0 0 0 2px rgba(255,255,255,.7)}
 .topbar{background:linear-gradient(180deg,#0c5da6 0%,rgba(12,93,166,0) 130%)}
+
+/* v20: photo row with separate Camera/Gallery options (BusinessX-style) */
+.photo-row{display:flex;align-items:center;gap:14px;margin:2px 0 8px}
+.photo-row .photo-pick{margin:0;border-radius:22px;width:84px;height:84px;flex:none}
+.photo-opts{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.photo-opt{background:none;border:none;color:#0b7cae;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 2px}
+.photo-opt:active{opacity:.6}
