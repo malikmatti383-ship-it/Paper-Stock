@@ -369,7 +369,7 @@ function renderDaySales(){
       <div class="sdet-r"><b>${pkr(it.qty*it.price)}</b>
       <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`).join('')+
       `<button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
-       <button class="mini-act" onclick="event.stopPropagation();printSale(${s.id})">🖨️ Print</button><button class="mini-act" onclick="event.stopPropagation();shareBillPDF(${s.id})">📄 PDF bill</button></div>`:'';
+       <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
       <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}<span class="t">${hhmm(s.ts)}</span></div>
       <div class="sub">${sub}${s.customer?' · '+esc(s.customer):''}</div></div>

@@ -343,3 +343,12 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 
 /* v25: primary buttons = rounded pill, 80% width */
 .btn-save{width:80%;margin:14px auto 0;border-radius:999px;display:block}
+
+/* ---- Bill action buttons (Print / PDF) ---- */
+.bill-btns{display:flex;gap:14px;margin-top:10px}
+.bill-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 8px;border-radius:999px;font-size:14.5px;font-weight:800;cursor:pointer;border:2px solid transparent}
+.bill-btn .bi{font-size:18px}
+.bill-btn.bill-print{background:#fff;border-color:var(--pp-teal);color:var(--pp-teal-d)}
+.bill-btn.bill-print:active{background:var(--pp-soft)}
+.bill-btn.bill-pdf{background:linear-gradient(135deg,var(--pp-teal-l),var(--pp-teal));color:#fff;box-shadow:0 5px 14px -4px var(--pp-teal)}
+.bill-btn.bill-pdf:active{filter:brightness(1.08)}
