@@ -418,14 +418,18 @@ window.returnItem=(saleId,ix)=>{
     if(mn) mn.classList.toggle('off',R.n<=1);
     if(pl) pl.classList.toggle('off',R.n>=maxQ);
   };
-  window.retStep=d=>{ R.n=Math.min(maxQ,Math.max(1,R.n+d)); paint(); };
-  window.retSet=v=>{ R.n=Math.min(maxQ,Math.max(1,parseInt(v)||1)); paint(); };
+  window.retStep=d=>retSet(R.n+d);
+  window.retSet=v=>{ const want=parseInt(v)||1, w=$('ret-warn');
+    if(w){ if(want>maxQ){ w.textContent='Only '+maxQ+' available'; w.classList.add('show'); }
+      else { w.textContent=''; w.classList.remove('show'); } }
+    R.n=Math.min(maxQ,Math.max(1,want)); paint(); };
   window.retGo=unpaid=>{ if(unpaid) markSaleUnpaid(saleId); else doReturn(saleId,ix,R.n); };
   window.retPaid=()=>sheetMarkPaid(saleId);
   const stepHtml=maxQ>1?`<div class="ret-card col"><div class="lbl-c">HOW MANY TO RETURN</div>
     <div class="ret-step"><button id="ret-minus" class="step-btn" onclick="retStep(-1)">−</button>
     <input id="ret-n-in" type="number" min="1" max="${maxQ}" value="${R.n}" oninput="retSet(this.value)">
     <button id="ret-plus" class="step-btn" onclick="retStep(1)">+</button></div>
+    <div class="bun-warn" id="ret-warn"></div>
     <div class="sub-c">of ${maxQ} sold</div>
     <div class="ret-quick"><button class="chip-btn" onclick="retSet(1)">Return 1</button><button class="chip-btn" onclick="retSet(${maxQ})">Return all ${maxQ}</button></div></div>`:'';
   openSheet(`<h3>Return item <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
@@ -494,7 +498,10 @@ window.returnSale=id=>{
   };
   window.bunTog=i=>{ if(sel.has(i)){sel.delete(i);}else{sel.add(i);rq[i]=its[i].qty||0;} paint(); };
   window.bunTogAll=()=>{ if(sel.size===its.length){sel.clear();}else{its.forEach((_,i)=>{sel.add(i);rq[i]=its[i].qty||0;});} paint(); };
-  const setQ=(i,v)=>{ rq[i]=Math.min(Math.max(1,parseInt(v)||1),its[i].qty||1); paint(); };
+  const setQ=(i,v)=>{ const max=its[i].qty||1, want=parseInt(v)||1, w=$('bun-w-'+i);
+    if(w){ if(want>max){ w.textContent='Only '+max+' available'; w.classList.add('show'); }
+      else { w.textContent=''; w.classList.remove('show'); } }
+    rq[i]=Math.min(Math.max(1,want),max); paint(); };
   window.bunMinus=i=>setQ(i,rq[i]-1);
   window.bunPlus=i=>setQ(i,rq[i]+1);
   window.bunSet=(i,v)=>setQ(i,v);
@@ -507,17 +514,18 @@ window.returnSale=id=>{
   <div class="bun-head"><div style="display:flex;align-items:center;gap:10px"><span class="bun-ico">\uD83D\uDCE6</span><span>Bundle \u00B7 ${its.length} items</span></div><b>${pkr(s.total)}</b></div>
   <div class="bun-selrow"><span id="bun-count"></span><button class="link-btn" id="bun-toggle" onclick="bunTogAll()"></button></div>
   <div class="ret-card col bun-list">${its.map((it,i)=>`
-    <div class="bun-item" onclick="bunTog(${i})"><span class="bun-check sel" id="bun-chk-${i}">\u2713</span>
-    <div class="bun-nm">${esc(it.name||s.name)}<div class="sub">Qty ${it.qty}</div>
-    ${(it.qty||0)>1?`<div class="bun-ret" id="bun-ret-${i}" onclick="event.stopPropagation()">
+    <div class="bun-item"><div class="bun-top" onclick="bunTog(${i})"><span class="bun-check sel" id="bun-chk-${i}">\u2713</span>
+    <div class="bun-nm">${esc(it.name||s.name)}<div class="sub">Qty ${it.qty}</div></div><b>${pkr(Math.round(it.qty*(it.price||0)*100)/100)}</b></div>
+    ${(it.qty||0)>1?`<div class="bun-ret" id="bun-ret-${i}">
       <span class="lbl">Returning</span>
-      <button class="mini-btn" onclick="event.stopPropagation();bunMinus(${i})">\u2212</button>
-      <input class="bun-qty-in" id="bun-q-${i}" type="number" min="1" max="${it.qty}" value="${it.qty}" oninput="bunSet(${i},this.value)" onclick="event.stopPropagation()">
-      <button class="mini-btn" onclick="event.stopPropagation();bunPlus(${i})">+</button></div>
-    <div class="ret-quick" id="bun-chips-${i}" style="justify-content:flex-start" onclick="event.stopPropagation()">
+      <button class="mini-btn" onclick="bunMinus(${i})">\u2212</button>
+      <input class="bun-qty-in" id="bun-q-${i}" type="number" min="1" max="${it.qty}" value="${it.qty}" oninput="bunSet(${i},this.value)">
+      <button class="mini-btn" onclick="bunPlus(${i})">+</button></div>
+    <div class="bun-warn" id="bun-w-${i}"></div>
+    <div class="ret-quick" id="bun-chips-${i}" style="justify-content:flex-start">
       <button class="chip-btn" onclick="bunOne(${i})">Return 1</button>
       <button class="chip-btn fill" onclick="bunAll(${i})">Return all ${it.qty}</button></div>`:''}
-    </div><b>${pkr(Math.round(it.qty*(it.price||0)*100)/100)}</b></div>`).join('')}</div>
+    </div>`).join('')}</div>
   <div class="ret-refund"><span id="bun-rlabel">Whole bundle</span><b id="bun-refund"></b></div>
   <p class="note" id="bun-note"></p>
   ${s.unpaid?'<button class="btn-paid" onclick="bunPaid()">Mark bundle as paid</button>':'<button class="btn-unpaid" onclick="bunUnpaid()">Mark bundle as unpaid</button>'}

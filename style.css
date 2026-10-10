@@ -392,7 +392,6 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 .bun-ico{width:38px;height:38px;border-radius:50%;background:var(--pp-teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
 .bun-selrow{display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px;color:#8a94a3;font-size:14px}
 .bun-list{padding:4px 14px!important}
-.bun-item{display:flex;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid #eef2f7;cursor:pointer}
 .bun-item:last-child{border-bottom:none}
 .bun-check{width:26px;height:26px;border-radius:50%;border:2px solid #cbd5e1;flex:none;display:flex;align-items:center;justify-content:center;color:transparent;font-size:15px;font-weight:800;transition:all .15s}
 .bun-check.sel{background:var(--pp-teal);border-color:var(--pp-teal);color:#fff}
@@ -401,6 +400,10 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 .btn-return.off{opacity:.45;box-shadow:none}
 
 /* ---- Bundle per-item mini stepper (theme accents) ---- */
+.bun-item{display:block;padding:13px 2px;border-bottom:1px solid #eef2f7}
+.bun-top{display:flex;align-items:center;gap:12px;cursor:pointer}
+.bun-warn{display:none;color:#dc2626;font-size:12px;font-weight:700;margin-top:4px}
+.bun-warn.show{display:block}
 .bun-ret{display:flex;align-items:center;gap:8px;margin-top:10px}
 .bun-ret .lbl{color:#8a94a3;font-size:14px;margin-right:auto}
 .mini-btn{width:34px;height:34px;border-radius:50%;border:none;background:var(--pp-soft);color:var(--pp-teal-d);font-size:19px;font-weight:800;cursor:pointer;line-height:1;flex:none}
