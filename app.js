@@ -157,8 +157,12 @@ function initAdd(){
   $('add-photo-pick').innerHTML='<span>📷</span>';
 }
 $('add-itemid-auto').onclick=()=>{ $('add-itemid').value=DB.seq.item; };
+$('opt-cam').onclick=()=>$('add-photo-cam').click();
+$('opt-gal').onclick=()=>$('add-photo').click();
 $('add-photo-pick').onclick=()=>$('add-photo').click();
-$('add-photo').onchange=e=>readImg(e.target.files[0],d=>{ addImg=d; if(d) $('add-photo-pick').innerHTML=`<img src="${d}">`; e.target.value=''; });
+const handleAddPhoto=e=>readImg(e.target.files[0],d=>{ addImg=d; if(d) $('add-photo-pick').innerHTML=`<img src="${d}">`; e.target.value=''; });
+$('add-photo').onchange=handleAddPhoto;
+$('add-photo-cam').onchange=handleAddPhoto;
 $('btn-add-save').onclick=()=>{
   const name=$('add-name').value.trim();
   if(!name){ toast('Enter item name'); return; }
