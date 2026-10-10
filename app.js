@@ -561,8 +561,8 @@ window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales();
 function hhmm(ts){ try{ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
 function saleItems(s){ return (s.items&&s.items.length)?s.items:[{qty:s.qty||0,price:(s.total||0)/Math.max(1,s.qty||1),name:s.name,productId:s.productId}]; }
 function renderDaySales(){
-  const list=DB.sales.filter(s=>s.date===saleDay).reverse();
-  const exps=DB.expenses.filter(e=>e.date===saleDay).reverse();
+  const list=DB.sales.filter(s=>s.date===saleDay).sort((a,b)=>b.id-a.id);
+  const exps=DB.expenses.filter(e=>e.date===saleDay).sort((a,b)=>b.id-a.id);
   const dlbl=saleDay===dstr()?'Today':fmtDate(saleDay);
   $('sales-day-title').textContent=dlbl+' · '+list.length+' sales';
   const saleRows=list.map(s=>{
