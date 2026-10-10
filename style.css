@@ -12,6 +12,36 @@ body{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:var
 .icon-btn svg{width:21px;height:21px}
 .icon-btn:active{transform:scale(.92)}
 .top-icons{display:flex;gap:12px;align-items:center}
+
+/* ---- Currency picker ---- */
+.cur-hint{font-size:11px;color:var(--pp-sub);margin-top:4px}
+.cur-list{max-height:52vh;overflow:auto;margin-top:8px}
+.cur-row{display:flex;align-items:center;gap:12px;padding:11px 8px;border-bottom:1px solid #f1f5f9;cursor:pointer;border-radius:10px}
+.cur-row:active{background:#f0f9ff}
+.cur-row.sel{background:#f0f9ff}
+.cur-flag{font-size:24px}
+.cur-name{flex:1;font-weight:600;font-size:15px}
+.cur-code{color:#8a94a3;font-size:13px}
+.cur-tick{color:#0284c7;font-weight:800;font-size:16px}
+
+/* ---- Return item sheet ---- */
+.ret-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ret-card.col{flex-direction:column;align-items:stretch}
+.ret-card .sub{color:#8a94a3;font-size:13px;margin-top:2px}
+.lbl-c{text-align:center;font-size:12px;letter-spacing:1.5px;color:#8a94a3;font-weight:700}
+.ret-step{display:flex;align-items:center;justify-content:center;gap:16px;margin:10px 0 4px}
+.step-btn{width:52px;height:52px;border-radius:50%;border:none;background:#e0f2fe;color:#0284c7;font-size:26px;font-weight:800;cursor:pointer;line-height:1}
+.step-btn.off{opacity:.35}
+#ret-n-in{width:76px;text-align:center;font-size:34px;font-weight:800;border:none;background:transparent;color:#1c2733}
+#ret-n-in::-webkit-inner-spin-button{opacity:1}
+.sub-c{text-align:center;color:#8a94a3;font-size:13px}
+.ret-quick{display:flex;gap:10px;justify-content:center;margin-top:10px}
+.chip-btn{border:none;background:#e0f2fe;color:#0284c7;font-weight:700;border-radius:999px;padding:10px 18px;font-size:14px;cursor:pointer}
+.ret-refund{display:flex;justify-content:space-between;align-items:center;margin:14px 2px}
+.ret-refund span{color:#8a94a3;font-size:16px}
+.ret-refund b{color:#dc2626;font-size:24px}
+.btn-unpaid{width:100%;background:#fff;border:1.5px solid var(--pp-teal);color:#dc2626;font-weight:800;font-size:16px;border-radius:14px;padding:13px;margin:6px 0 10px;cursor:pointer;letter-spacing:.5px}
+.btn-return{width:100%;background:#dc2626;border:none;color:#fff;font-weight:800;font-size:17px;border-radius:14px;padding:15px;margin-bottom:4px;cursor:pointer;letter-spacing:.5px;box-shadow:0 6px 16px -6px #dc2626}
 .toptabs{position:sticky;top:52px;z-index:20;display:flex;background:rgba(255,255,255,.14);backdrop-filter:blur(4px)}
 .tt{flex:1;background:none;border:none;color:#d7ecf5;font-size:20px;padding:10px 2px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border-bottom:3px solid transparent}
 .tt span{font-size:12px;font-weight:700;letter-spacing:.5px}

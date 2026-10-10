@@ -3,13 +3,97 @@ const DB_KEY = 'paperstock_v1';
 let DB = null;
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pkr = n => 'PKR ' + Number(n||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pkr = n => curCode() + ' ' + Number(n||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2});
 const dstr = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.remove('hidden'); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.add('hidden'),2400); }
 
+/* ================= CURRENCY: country list [name, iso2, code, symbol] ================= */
+const COUNTRIES=[
+["Pakistan","PK","PKR","Rs"],["Afghanistan","AF","AFN","؋"],["Albania","AL","ALL","L"],["Algeria","DZ","DZD","دج"],
+["Andorra","AD","EUR","€"],["Angola","AO","AOA","Kz"],["Argentina","AR","ARS","$"],["Armenia","AM","AMD","֏"],
+["Australia","AU","AUD","$"],["Austria","AT","EUR","€"],["Azerbaijan","AZ","AZN","₼"],["Bahamas","BS","BSD","$"],
+["Bahrain","BH","BHD","ب.د"],["Bangladesh","BD","BDT","৳"],["Belarus","BY","BYN","Br"],["Belgium","BE","EUR","€"],
+["Belize","BZ","BZD","$"],["Benin","BJ","XOF","CFA"],["Bhutan","BT","BTN","Nu."],["Bolivia","BO","BOB","$"],
+["Bosnia & Herz.","BA","BAM","KM"],["Botswana","BW","BWP","P"],["Brazil","BR","BRL","R$"],["Brunei","BN","BND","$"],
+["Bulgaria","BG","BGN","лв"],["Burkina Faso","BF","XOF","CFA"],["Burundi","BI","BIF","FBu"],["Cambodia","KH","KHR","៛"],
+["Cameroon","CM","XAF","FCFA"],["Canada","CA","CAD","$"],["Cape Verde","CV","CVE","$"],["Chad","TD","XAF","FCFA"],
+["Chile","CL","CLP","$"],["China","CN","CNY","¥"],["Colombia","CO","COP","$"],["Comoros","KM","KMF","CF"],
+["Congo","CG","XAF","FCFA"],["Costa Rica","CR","CRC","₡"],["Croatia","HR","EUR","€"],["Cuba","CU","CUP","$"],
+["Cyprus","CY","EUR","€"],["Czechia","CZ","CZK","Kč"],["Denmark","DK","DKK","kr"],["Djibouti","DJ","DJF","Fdj"],
+["Dominica","DM","XCD","$"],["Dominican Rep.","DO","DOP","$"],["DR Congo","CD","CDF","FC"],["Ecuador","EC","USD","$"],
+["Egypt","EG","EGP","£"],["El Salvador","SV","USD","$"],["Eritrea","ER","ERN","Nfk"],["Estonia","EE","EUR","€"],
+["Eswatini","SZ","SZL","L"],["Ethiopia","ET","ETB","Br"],["Fiji","FJ","FJD","$"],["Finland","FI","EUR","€"],
+["France","FR","EUR","€"],["Gabon","GA","XAF","FCFA"],["Gambia","GM","GMD","D"],["Georgia","GE","GEL","₾"],
+["Germany","DE","EUR","€"],["Ghana","GH","GHS","₵"],["Greece","GR","EUR","€"],["Grenada","GD","XCD","$"],
+["Guatemala","GT","GTQ","Q"],["Guinea","GN","GNF","FG"],["Guyana","GY","GYD","$"],["Haiti","HT","HTG","G"],
+["Honduras","HN","HNL","L"],["Hungary","HU","HUF","Ft"],["Iceland","IS","ISK","kr"],["India","IN","INR","₹"],
+["Indonesia","ID","IDR","Rp"],["Iran","IR","IRR","﷼"],["Iraq","IQ","IQD","ع.د"],["Ireland","IE","EUR","€"],
+["Israel","IL","ILS","₪"],["Italy","IT","EUR","€"],["Ivory Coast","CI","XOF","CFA"],["Jamaica","JM","JMD","$"],
+["Japan","JP","JPY","¥"],["Jordan","JO","JOD","د.ا"],["Kazakhstan","KZ","KZT","₸"],["Kenya","KE","KES","KSh"],
+["Kuwait","KW","KWD","د.ك"],["Kyrgyzstan","KG","KGS","сом"],["Laos","LA","LAK","₭"],["Latvia","LV","EUR","€"],
+["Lebanon","LB","LBP","ل.ل"],["Lesotho","LS","LSL","L"],["Liberia","LR","LRD","$"],["Libya","LY","LYD","ل.د"],
+["Lithuania","LT","EUR","€"],["Luxembourg","LU","EUR","€"],["Madagascar","MG","MGA","Ar"],["Malawi","MW","MWK","MK"],
+["Malaysia","MY","MYR","RM"],["Maldives","MV","MVR","Rf"],["Mali","ML","XOF","CFA"],["Malta","MT","EUR","€"],
+["Mauritania","MR","MRU","UM"],["Mauritius","MU","MUR","₨"],["Mexico","MX","MXN","$"],["Moldova","MD","MDL","L"],
+["Monaco","MC","EUR","€"],["Mongolia","MN","MNT","₮"],["Montenegro","ME","EUR","€"],["Morocco","MA","MAD","د.م."],
+["Mozambique","MZ","MZN","MT"],["Myanmar","MM","MMK","K"],["Namibia","NA","NAD","$"],["Nepal","NP","NPR","₨"],
+["Netherlands","NL","EUR","€"],["New Zealand","NZ","NZD","$"],["Nicaragua","NI","NIO","C$"],["Niger","NE","XOF","CFA"],
+["Nigeria","NG","NGN","₦"],["North Macedonia","MK","MKD","ден"],["Norway","NO","NOK","kr"],["Oman","OM","OMR","ر.ع."],
+["Panama","PA","USD","$"],["Papua New Guinea","PG","PGK","K"],["Paraguay","PY","PYG","₲"],["Peru","PE","PEN","S/"],
+["Philippines","PH","PHP","₱"],["Poland","PL","PLN","zł"],["Portugal","PT","EUR","€"],["Qatar","QA","QAR","ر.ق"],
+["Romania","RO","RON","lei"],["Russia","RU","RUB","₽"],["Rwanda","RW","RWF","RF"],["Saudi Arabia","SA","SAR","ر.س"],
+["Senegal","SN","XOF","CFA"],["Serbia","RS","RSD","дин"],["Seychelles","SC","SCR","₨"],["Sierra Leone","SL","SLE","Le"],
+["Singapore","SG","SGD","$"],["Slovakia","SK","EUR","€"],["Slovenia","SI","EUR","€"],["Somalia","SO","SOS","Sh"],
+["South Africa","ZA","ZAR","R"],["South Korea","KR","KRW","₩"],["South Sudan","SS","SSP","£"],["Spain","ES","EUR","€"],
+["Sri Lanka","LK","LKR","₨"],["Sudan","SD","SDG","£"],["Suriname","SR","SRD","$"],["Sweden","SE","SEK","kr"],
+["Switzerland","CH","CHF","CHF"],["Syria","SY","SYP","£"],["Taiwan","TW","TWD","NT$"],["Tajikistan","TJ","TJS","ЅМ"],
+["Tanzania","TZ","TZS","TSh"],["Thailand","TH","THB","฿"],["Togo","TG","XOF","CFA"],["Trinidad & Tob.","TT","TTD","$"],
+["Tunisia","TN","TND","د.ت"],["Turkey","TR","TRY","₺"],["Turkmenistan","TM","TMT","m"],["Uganda","UG","UGX","USh"],
+["Ukraine","UA","UAH","₴"],["UAE","AE","AED","د.إ"],["United Kingdom","GB","GBP","£"],["United States","US","USD","$"],
+["Uruguay","UY","UYU","$"],["Uzbekistan","UZ","UZS","so'm"],["Venezuela","VE","VES","Bs"],["Vietnam","VN","VND","₫"],
+["Yemen","YE","YER","﷼"],["Zambia","ZM","ZMW","K"],["Zimbabwe","ZW","ZWL","$"]
+];
+const flagEmoji=cc=>{try{return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>127397+c.charCodeAt(0)));}catch(e){return "🏳";}};
+const curCode=()=>(DB&&DB.profile&&DB.profile.currency)||'PKR';
+function detectCurrency(){
+  try{
+    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';
+    const TZM={'Asia/Karachi':'PKR','Asia/Dubai':'AED','Asia/Muscat':'OMR','Asia/Qatar':'QAR','Asia/Bahrain':'BHD','Asia/Kuwait':'KWD','Asia/Riyadh':'SAR','Asia/Jeddah':'SAR','Asia/Kolkata':'INR','Asia/Calcutta':'INR','Asia/Dhaka':'BDT','Asia/Kathmandu':'NPR','Asia/Colombo':'LKR','Asia/Kabul':'AFN','Asia/Tehran':'IRR','Asia/Baghdad':'IQD','Asia/Amman':'JOD','Asia/Beirut':'LBP','Asia/Damascus':'SYP','Asia/Yerevan':'AMD','Asia/Baku':'AZN','Asia/Tbilisi':'GEL','Asia/Almaty':'KZT','Asia/Tashkent':'UZS','Asia/Bishkek':'KGS','Asia/Dushanbe':'TJS','Asia/Ashgabat':'TMT','Asia/Yangon':'MMK','Asia/Rangoon':'MMK','Asia/Bangkok':'THB','Asia/Jakarta':'IDR','Asia/Kuala_Lumpur':'MYR','Asia/Singapore':'SGD','Asia/Manila':'PHP','Asia/Hong_Kong':'HKD','Asia/Shanghai':'CNY','Asia/Chongqing':'CNY','Asia/Taipei':'TWD','Asia/Seoul':'KRW','Asia/Tokyo':'JPY','Asia/Brunei':'BND','Australia/':'AUD','Pacific/Auckland':'NZD','Pacific/Port_Moresby':'PGK','Pacific/Suva':'FJD','Europe/London':'GBP','Europe/Dublin':'GBP','Europe/Paris':'EUR','Europe/Berlin':'EUR','Europe/':'EUR','America/New_York':'USD','America/Chicago':'USD','America/Denver':'USD','America/Los_Angeles':'USD','America/Anchorage':'USD','Pacific/Honolulu':'USD','America/Toronto':'CAD','America/Vancouver':'CAD','America/Mexico_City':'MXN','America/Sao_Paulo':'BRL','America/Argentina/Buenos_Aires':'ARS','America/Bogota':'COP','America/Lima':'PEN','America/Santiago':'CLP','America/Caracas':'VES','America/Havana':'CUP','America/Santo_Domingo':'DOP','America/Guatemala':'GTQ','America/Tegucigalpa':'HNL','America/Managua':'NIO','America/Costa_Rica':'CRC','America/Panama':'USD','America/El_Salvador':'USD','America/Jamaica':'JMD','America/Port_of_Spain':'TTD','Africa/Cairo':'EGP','Africa/Lagos':'NGN','Africa/Nairobi':'KES','Africa/Johannesburg':'ZAR','Africa/Accra':'GHS','Africa/Addis_Ababa':'ETB','Africa/Khartoum':'SDG','Africa/Tunis':'TND','Africa/Algiers':'DZD','Africa/Casablanca':'MAD','Africa/Dakar':'XOF','Africa/Abidjan':'XOF'};
+    for(const k in TZM){ if(tz===k||tz.indexOf(k)===0) return TZM[k]; }
+    const lang=((navigator&&navigator.language)||'en-US').split('-');
+    if(lang[1]){ const f=COUNTRIES.find(x=>x[1]===lang[1].toUpperCase()); if(f) return f[2]; }
+  }catch(e){}
+  return 'PKR';
+}
+function paintCur(){ try{ document.querySelectorAll('[data-cur]').forEach(el=>el.textContent=curCode()); }catch(e){} }
+window.openCurrency=()=>{
+  openSheet(`<h3>💱 Currency <button class="link-btn" style="float:right" onclick="closeSheet()">Done</button></h3>
+  <div class="search-wrap">🔍 <input id="cur-q" placeholder="Country or currency" autocomplete="off" oninput="renderCurList(this.value)"></div>
+  <div id="cur-list" class="cur-list"></div>`);
+  renderCurList(''); setTimeout(()=>{const q=$('cur-q'); if(q) q.focus();},150);
+};
+window.renderCurList=q=>{
+  q=(q||'').toLowerCase().trim();
+  const list=COUNTRIES.filter(c=>!q||c[0].toLowerCase().indexOf(q)>-1||c[2].toLowerCase().indexOf(q)>-1);
+  const box=$('cur-list'); if(!box) return;
+  box.innerHTML=list.map(c=>`<div class="cur-row${c[2]===curCode()?' sel':''}" onclick="setCurrency('${c[2]}')">
+    <span class="cur-flag">${flagEmoji(c[1])}</span><span class="cur-name">${c[0]}</span>
+    <span class="cur-code">${c[3]} ${c[2]}</span>${c[2]===curCode()?'<span class="cur-tick">✓</span>':''}</div>`).join('')||'<p class="note">No match</p>';
+};
+window.setCurrency=code=>{
+  if(code===curCode()){ closeSheet(); return; }
+  closeSheet();
+  confirmDlg('Change currency?','All amounts will show in '+code+'. Continue?','CHANGE',()=>{
+    DB.profile.currency=code; save(); paintCur();
+    renderSales(); renderStock(); if(typeof renderReport==='function') renderReport(); if(typeof renderCredit==='function') renderCredit();
+    toast('💱 Currency: '+code);
+  });
+};
+
+
 /* ---------- Data ---------- */
 function defDB(){ return { profile:{name:'Paper Store',email:'',logo:''}, products:[], sales:[], expenses:[], customers:[], printQueue:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
-function load(){ try{ DB=JSON.parse(localStorage.getItem(DB_KEY))||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; }
+function load(){ try{ DB=JSON.parse(localStorage.getItem(DB_KEY))||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency(); }
 function save(){ localStorage.setItem(DB_KEY,JSON.stringify(DB)); }
 
 /* ---------- Cloud sync (Gmail login) ---------- */
@@ -27,7 +111,7 @@ function applyRemote(data,updatedAt){
   if(!data||!updatedAt||updatedAt<=syncedAt) return;
   applyingRemote=true;
   try{
-    DB=data; if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[];
+    DB=data; if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
     _saveLocal();
     syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){}
     renderStoreName(); applyTheme(curTheme());
@@ -214,7 +298,7 @@ function grossProfit(){ return DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+
 function renderSales(){
   const tot=DB.sales.reduce((s,x)=>s+x.total,0);
   const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
-  $('s-total').textContent=pkr(tot); $('s-exp').textContent=pkr(exp);
+  $('s-total').textContent=pkr(tot); $('s-exp').textContent=pkr(exp); paintCur();
   $('s-profit').textContent=pkr(grossProfit()-exp); // expense minus from profit
   $('sale-date-txt').textContent=fmtDate(saleDate);
   if(!$('exp-date').value) $('exp-date').value=dstr();
@@ -314,25 +398,65 @@ $('btn-sold').onclick=()=>{
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
 };
 /* ---- Return: single item or whole bundle (NADIR style) ---- */
+// Return item — bottom sheet like reference: stepper, refund, mark as unpaid
 window.returnItem=(saleId,ix)=>{
   const s=DB.sales.find(x=>x.id===saleId); if(!s) return;
-  const its=saleItems(s), it=its[ix]; if(!it) return;
-  confirmDlg('Return Item?','This will return the item to your inventory stock.','RETURN',()=>{
-    const p=DB.products.find(x=>x.id===it.productId); if(p) p.qty+=it.qty;
-    s.total=Math.round((s.total-it.qty*it.price)*100)/100;
-    s.qty-=it.qty;
-    if(s.items&&s.items.length){ s.items.splice(ix,1); }
-    if(!s.items||!s.items.length){
-      DB.sales=DB.sales.filter(x=>x.id!==saleId);
-      DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId);
-    } else {
-      const left=saleItems(s);
-      s.name=left.length===1?left[0].name:(left.length+' items');
-    }
-    save(); renderSales(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
-    toast('↩️ Item returned to stock');
-  });
+  const its=saleItems(s), it=its[ix]; if(!it||!(it.qty>0)) return;
+  const maxQ=it.qty, unit=it.price||0, R={n:maxQ};
+  const tm=new Date(s.ts||Date.now());
+  const tstr=tm.toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit'});
+  const paint=()=>{
+    const inp=$('ret-n-in'); if(inp) inp.value=R.n;
+    $('ret-refund').textContent=pkr(Math.round(R.n*unit*100)/100);
+    $('ret-go').textContent=R.n>=maxQ?`Return all ${maxQ}`:`Return ${R.n} of ${maxQ}`;
+    $('ret-minus').classList.toggle('off',R.n<=1);
+    $('ret-plus').classList.toggle('off',R.n>=maxQ);
+  };
+  window.retStep=d=>{ R.n=Math.min(maxQ,Math.max(1,R.n+d)); paint(); };
+  window.retSet=v=>{ R.n=Math.min(maxQ,Math.max(1,parseInt(v)||1)); paint(); };
+  window.retGo=unpaid=>doReturn(saleId,ix,R.n,unpaid);
+  openSheet(`<h3>Return item <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
+  <div class="ret-card"><div><b>${esc(it.name||s.name)}</b><div class="sub">${tstr} · Qty ${maxQ}</div></div><b>${pkr(unit*maxQ)}</b></div>
+  <div class="ret-card col"><div class="lbl-c">HOW MANY TO RETURN</div>
+    <div class="ret-step"><button id="ret-minus" class="step-btn" onclick="retStep(-1)">−</button>
+    <input id="ret-n-in" type="number" min="1" max="${maxQ}" value="${R.n}" oninput="retSet(this.value)">
+    <button id="ret-plus" class="step-btn" onclick="retStep(1)">+</button></div>
+    <div class="sub-c">of ${maxQ} sold</div>
+    <div class="ret-quick"><button class="chip-btn" onclick="retSet(1)">Return 1</button><button class="chip-btn" onclick="retSet(${maxQ})">Return all ${maxQ}</button></div></div>
+  <div class="ret-refund"><span>Refund</span><b id="ret-refund"></b></div>
+  <p class="note">Returned quantity goes back into stock.</p>
+  <button class="btn-unpaid" onclick="retGo(true)">Mark as unpaid</button>
+  <button class="btn-return" id="ret-go" onclick="retGo(false)"></button>`);
+  paint();
 };
+function doReturn(saleId,ix,n,unpaid){
+  const s=DB.sales.find(x=>x.id===saleId); if(!s){ closeSheet(); return; }
+  const its=saleItems(s), it=its[ix]; if(!it){ closeSheet(); return; }
+  n=Math.min(Math.max(1,n||1),it.qty||1);
+  const refund=Math.round(n*(it.price||0)*100)/100;
+  const p=DB.products.find(x=>x.id===it.productId); if(p) p.qty+=n;   // back to stock
+  let empty;
+  if(s.items&&s.items.length){ it.qty-=n; if(it.qty<=0) s.items.splice(ix,1); empty=!s.items.length; }
+  else { empty=((s.qty||0)-n)<=0; }
+  s.qty=Math.max(0,(s.qty||0)-n);
+  s.total=Math.round(((s.total||0)-refund)*100)/100;
+  if(unpaid) markUnpaid(s,refund);
+  if(empty){ DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId); }
+  else { const left=saleItems(s); s.name=left.length===1?left[0].name:(left.length+' items'); }
+  save(); closeSheet(); renderSales(); renderStock(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
+  toast('↩️ Returned '+n+' × '+(it.name||'')+' — back to stock');
+}
+function markUnpaid(s,refund){
+  const nm=(s.customer||'').trim();
+  if(!nm||refund<=0){ if(!nm) toast('⚠️ Add customer name to mark unpaid'); return; }
+  let c=DB.customers.find(x=>(x.name||'').toLowerCase()===nm.toLowerCase());
+  if(!c){ c={id:DB.seq.c++,custId:DB.seq.c,name:nm,phone:s.phone||'',product:'',saleRate:0,discount:0,qty:0,credit:0,received:0,promiseDate:'',promiseTime:'',log:[]}; DB.customers.push(c); if(c.custId>=DB.seq.c)DB.seq.c=c.custId+1; }
+  c.received=Math.round(((c.received||0)+refund)*100)/100;
+  c.log.push({t:'Return refund (unpaid)',a:refund,d:dstr()});
+  if(typeof renderCredit==='function') renderCredit(); if(typeof updateBellBadge==='function') updateBellBadge();
+  toast('📒 '+pkr(refund)+' marked unpaid for '+nm);
+}
+
 window.returnSale=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
   confirmDlg('Return Bundle?','This will return all items to your inventory stock.','RETURN',()=>{
@@ -830,7 +954,7 @@ function numToWords(n){
   if(cr)o+=three(cr)+' Crore '; if(lk)o+=two(lk)+' Lakh '; if(th)o+=two(th)+' Thousand '; if(n)o+=three(n);
   return o.trim();
 }
-function rsFmt(v){ return 'Rs'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function rsFmt(v){ const c=curCode(); return (c==='PKR'?'Rs':c+' ')+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function billTheme(){
   const BT={ocean:['#102c6b','#4a86f5','#1e40af'],emerald:['#0f6b49','#16c475','#0b5e3f'],purple:['#471c7d','#875ff0','#5b21b6'],orange:['#8a3a1c','#e5862c','#9a3412'],midnight:['#131c2e','#8a6d1b','#8a6d1b'],red:['#521010','#e03232','#991b1b'],pink:['#5c1630','#e03283','#9d174d'],brown:['#362115','#976637','#5b3a24'],olive:['#223a08','#70b012','#3f6212'],wine:['#360b14','#c42544','#7f1d2d'],sunset:['#7933e0','#f7a716','#9d174d'],grey:['#1a2332','#78828f','#374151'],cyan:['#0d3d52','#2fd8f2','#0e7490'],classic:['#1268b1','#14b2d6','#095f86']};
   return BT[curTheme()]||BT.ocean;

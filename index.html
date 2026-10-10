@@ -63,8 +63,8 @@
         <label class="fl">QUANTITY</label>
         <input id="add-qty" type="number" min="0" value="1">
         <div class="two-col">
-          <div><label class="fl">COST PRICE</label><div class="pkr-wrap"><input id="add-cost" type="number" min="0" value="0"><span>PKR</span></div></div>
-          <div><label class="fl">SELLING PRICE</label><div class="pkr-wrap"><input id="add-sell" type="number" min="0" value="0"><span>PKR</span></div></div>
+          <div><label class="fl">COST PRICE</label><div class="pkr-wrap"><input id="add-cost" type="number" min="0" value="0"><span data-cur>PKR</span></div></div>
+          <div><label class="fl">SELLING PRICE</label><div class="pkr-wrap"><input id="add-sell" type="number" min="0" value="0"><span data-cur>PKR</span></div></div>
         </div>
         <label class="fl">Tax Percent</label>
         <div class="pkr-wrap"><input id="add-tax" type="number" min="0" value="0"><span>%</span></div>
@@ -77,8 +77,8 @@
   <!-- ============ SALES ============ -->
   <section id="view-sales" class="view active">
     <div class="pad">
-      <div class="white-card split-card">
-        <div><div class="lbl">Total sale till now</div><div class="big-num" id="s-total">PKR 0.00</div></div>
+      <div class="white-card split-card" onclick="openCurrency()" style="cursor:pointer" title="Change currency">
+        <div><div class="lbl">Total sale till now</div><div class="big-num" id="s-total">PKR 0.00</div><div class="cur-hint">💱 Tap to change currency</div></div>
         <div class="split-right"><div class="lbl">EXPENSES</div><div id="s-exp">PKR 0.00</div>
         <div class="lbl" style="margin-top:8px">NET PROFIT</div><div class="green-num" id="s-profit">PKR 0.00</div></div>
       </div>
@@ -93,10 +93,10 @@
             <div id="sale-dd" class="dd-list hidden"></div>
           </div>
           <div id="sale-cart"></div>
-          <div class="fld"><span class="fld-lbl">Cost per item</span><div class="fld-in"><input id="sale-cost" readonly tabindex="-1" autocomplete="off"><span class="pkr">PKR</span></div></div>
+          <div class="fld"><span class="fld-lbl">Cost per item</span><div class="fld-in"><input id="sale-cost" readonly tabindex="-1" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
           <div class="fld"><span class="fld-lbl">Quantity sold</span><input id="sale-qty" type="number" min="1" value="1" autocomplete="off"></div>
           <button class="btn-addmore" id="btn-add-item">+ Add more items</button>
-          <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr">PKR</span></div></div>
+          <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <button class="link-btn" id="sale-add-cust">+ Add Customer Name/Number</button>
           <input id="sale-cust" class="hidden" placeholder="Customer name">
           <input id="sale-cust-phone" class="hidden" placeholder="Customer number" inputmode="tel">
@@ -170,7 +170,7 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js?v=33"></script>
+    <script src="app.js?v=34"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
