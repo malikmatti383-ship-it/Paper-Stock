@@ -401,3 +401,10 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 .bun-nm{flex:1;min-width:0;font-weight:800;font-size:15px}
 .bun-nm .sub{color:#8a94a3;font-size:13px;margin-top:2px;font-weight:400}
 .btn-return.off{opacity:.45;box-shadow:none}
+
+/* ---- Bundle per-item mini stepper (theme accents) ---- */
+.bun-ret{display:flex;align-items:center;gap:8px;margin-top:10px}
+.bun-ret .lbl{color:#8a94a3;font-size:14px;margin-right:auto}
+.mini-btn{width:34px;height:34px;border-radius:50%;border:none;background:var(--pp-soft);color:var(--pp-teal-d);font-size:19px;font-weight:800;cursor:pointer;line-height:1;flex:none}
+.bun-qty-in{width:44px;text-align:center;font-size:17px;font-weight:800;border:none;background:transparent;color:#1c2733;outline:none}
+.chip-btn.fill{background:var(--pp-teal);color:#fff}

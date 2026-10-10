@@ -464,57 +464,83 @@ window.returnSale=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
   const its=saleItems(s); if(!its.length) return;
   const sel=new Set(its.map((_,i)=>i));
+  const rq=its.map(it=>it.qty||0);   // return-qty per item
   const paint=()=>{
-    const arr=[...sel];
-    const refund=Math.round(arr.reduce((tt,i)=>tt+(its[i].qty*(its[i].price||0)),0)*100)/100;
+    const refund=Math.round([...sel].reduce((tt,i)=>tt+(rq[i]*(its[i].price||0)),0)*100)/100;
     $('bun-count').textContent=sel.size+' of '+its.length+' selected';
     $('bun-toggle').textContent=sel.size===its.length?'Clear all':'Select all';
+    const fullAll=its.every((it,i)=>sel.has(i)&&rq[i]>=(it.qty||0));
+    $('bun-rlabel').textContent=fullAll?'Whole bundle':'Refund';
     $('bun-refund').textContent=pkr(refund);
     $('bun-note').textContent=sel.size?'Returned quantity goes back into stock.':"This sale isn't linked to an inventory item, so no stock will be restored.";
     const go=$('bun-go');
-    go.textContent=sel.size===its.length?'Return whole bundle':'Return '+sel.size+' item'+(sel.size===1?'':'s');
+    go.textContent=fullAll?'Return whole bundle':'Return '+sel.size+' item'+(sel.size===1?'':'s');
     go.classList.toggle('off',!sel.size);
-    its.forEach((it,i)=>{ const c=$('bun-chk-'+i); if(c) c.classList.toggle('sel',sel.has(i)); });
+    its.forEach((it,i)=>{
+      const c=$('bun-chk-'+i); if(c) c.classList.toggle('sel',sel.has(i));
+      const on=sel.has(i);
+      const r=$('bun-ret-'+i); if(r) r.style.display=(on&&(it.qty||0)>1)?'flex':'none';
+      const ch=$('bun-chips-'+i); if(ch) ch.style.display=(on&&(it.qty||0)>1)?'flex':'none';
+      const q=$('bun-q-'+i); if(q&&document.activeElement!==q) q.value=rq[i];
+    });
   };
-  window.bunTog=i=>{ sel.has(i)?sel.delete(i):sel.add(i); paint(); };
-  window.bunTogAll=()=>{ if(sel.size===its.length) sel.clear(); else its.forEach((_,i)=>sel.add(i)); paint(); };
-  window.bunGo=()=>{ if(!sel.size) return; doReturnBundle(id,[...sel]); };
+  window.bunTog=i=>{ if(sel.has(i)){sel.delete(i);}else{sel.add(i);rq[i]=its[i].qty||0;} paint(); };
+  window.bunTogAll=()=>{ if(sel.size===its.length){sel.clear();}else{its.forEach((_,i)=>{sel.add(i);rq[i]=its[i].qty||0;});} paint(); };
+  const setQ=(i,v)=>{ rq[i]=Math.min(Math.max(1,parseInt(v)||1),its[i].qty||1); paint(); };
+  window.bunMinus=i=>setQ(i,rq[i]-1);
+  window.bunPlus=i=>setQ(i,rq[i]+1);
+  window.bunSet=(i,v)=>setQ(i,v);
+  window.bunOne=i=>setQ(i,1);
+  window.bunAll=i=>setQ(i,its[i].qty||1);
+  window.bunGo=()=>{ const list=[...sel].map(i=>({ix:i,n:rq[i]})).filter(x=>x.n>0); if(!list.length) return; doReturnBundle(id,list); };
   window.bunUnpaid=()=>markSaleUnpaid(id);
   openSheet(`<h3>Return from bundle <button class="link-btn" style="float:right" onclick="closeSheet()">Cancel</button></h3>
   <div class="bun-head"><div style="display:flex;align-items:center;gap:10px"><span class="bun-ico">\uD83D\uDCE6</span><span>Bundle \u00B7 ${its.length} items</span></div><b>${pkr(s.total)}</b></div>
   <div class="bun-selrow"><span id="bun-count"></span><button class="link-btn" id="bun-toggle" onclick="bunTogAll()"></button></div>
   <div class="ret-card col bun-list">${its.map((it,i)=>`
     <div class="bun-item" onclick="bunTog(${i})"><span class="bun-check sel" id="bun-chk-${i}">\u2713</span>
-    <div class="bun-nm">${esc(it.name||s.name)}<div class="sub">Qty ${it.qty}</div></div>
-    <b>${pkr(Math.round(it.qty*(it.price||0)*100)/100)}</b></div>`).join('')}</div>
-  <div class="ret-refund"><span>Refund</span><b id="bun-refund"></b></div>
+    <div class="bun-nm">${esc(it.name||s.name)}<div class="sub">Qty ${it.qty}</div>
+    ${(it.qty||0)>1?`<div class="bun-ret" id="bun-ret-${i}" onclick="event.stopPropagation()">
+      <span class="lbl">Returning</span>
+      <button class="mini-btn" onclick="event.stopPropagation();bunMinus(${i})">\u2212</button>
+      <input class="bun-qty-in" id="bun-q-${i}" type="number" min="1" max="${it.qty}" value="${it.qty}" oninput="bunSet(${i},this.value)" onclick="event.stopPropagation()">
+      <button class="mini-btn" onclick="event.stopPropagation();bunPlus(${i})">+</button></div>
+    <div class="ret-quick" id="bun-chips-${i}" style="justify-content:flex-start" onclick="event.stopPropagation()">
+      <button class="chip-btn" onclick="bunOne(${i})">Return 1</button>
+      <button class="chip-btn fill" onclick="bunAll(${i})">Return all ${it.qty}</button></div>`:''}
+    </div><b>${pkr(Math.round(it.qty*(it.price||0)*100)/100)}</b></div>`).join('')}</div>
+  <div class="ret-refund"><span id="bun-rlabel">Whole bundle</span><b id="bun-refund"></b></div>
   <p class="note" id="bun-note"></p>
   <button class="btn-unpaid" onclick="bunUnpaid()">Mark bundle as unpaid</button>
   <button class="btn-return" id="bun-go" onclick="bunGo()"></button>`);
   paint();
 };
-function doReturnBundle(saleId,selIx){
+function doReturnBundle(saleId,list){
   const s=DB.sales.find(x=>x.id===saleId); if(!s){ closeSheet(); return; }
   const its=saleItems(s);
   let refund=0;
-  [...selIx].sort((a,b)=>b-a).forEach(ix=>{
-    const it=its[ix]; if(!it) return;
-    refund=Math.round((refund+it.qty*(it.price||0))*100)/100;
-    const pr=DB.products.find(x=>x.id===it.productId); if(pr) pr.qty+=it.qty;
-    if(s.items&&s.items.length) s.items.splice(ix,1);
+  [...list].sort((a,b)=>b.ix-a.ix).forEach(o=>{
+    const it=its[o.ix]; if(!it) return;
+    const n=Math.min(Math.max(1,o.n||1),it.qty||1);
+    refund=Math.round((refund+n*(it.price||0))*100)/100;
+    const pr=DB.products.find(x=>x.id===it.productId); if(pr) pr.qty+=n;
+    if(s.items&&s.items.length){ it.qty-=n; if(it.qty<=0) s.items.splice(o.ix,1); }
+    else { s.qty=Math.max(0,(s.qty||0)-n); }
   });
   if(s.items&&s.items.length){
     const left=saleItems(s);
     s.qty=left.reduce((tt,it)=>tt+it.qty,0);
     s.total=Math.round((s.total-refund)*100)/100;
     s.name=left.length===1?left[0].name:(left.length+' items');
+    if(!left.length){ DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId); }
   } else {
-    DB.sales=DB.sales.filter(x=>x.id!==saleId);
-    DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId);
+    s.total=Math.round((s.total-refund)*100)/100;
+    if((s.qty||0)<=0){ DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId); }
   }
   save(); closeSheet(); renderSales(); renderStock(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
-  toast('\u21A9\uFE0F Returned '+selIx.length+' item(s) \u2014 back to stock');
+  toast('\u21A9\uFE0F Returned '+list.length+' item(s) \u2014 back to stock');
 }
+
 
 $('btn-exp-add').onclick=()=>{
   const a=Math.max(0,parseFloat($('exp-amt').value)||0);
