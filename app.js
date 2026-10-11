@@ -791,7 +791,7 @@ function renderDaySales(){
   const saleRows=list.map(s=>{
     const its=saleItems(s), open=expSaleId===s.id;
     const sub=its.length>1?its.length+' items':'× '+s.qty;
-    const lineP=it=>(it.qty||0)*((it.price||0)-(it.cost||0));
+    const lineP=it=>{ const lt=(it.total!=null?it.total:(it.qty||0)*(it.price||0)); return lt-(it.qty||0)*(it.cost||0); };
     const hasCost=its.some(it=>it.cost!=null);
     const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
     const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
@@ -802,7 +802,7 @@ function renderDaySales(){
       <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
       ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
       <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
-      (hasCost?((posP>0?`<div class="profit-line">💰 Profit: ${pkr(posP)}</div>`:'')+(negL>0?`<div class="loss-line">📉 Loss: ${pkr(negL)}</div>`:'')+((posP===0&&negL===0)?`<div class="profit-line">💰 Profit: ${pkr(0)}</div>`:'')):'')+
+      (hasCost?((posP>0&&negL>0)?`<div class="pl-row"><span class="pl-pos">💰 Profit: ${pkr(posP)}</span><span class="pl-neg">📉 Loss: ${pkr(negL)}</span></div>`:(posP>0?`<div class="profit-line">💰 Profit: ${pkr(posP)}</div>`:(negL>0?`<div class="loss-line">📉 Loss: ${pkr(negL)}</div>`:`<div class="profit-line">💰 Profit: ${pkr(0)}</div>`))):'')+
       `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
       <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
