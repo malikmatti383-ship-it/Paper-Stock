@@ -393,7 +393,7 @@ function applyTabOrder(selectFirst){
 function openDatePicker(id){ const el=$(id); if(!el) return;
   try{ if(el.showPicker) el.showPicker(); else el.click(); }catch(e){ try{ el.click(); }catch(_){} } }
 $('sale-date-pill').onclick=()=>openDatePicker('sale-date');
-$('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sale-date-txt').textContent=fmtDate(saleDate); } };
+$('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sale-date-txt').textContent=fmtDate(saleDate); saleDay=saleDate; renderDaySales(); } };
 /* ---- NADIR-style search dropdown + multi-item cart ---- */
 let saleCart=[];
 $('sale-psearch').oninput=e=>{ salePickId=null; renderSaleDD(e.target.value.toLowerCase().trim()); };
@@ -564,7 +564,7 @@ $('btn-sold').onclick=()=>{
 let wsPickId=null, wsDate=dstr(), wsCart=[];
 $('ws-psearch').oninput=e=>{ wsPickId=null; renderWsDD(e.target.value.toLowerCase().trim()); };
 $('ws-date-pill').onclick=()=>openDatePicker('ws-date');
-$('ws-date').onchange=e=>{ if(e.target.value){ wsDate=e.target.value; $('ws-date-txt').textContent=fmtDate(wsDate); } };
+$('ws-date').onchange=e=>{ if(e.target.value){ wsDate=e.target.value; $('ws-date-txt').textContent=fmtDate(wsDate); saleDay=wsDate; renderDaySales(); } };
 function renderWsDD(q){
   const dd=$('ws-dd'); if(!dd) return;
   if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
