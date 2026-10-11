@@ -468,7 +468,7 @@ window.rmCartItem=ix=>{ saleCart.splice(ix,1); renderSaleCart(); };
 window.saleStep=(ix,d)=>{ const l=saleCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' in stock!'); return; } }
-  l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderSaleCart();
+  qtyReject=null; l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderSaleCart();
   $('sale-total-in').value=cartGrand().toFixed(0); };
 /* Staged product -> a sale line. Line total = bill field minus cart sum (item's share of the bill). */
 function stageLine(){
@@ -497,6 +497,7 @@ const _sc=$('sale-contact'); if(_sc) _sc.onclick=()=>{ $('sale-cust').classList.
   pickContact((n,ph)=>{ if(n) $('sale-cust').value=n; if(ph) $('sale-cust-phone').value=ph; }); };
 const _wc=$('ws-contact'); if(_wc) _wc.onclick=()=>{ pickContact((n,ph)=>{ if(n) $('ws-shop').value=n; if(ph) $('ws-phone').value=ph; }); };
 $('btn-sold').onclick=()=>{
+  if(!guardQtyEdit('sale')) return;
   const lines=[...saleCart];
   const st=stageLine();
   if(st==='err') return;
@@ -587,7 +588,7 @@ window.rmWsItem=ix=>{ wsCart.splice(ix,1); renderWsCart(); $('ws-total').value=w
 window.wsStep=(ix,d)=>{ const l=wsCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' available'); return; } }
-  l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderWsCart(); $('ws-total').value=wsGrand().toFixed(0); };
+  qtyReject=null; l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderWsCart(); $('ws-total').value=wsGrand().toFixed(0); };
 function stageWsLine(){
   const p=DB.products.find(x=>x.id===wsPickId);
   if(!p||!$('ws-psearch').value.trim()) return null;
@@ -605,6 +606,7 @@ $('btn-ws-add').onclick=()=>{
   wsCart.push(it); clearWsStaging(); renderWsCart(); toast('\u2705 Added: '+it.name);
 };
 $('btn-ws-sold').onclick=()=>{
+  if(!guardQtyEdit('ws')) return;
   const shop=$('ws-shop').value.trim(), phone=$('ws-phone').value.trim();
   if(!shop){ toast('Enter shop name'); $('ws-shop').focus(); return; }
   if(!phone){ toast('Enter shop phone number'); $('ws-phone').focus(); return; }
@@ -1209,8 +1211,10 @@ function maxFor(kind,l){
 }
 /* tap the qty number -> type quantity directly (for 20, 25, ...) */
 let qtyOverWarn=null; /* transient: {kind,ix,mx} shown as red inline warning after over-stock typed qty */
+let qtyReject=null; /* one-shot: {t,kind,ix,mx,name} — abort save if user taps Save right after a rejected over-stock edit */
 window.qtyTap=(kind,ix,el)=>{
   const cart=cartFor(kind), l=cart[ix]; if(!l||!el||el.dataset.e) return; el.dataset.e='1';
+  qtyReject=null;
   const mx=maxFor(kind,l);
   const inp=document.createElement('input');
   inp.type='number'; inp.min='1'; inp.value=l.qty; inp.className='qty-in';
@@ -1218,7 +1222,7 @@ window.qtyTap=(kind,ix,el)=>{
   const done=ok=>{ if(settled) return; settled=true;
     if(ok){ const v=parseInt(inp.value,10);
       if(!(v>=1)){ /* ignore bad input */ }
-      else if(v>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); qtyOverWarn={kind,ix,mx}; }
+      else if(v>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); qtyOverWarn={kind,ix,mx}; qtyReject={t:Date.now(),kind,ix,mx,name:l.name}; }
       else { qtyOverWarn=null; const oq=l.qty; l.qty=v;
         /* sale/ws rows store total (may include bill adjustments) — scale proportionally */
         if((kind==='sale'||kind==='ws')&&l.total!=null&&oq>0) l.total=Math.round(l.total*v/oq*100)/100; } }
@@ -1229,6 +1233,16 @@ window.qtyTap=(kind,ix,el)=>{
   inp.onblur=()=>done(true);
   el.replaceWith(inp); inp.focus(); inp.select();
 };
+/* call at the top of every save: commits a mid-edit qty box, then aborts the save if that edit was just rejected for over-stock */
+function guardQtyEdit(kind){
+  const pend=document.querySelector('.qty-in'); if(pend) pend.blur();
+  if(qtyReject&&qtyReject.kind===kind&&Date.now()-qtyReject.t<2500){
+    const r=qtyReject; qtyReject=null;
+    toast('⚠️ Only '+r.mx+' "'+r.name+'" in stock! Not saved.');
+    return false;
+  }
+  return true;
+}
 let credCart=[];
 function renderCredPick(){
   const q=(credPickQ||'').trim(), box=$('cc-pick-list'); if(!box) return;
@@ -1241,7 +1255,8 @@ function renderCredPick(){
 }
 window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   const ex=credCart.find(x=>x.productId===id);
-  if(ex) ex.qty++; else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  if(ex){ if(ex.qty+1>p.qty){ toast('Only '+p.qty+' "'+p.name+'" in stock!'); return; } ex.qty++; }
+  else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
   $('cc-psearch').value=''; credPickQ=''; renderCredPick(); renderCredCart();
   toast('✅ Added: '+p.name); };
 function credCartTotal(){ return credCart.reduce((s,l)=>s+l.qty*l.rate,0); }
@@ -1272,9 +1287,10 @@ window.credRate=(ix,v,el)=>{ const l=credCart[ix]; if(!l) return; l.rate=Math.ma
 window.credStep=(ix,d)=>{ const l=credCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
-  l.qty=Math.max(1,l.qty+d); renderCredCart(); };
-window.credRm=ix=>{ credCart.splice(ix,1); renderCredCart(); };
+  qtyReject=null; l.qty=Math.max(1,l.qty+d); renderCredCart(); };
+window.credRm=ix=>{ qtyReject=null; credCart.splice(ix,1); renderCredCart(); };
 window.saveCredit=()=>{
+  if(!guardQtyEdit('cred')) return;
   const name=$('cc-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
   const cid=parseInt($('cc-id').value)||DB.seq.c;
   const camt=Math.max(0,parseFloat($('cc-credit').value)||0);
@@ -1352,7 +1368,8 @@ function renderMorePick(q){
 }
 window.pickMoreCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   const ex=moreCart.find(x=>x.productId===id);
-  if(ex) ex.qty++; else moreCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  if(ex){ if(ex.qty+1>p.qty){ toast('Only '+p.qty+' "'+p.name+'" in stock!'); return; } ex.qty++; }
+  else moreCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
   $('m-psearch').value=''; renderMorePick(''); renderMoreCart();
   toast('✅ Added: '+p.name); };
 function moreCartTotal(){ return moreCart.reduce((s,l)=>s+l.qty*l.rate,0); }
@@ -1382,9 +1399,10 @@ window.moreRate=(ix,v,el)=>{ const l=moreCart[ix]; if(!l) return; l.rate=Math.ma
 window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
-  l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
-window.moreRm=ix=>{ moreCart.splice(ix,1); renderMoreCart(); };
+  qtyReject=null; l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
+window.moreRm=ix=>{ qtyReject=null; moreCart.splice(ix,1); renderMoreCart(); };
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
+  if(!guardQtyEdit('more')) return;
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
   const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
   for(const l of items){ const p=findProd(l.productId);
@@ -1434,7 +1452,7 @@ function renderEditItems(){
 window.editStep=(ix,d)=>{ const l=editItems[ix]; if(!l) return;
   if(d>0){ const mx=maxFor('edit',l);
     if(l.qty+1>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); return; } }
-  l.qty=Math.max(1,l.qty+d); renderEditItems(); };
+  qtyReject=null; l.qty=Math.max(1,l.qty+d); renderEditItems(); };
 window.editRate=(ix,v,el)=>{ const l=editItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0);
   const row=el&&el.closest?el.closest('.cart-row'):null;
   if(row){ const lt=row.querySelector('.line-total'); if(lt) lt.textContent=pkr(l.qty*l.rate); }
@@ -1452,11 +1470,13 @@ function renderEditPick(q){
 }
 window.pickEditItem=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   const ex=editItems.find(x=>x.productId===id);
-  if(ex) ex.qty++; else editItems.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  if(ex){ const mx=maxFor('edit',ex); if(ex.qty+1>mx){ toast('Only '+mx+' "'+p.name+'" in stock!'); return; } ex.qty++; }
+  else editItems.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
   $('e-psearch').value=''; renderEditPick(''); renderEditItems();
   toast('✅ Added: '+p.name); };
 window.saveEditCustomer=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  if(!guardQtyEdit('edit')) return;
   const name=$('e-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
   // effective availability = current stock + old lines coming back
   const effAvail=pid=>{ const p=findProd(pid); if(!p||p.qty==null) return 0;
