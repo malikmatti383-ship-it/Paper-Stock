@@ -246,7 +246,6 @@ const THEMES=[
  {id:'purple',name:'Royal Purple',g:'linear-gradient(135deg,#471c7d,#875ff0)'},
  {id:'red',name:'Cherry Red',g:'linear-gradient(135deg,#521010,#e03232)'},
  {id:'pink',name:'Rose Pink',g:'linear-gradient(135deg,#5c1630,#e03283)'},
- {id:'olive',name:'Olive Green',g:'linear-gradient(135deg,#223a08,#70b012)'},
  {id:'sunset',name:'Sunset Glow',g:'linear-gradient(135deg,#7933e0,#f7a716)'},
  {id:'grey',name:'Slate Grey',g:'linear-gradient(135deg,#1a2332,#78828f)'},
  {id:'cyan',name:'Aqua Cyan',g:'linear-gradient(135deg,#0d3d52,#2fd8f2)'},
@@ -269,7 +268,7 @@ window.openThemePicker=()=>{
   const rest=THEMES.filter(t=>!bizIds.includes(t.id));
   openSheet(`<h3>🎨 Colors Theme</h3><div class="sub" style="margin-bottom:8px">Pick a theme — it stays until you change it.</div>`+
    sec('💼 Business Themes')+biz.map(row).join('')+
-   sec('🎨 More Themes')+rest.map(row).join('')+
+   sec('🎨 Your Style Theme')+rest.map(row).join('')+
    `<div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 $('btn-profile').onclick=()=>{
