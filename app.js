@@ -369,7 +369,7 @@ function grossProfit(){ return DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+
 function renderSales(){
   const tot=DB.sales.reduce((s,x)=>s+x.total,0);
   const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
-  $('s-total').textContent=pkr(tot); $('s-exp').textContent=pkr(exp); paintCur();
+  $('s-total').textContent=pkr(tot); $('s-exp').textContent='- '+pkr(exp); paintCur();
   $('s-profit').textContent=pkr(grossProfit()-exp); // expense minus from profit
   $('sale-date-txt').textContent=fmtDate(saleDate);
   if(!$('exp-date').value) $('exp-date').value=dstr();
