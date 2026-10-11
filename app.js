@@ -481,9 +481,10 @@ $('btn-add-item').onclick=()=>{
   renderSaleCart(); toast('✅ Added: '+it.name);
 };
 $('sale-add-cust').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-cust-phone').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden'); $('sale-cust').focus(); };
-$('sale-contact').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-cust-phone').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden');
+/* null-guarded: a stale cached page must never kill the whole app (v57 lesson) */
+const _sc=$('sale-contact'); if(_sc) _sc.onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-cust-phone').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden');
   pickContact((n,ph)=>{ if(n) $('sale-cust').value=n; if(ph) $('sale-cust-phone').value=ph; }); };
-$('ws-contact').onclick=()=>{ pickContact((n,ph)=>{ if(n) $('ws-shop').value=n; if(ph) $('ws-phone').value=ph; }); };
+const _wc=$('ws-contact'); if(_wc) _wc.onclick=()=>{ pickContact((n,ph)=>{ if(n) $('ws-shop').value=n; if(ph) $('ws-phone').value=ph; }); };
 $('btn-sold').onclick=()=>{
   const lines=[...saleCart];
   const st=stageLine();
