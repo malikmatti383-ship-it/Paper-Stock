@@ -1197,7 +1197,9 @@ document.addEventListener('focusin',e=>{
 let editCust=null;
 function findProd(pid){ return DB.products.find(x=>x.id===pid)||DB.products.find(x=>String(x.id)===String(pid)); }
 function cartFor(kind){ return kind==='cred'?credCart:kind==='more'?moreCart:kind==='edit'?editItems:kind==='sale'?saleCart:wsCart; }
-function renderCartFor(kind){ if(kind==='cred')renderCredCart(); else if(kind==='more')renderMoreCart(); else if(kind==='edit')renderEditItems(); else if(kind==='sale')renderSaleCart(); else renderWsCart(); }
+function renderCartFor(kind){ if(kind==='cred')renderCredCart(); else if(kind==='more')renderMoreCart(); else if(kind==='edit')renderEditItems(); else if(kind==='sale')renderSaleCart(); else renderWsCart(); qtyOverWarn=null; }
+/* red inline warning row for rejected over-stock typed qty */
+function qtyWarnHtml(kind,ix){ return (qtyOverWarn&&qtyOverWarn.kind===kind&&qtyOverWarn.ix===ix)?`<div class="red-sub">Only ${qtyOverWarn.mx} in stock!</div>`:''; }
 function maxFor(kind,l){
   const p=findProd(l.productId);
   const base=p&&p.qty!=null?p.qty:1e9;
@@ -1206,6 +1208,7 @@ function maxFor(kind,l){
   return base;
 }
 /* tap the qty number -> type quantity directly (for 20, 25, ...) */
+let qtyOverWarn=null; /* transient: {kind,ix,mx} shown as red inline warning after over-stock typed qty */
 window.qtyTap=(kind,ix,el)=>{
   const cart=cartFor(kind), l=cart[ix]; if(!l||!el||el.dataset.e) return; el.dataset.e='1';
   const mx=maxFor(kind,l);
@@ -1215,8 +1218,8 @@ window.qtyTap=(kind,ix,el)=>{
   const done=ok=>{ if(settled) return; settled=true;
     if(ok){ const v=parseInt(inp.value,10);
       if(!(v>=1)){ /* ignore bad input */ }
-      else if(v>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); }
-      else { const oq=l.qty; l.qty=v;
+      else if(v>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); qtyOverWarn={kind,ix,mx}; }
+      else { qtyOverWarn=null; const oq=l.qty; l.qty=v;
         /* sale/ws rows store total (may include bill adjustments) — scale proportionally */
         if((kind==='sale'||kind==='ws')&&l.total!=null&&oq>0) l.total=Math.round(l.total*v/oq*100)/100; } }
     renderCartFor(kind);
@@ -1249,15 +1252,23 @@ function renderCredCart(){
   if(mw) mw.innerHTML='<button class="btn-addmore" onclick="$(\'cc-psearch\').focus()">+ Add more products</button>';
   box.innerHTML='<div class="cart-box">'+credCart.map((l,ix)=>{
     const p=findProd(l.productId), over=p&&l.qty>p.qty;
-    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span>
-      <div class="sub nowrap">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="credRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
-      ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
-      <div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div>
-      <button class="cart-x" onclick="credRm(${ix})">✕</button></div>`; }).join('')+
-    `<div class="cart-total"><span>Items total</span><b>${pkr(credCartTotal())}</b></div></div>`;
+    return `<div class="cart-row"><div style="flex:1;min-width:0">
+      <div class="cr-top"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span><button class="cart-x" onclick="credRm(${ix})">✕</button></div>
+      <div class="two-col cr-boxes">
+        <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="credRate(${ix},this.value,this)"></div>
+        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div></div>
+      </div>
+      <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
+      ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('cred',ix)}</div></div>`; }).join('')+
+    `<div class="cart-total"><span>Items total</span><b id="cc-items-total">${pkr(credCartTotal())}</b></div></div>`;
   $('cc-credit').value=credCartTotal().toFixed(0);
 }
-window.credRate=(ix,v)=>{ const l=credCart[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); renderCredCart(); };
+window.credRate=(ix,v,el)=>{ const l=credCart[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0);
+  const row=el&&el.closest?el.closest('.cart-row'):null;
+  if(row){ const lt=row.querySelector('.line-total'); if(lt) lt.textContent=pkr(l.qty*l.rate); }
+  const t=credCartTotal();
+  const it=document.querySelector('#cc-items-total'); if(it) it.textContent=pkr(t);
+  const ca=$('cc-credit'); if(ca) ca.value=t.toFixed(0); };
 window.credStep=(ix,d)=>{ const l=credCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
@@ -1292,7 +1303,7 @@ window.creditDetail=id=>{
     ${(c.saleRate&&!(c.items&&c.items.length))?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
-    <div class="kv"><span>💵 Received</span><b>${pkr(c.received)}</b></div>
+    <div class="kv"><span>💵 Received</span><b style="color:var(--green)">${pkr(c.received)}</b></div>
     <div class="kv"><span>📌 Balance due</span><b style="color:var(--red)">${pkr(b)}</b></div>
     ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
     <div class="mrow">
@@ -1350,16 +1361,24 @@ function renderMoreCart(){
   if(!moreCart.length){ box.innerHTML=''; const mw0=$('m-more'); if(mw0)mw0.innerHTML=''; return; }
   box.innerHTML='<div class="cart-box">'+moreCart.map((l,ix)=>{
     const p=findProd(l.productId), over=p&&l.qty>p.qty;
-    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span>
-      <div class="sub nowrap">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="moreRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
-      ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
-      <div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div>
-      <button class="cart-x" onclick="moreRm(${ix})">✕</button></div>`; }).join('')+
-    `<div class="cart-total"><span>Items total</span><b>${pkr(moreCartTotal())}</b></div></div>`;
+    return `<div class="cart-row"><div style="flex:1;min-width:0">
+      <div class="cr-top"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span><button class="cart-x" onclick="moreRm(${ix})">✕</button></div>
+      <div class="two-col cr-boxes">
+        <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="moreRate(${ix},this.value,this)"></div>
+        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div></div>
+      </div>
+      <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
+      ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('more',ix)}</div></div>`; }).join('')+
+    `<div class="cart-total"><span>Items total</span><b id="m-items-total">${pkr(moreCartTotal())}</b></div></div>`;
   $('m-amt').value=moreCartTotal().toFixed(0);
   const mw=$('m-more'); if(mw) mw.innerHTML='<button class="btn-addmore" onclick="$(\'m-psearch\').focus()">+ Add more products</button>';
 }
-window.moreRate=(ix,v)=>{ const l=moreCart[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); renderMoreCart(); };
+window.moreRate=(ix,v,el)=>{ const l=moreCart[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0);
+  const row=el&&el.closest?el.closest('.cart-row'):null;
+  if(row){ const lt=row.querySelector('.line-total'); if(lt) lt.textContent=pkr(l.qty*l.rate); }
+  const t=moreCartTotal();
+  const it=document.querySelector('#m-items-total'); if(it) it.textContent=pkr(t);
+  const ca=$('m-amt'); if(ca) ca.value=t.toFixed(0); };
 window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
@@ -1400,11 +1419,14 @@ function renderEditItems(){
   box.innerHTML=editItems.length?'<div class="cart-box">'+editItems.map((l,ix)=>{
     const mx=maxFor('edit',l), over=l.qty>mx;
     return `
-    <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b> <span class="stk">· ${mx} in stock</span>
-      <div class="sub"><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
-      ${over?`<div class="red-sub">Only ${mx} in stock!</div>`:''}</div>
-      <div class="fld-in" style="width:110px"><input type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value)"><span class="pkr" data-cur>${curCode()}</span></div>
-      <button class="cart-x" onclick="editRm(${ix})">✕</button></div>`; }).join('')+
+    <div class="cart-row"><div style="flex:1;min-width:0">
+      <div class="cr-top"><b>${esc(l.name)}</b> <span class="stk">· ${mx} in stock</span><button class="cart-x" onclick="editRm(${ix})">✕</button></div>
+      <div class="two-col cr-boxes">
+        <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value,this)"></div>
+        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
+      </div>
+      <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
+      ${over?`<div class="red-sub">Only ${mx} in stock!</div>`:''}${qtyWarnHtml('edit',ix)}</div></div>`; }).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(editItemsTotal())}</b></div></div>`
     :'<p class="note">No items — add products below or leave empty.</p>';
   const ca=$('e-credit'); if(ca&&editItems.length) ca.value=editItemsTotal().toFixed(0);
@@ -1413,8 +1435,10 @@ window.editStep=(ix,d)=>{ const l=editItems[ix]; if(!l) return;
   if(d>0){ const mx=maxFor('edit',l);
     if(l.qty+1>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); return; } }
   l.qty=Math.max(1,l.qty+d); renderEditItems(); };
-window.editRate=(ix,v)=>{ const l=editItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0);
-  const t=$('e-items'); if(t){ const el=t.querySelector('.cart-total b'); if(el) el.textContent=pkr(editItemsTotal()); }
+window.editRate=(ix,v,el)=>{ const l=editItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0);
+  const row=el&&el.closest?el.closest('.cart-row'):null;
+  if(row){ const lt=row.querySelector('.line-total'); if(lt) lt.textContent=pkr(l.qty*l.rate); }
+  const t=$('e-items'); if(t){ const elb=t.querySelector('.cart-total b'); if(elb) elb.textContent=pkr(editItemsTotal()); }
   const ca=$('e-credit'); if(ca) ca.value=editItemsTotal().toFixed(0); };
 window.editRm=ix=>{ editItems.splice(ix,1); renderEditItems(); };
 function renderEditPick(q){
