@@ -1,6 +1,6 @@
 /* Paper Stock offline support v13 */
-const CACHE='paper-stock-v53';
-const ASSETS=['./','./index.html','./app.js?v=51','./auth.js?v=1','./lib/jspdf.umd.min.js','./style.css','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='paper-stock-v54';
+const ASSETS=['./','./index.html','./app.js?v=52','./auth.js?v=1','./lib/jspdf.umd.min.js','./style.css','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });

@@ -347,6 +347,20 @@ function paintWsDisc(){ const box=$('ws-disc-pill'); if(!box) return;
   const tt=parseFloat($('ws-total').value)||0, sub=wsGrand();
   box.innerHTML=(tt>0&&sub>tt)?`<span class="disc-pill">✓ ${pkr(sub-tt)} discount applied</span>`:'';
 }
+function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;
+  const p=DB.products.find(x=>x.id===salePickId);
+  if(!p){ box.innerHTML=''; return; }
+  const q=Math.max(1,parseInt($('sale-qty').value)||1);
+  const bill=parseFloat($('sale-total-in').value)||0, lineTotal=bill-cartGrand();
+  const unit=lineTotal>0?lineTotal/q:p.sell;
+  box.innerHTML=(unit<p.cost)?`<span class="loss-pill">\u26A0\uFE0F Below cost! Cost ${pkr(p.cost)} / unit</span>`:'';
+}
+function paintWsCostWarn(){ const box=$('ws-cost-warn'); if(!box) return;
+  const p=DB.products.find(x=>x.id===wsPickId);
+  if(!p){ box.innerHTML=''; return; }
+  const r=parseFloat($('ws-rate').value)||0;
+  box.innerHTML=(r>0&&r<p.cost)?`<span class="loss-pill">\u26A0\uFE0F Below cost! Cost ${pkr(p.cost)} / unit</span>`:'';
+}
 function renderSaleDD(q){
   const dd=$('sale-dd');
   if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
@@ -368,12 +382,12 @@ window.pickSaleDD=id=>{
   $('sale-dd').classList.add('hidden');
   $('sale-cost').value=p.cost.toFixed(2);
   $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); // running bill total
-  paintSaleDisc();
+  paintSaleDisc(); paintSaleCostWarn();
 };
 $('sale-qty').oninput=()=>{ const p=DB.products.find(x=>x.id===salePickId);
-  if(p) $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); paintSaleDisc(); };
+  if(p) $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); paintSaleDisc(); paintSaleCostWarn(); };
 const saleQtyStep=d=>{ const el=$('sale-qty'); el.value=Math.max(1,(parseInt(el.value)||1)+d); el.oninput(); };
-$('sale-total-in').oninput=paintSaleDisc;
+$('sale-total-in').oninput=()=>{ paintSaleDisc(); paintSaleCostWarn(); };
 $('sale-qty-minus').onclick=()=>saleQtyStep(-1);
 $('sale-qty-plus').onclick=()=>saleQtyStep(1);
 function cartGrand(){ return saleCart.reduce((s,i)=>s+i.total,0); }
@@ -385,7 +399,7 @@ function renderSaleCart(){
     <div class="cart-step"><button class="mini-btn" onclick="saleStep(${ix},-1)">−</button><b>${i.qty}</b><button class="mini-btn" onclick="saleStep(${ix},1)">+</button></div>
     <button class="cart-x" onclick="rmCartItem(${ix})">✕</button></div>`).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(cartGrand())}</b></div></div>`;
-  paintSaleDisc();
+  paintSaleDisc(); paintSaleCostWarn();
 }
 window.rmCartItem=ix=>{ saleCart.splice(ix,1); renderSaleCart(); };
 window.saleStep=(ix,d)=>{ const l=saleCart[ix]; if(!l) return;
@@ -470,7 +484,7 @@ window.pickWsDD=id=>{
   $('ws-rate').value=p.sell; wsPreview();
 };
 const wsPreview=()=>{ const r=parseFloat($('ws-rate').value)||0;
-  $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); paintWsDisc(); };
+  $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); paintWsDisc(); paintWsCostWarn(); };
 $('ws-qty').oninput=wsPreview; $('ws-rate').oninput=wsPreview;
 const wsQtyStep=d=>{ const el=$('ws-qty'); el.value=Math.max(1,(parseInt(el.value)||1)+d); wsPreview(); };
 $('ws-qty-minus').onclick=()=>wsQtyStep(-1);
@@ -484,7 +498,7 @@ function renderWsCart(){
     <div class="cart-step"><button class="mini-btn" onclick="wsStep(${ix},-1)">\u2212</button><b>${i.qty}</b><button class="mini-btn" onclick="wsStep(${ix},1)">+</button></div>
     <button class="cart-x" onclick="rmWsItem(${ix})">\u2715</button></div>`).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(wsGrand())}</b></div></div>`;
-  paintWsDisc();
+  paintWsDisc(); paintWsCostWarn();
 }
 window.rmWsItem=ix=>{ wsCart.splice(ix,1); renderWsCart(); $('ws-total').value=wsGrand().toFixed(0); };
 window.wsStep=(ix,d)=>{ const l=wsCart[ix]; if(!l) return;
