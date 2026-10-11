@@ -745,10 +745,6 @@ $('day-prev').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getD
 $('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()+1); if(dstr(d)>dstr()){toast('Future date not allowed');return;} saleDay=dstr(d); renderDaySales(); };
 $('sales-day-title').onclick=()=>$('day-jump').click();
 $('day-jump').onchange=e=>{ if(e.target.value){ saleDay=e.target.value; renderDaySales(); } };
-const _fp=$('f-paid'); if(_fp) _fp.onclick=openPaidFilter;
-const _ft=$('f-type'); if(_ft) _ft.onclick=openTypeFilter;
-const _fsb=$('f-search-btn'); if(_fsb) _fsb.onclick=()=>{ const r=$('day-search-row'); r.classList.toggle('hidden'); const i=$('day-search'); if(!r.classList.contains('hidden')) setTimeout(()=>i.focus(),100); else { i.value=''; fQ=''; renderDaySales(); } };
-const _ds=$('day-search'); if(_ds) _ds.oninput=e=>{ fQ=e.target.value.toLowerCase(); renderDaySales(); };
 let expSaleId=null;
 window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales(); };
 function hhmm(ts){ try{ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
@@ -771,6 +767,10 @@ window.openTypeFilter=()=>{
   openSheet(`<h3>Record type <button class="link-btn" style="float:right" onclick="closeSheet()">Done</button></h3>`+row('all','All')+row('sale','🛒 Sale')+row('wholesale','🏪 Wholesale')+row('expense','📋 Expense'));
 };
 window.setTypeFilter=v=>{ fType=v; paintFPills(); closeSheet(); renderDaySales(); };
+const _fp=$('f-paid'); if(_fp) _fp.onclick=openPaidFilter;
+const _ft=$('f-type'); if(_ft) _ft.onclick=openTypeFilter;
+const _fsb=$('f-search-btn'); if(_fsb) _fsb.onclick=()=>{ const r=$('day-search-row'); r.classList.toggle('hidden'); const i=$('day-search'); if(!r.classList.contains('hidden')) setTimeout(()=>i.focus(),100); else { i.value=''; fQ=''; renderDaySales(); } };
+const _ds=$('day-search'); if(_ds) _ds.oninput=e=>{ fQ=e.target.value.toLowerCase(); renderDaySales(); };
 function renderDaySales(){
   paintFPills();
   let list=DB.sales.filter(s=>s.date===saleDay);
