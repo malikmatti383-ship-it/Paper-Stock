@@ -1,6 +1,1 @@
-{
-  "versionCode": 4,
-  "versionName": "1.0.4",
-  "apkUrl": "https://malikmatti383-ship-it.github.io/Paper-Stock/apk/PaperPilot.apk",
-  "notes": "Contact picker (sale/wholesale/credit) + settings section"
-}
+{"apkUrl":"https://malikmatti383-ship-it.github.io/Paper-Stock/apk/PaperPilot.apk","notes":"PDF share fix (WhatsApp attachment) + contact picker + settings section","versionCode":5,"versionName":"1.0.5"}
