@@ -841,11 +841,11 @@ function renderDaySales(){
     const hasCost=its.some(it=>it.cost!=null);
     const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
     const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
-    const miniPL=hasCost?its.map(it=>{ const lp=lineP(it); return lp>0?'<span class="mpl mp-pos" title="Profit">🔼</span>':(lp<0?'<span class="mpl mp-neg" title="Loss">🔽</span>':''); }).join(''):'';
+    const miniPL=hasCost?its.map(it=>{ const lp=lineP(it); return lp>0?'<span class="mpl mp-pos" title="Profit">▲</span>':(lp<0?'<span class="mpl mp-neg" title="Loss">▼</span>':''); }).join(''):'';
     const det=open?`<div class="sale-det">`+its.map((it,ix)=>{
       const lp=hasCost?lineP(it):0;
       return `
-      <div class="sdet-row"><div><b>${esc(it.name||s.name)}</b>${hasCost&&lineP(it)<0?'<span class="loss-tag">🔻 LOSS</span>':''}${hasCost&&lineP(it)>0?'<span class="profit-tag">🔼 PROFIT</span>':''}<div class="sub">${it.qty} × ${pkr(it.price)}</div></div>
+      <div class="sdet-row"><div><b>${esc(it.name||s.name)}</b>${hasCost&&lineP(it)<0?'<span class="loss-tag">▼ LOSS</span>':''}${hasCost&&lineP(it)>0?'<span class="profit-tag">▲ PROFIT</span>':''}<div class="sub">${it.qty} × ${pkr(it.price)}</div></div>
       <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
       ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
       <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
