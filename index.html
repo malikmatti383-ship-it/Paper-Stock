@@ -199,5 +199,12 @@
 <script src="lib/jspdf.umd.min.js"></script>
     <script src="app.js?v=69"></script>
 <script src="auth.js?v=1"></script>
+<script>
+/* Auto-reload when a new service worker takes over, so updates appear on first reopen.
+   Only reloads if the update happened right at launch (15s guard avoids mid-work reloads). */
+if('serviceWorker' in navigator){ var _swt0=Date.now();
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    if(Date.now()-_swt0<15000) window.location.reload(); }); }
+</script>
 </body>
 </html>
