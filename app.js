@@ -175,8 +175,19 @@ window.openSettings=()=>{
   openSheet(`<h3>⚙️ Settings</h3>
   <div class="lbl" style="margin:8px 0 2px">WARNINGS</div>
   <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Asks before selling an item below its cost price</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
+  <div class="menu-row" onclick="openTabOrder()"><span class="ic">📑</span><div><div>Tab order</div><div class="sub">${tabOrder().map(k=>TAB_LABEL[k]).join(', ')} — tap to change</div></div><span class="arw">›</span></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
+window.openTabOrder=()=>{
+  const cur=DB.profile.tabOrder||0;
+  const det=['Sale opens first — best for counter billing','Wholesale opens first — best for salesmen','Expense opens first — best for quick expense entry'];
+  openSheet(`<h3>📑 Tab order</h3>
+  <div class="sub" style="margin:2px 0 8px">Choose the order of the Sale, Wholesale and Expense tabs — the first one opens by default.</div>
+  ${TAB_ORDERS.map((o,i)=>`<div class="menu-row" onclick="setTabOrder(${i})"><span class="radio${i===cur?' on':''}"></span><div><div>${o.map(k=>TAB_LABEL[k]).join(', ')}</div><div class="sub">${det[i]}</div></div></div>`).join('')}
+  <div class="mrow"><button class="btn-ghost" onclick="openSettings()">Back</button></div>`);
+};
+window.setTabOrder=i=>{ DB.profile.tabOrder=i; save(); applyTabOrder(true); openTabOrder(); toast('✅ Tab order updated'); };
 window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save();
   const on=DB.profile.lossAsk!==false, btn=document.querySelector('#loss-tswitch');
   if(btn){ btn.classList.toggle('on',on); btn.querySelector('.tlbl').textContent=on?'On':'Off'; } };
@@ -366,7 +377,22 @@ function setSeg(id){ ['seg-sale','seg-ws','seg-exp'].forEach(x=>$(x).classList.t
 $('seg-sale').onclick=()=>{ saleMode='sale'; setSeg('seg-sale'); };
 $('seg-ws').onclick=()=>{ saleMode='ws'; setSeg('seg-ws'); };
 $('seg-exp').onclick=()=>{ saleMode='exp'; setSeg('seg-exp'); };
-$('sale-date-pill').onclick=()=>$('sale-date').click();
+/* ---- Tab order (Settings → Navigation): reorder Sale/Wholesale/Expense pills + which opens first ---- */
+const TAB_ORDERS=[['sale','ws','exp'],['ws','sale','exp'],['exp','sale','ws']];
+const TAB_ID={sale:'seg-sale',ws:'seg-ws',exp:'seg-exp'};
+const TAB_MODE={sale:'sale',ws:'ws',exp:'exp'};
+const TAB_LABEL={sale:'Sale',ws:'Wholesale',exp:'Expense'};
+function tabOrder(){ const o=DB.profile?DB.profile.tabOrder:0; return TAB_ORDERS[o]||TAB_ORDERS[0]; }
+function applyTabOrder(selectFirst){
+  const order=tabOrder();
+  const seg=document.querySelector('#view-sales .seg');
+  if(seg) order.forEach(k=>{ const b=document.getElementById(TAB_ID[k]); if(b) seg.appendChild(b); });
+  if(selectFirst){ const f=order[0]; saleMode=TAB_MODE[f]; setSeg(TAB_ID[f]); }
+}
+/* native date picker: showPicker() opens the calendar reliably on mobile (programmatic .click() often fails silently) */
+function openDatePicker(id){ const el=$(id); if(!el) return;
+  try{ if(el.showPicker) el.showPicker(); else el.click(); }catch(e){ try{ el.click(); }catch(_){} } }
+$('sale-date-pill').onclick=()=>openDatePicker('sale-date');
 $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sale-date-txt').textContent=fmtDate(saleDate); } };
 /* ---- NADIR-style search dropdown + multi-item cart ---- */
 let saleCart=[];
@@ -537,7 +563,7 @@ $('btn-sold').onclick=()=>{
 /* ================= WHOLESALE (shopkeeper sales at stock rates) ================= */
 let wsPickId=null, wsDate=dstr(), wsCart=[];
 $('ws-psearch').oninput=e=>{ wsPickId=null; renderWsDD(e.target.value.toLowerCase().trim()); };
-$('ws-date-pill').onclick=()=>$('ws-date').click();
+$('ws-date-pill').onclick=()=>openDatePicker('ws-date');
 $('ws-date').onchange=e=>{ if(e.target.value){ wsDate=e.target.value; $('ws-date-txt').textContent=fmtDate(wsDate); } };
 function renderWsDD(q){
   const dd=$('ws-dd'); if(!dd) return;
@@ -803,7 +829,7 @@ $('btn-exp-add').onclick=()=>{
 };
 $('day-prev').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()-1); saleDay=dstr(d); renderDaySales(); };
 $('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()+1); if(dstr(d)>dstr()){toast('Future date not allowed');return;} saleDay=dstr(d); renderDaySales(); };
-$('sales-day-title').onclick=()=>$('day-jump').click();
+$('sales-day-title').onclick=()=>openDatePicker('day-jump');
 $('day-jump').onchange=e=>{ if(e.target.value){ saleDay=e.target.value; renderDaySales(); } };
 let expSaleId=null;
 window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales(); };
@@ -1516,7 +1542,7 @@ window.sendMsg=(id,kind)=>{
 };
 
 /* ---------- Init ---------- */
-load(); applyTheme(curTheme()); renderStoreName(); initAdd(); initAuth(); showView('view-sales');
+load(); applyTheme(curTheme()); renderStoreName(); initAdd(); initAuth(); applyTabOrder(true); showView('view-sales');
 updateBellBadge(); updatePrintBadge(); checkReminders();
 
 /* ================= BELL: reminders + bulk send ================= */
