@@ -123,7 +123,7 @@ function authSection(){
   if(!window.PaperAuth||!PaperAuth.isConfigured()) return '';
   if(!PaperAuth.getToken())
     return `<button class="btn-go" style="width:100%;margin-bottom:4px" onclick="PaperAuth.login()">🔐 Login with Gmail</button>
-    <div class="sub" style="text-align:center;margin-bottom:10px">Ek login — 5 devices par apna data sync</div>`;
+    <div class="sub" style="text-align:center;margin-bottom:10px">One login — sync your data on 5 devices</div>`;
   let u=null; try{ u=JSON.parse(localStorage.getItem('ps_user')||'null'); }catch(e){}
   const nm=u?(u.name||u.email):'...', em=u?(u.email||''):'' ;
   const av=u&&u.picture?`<img src="${u.picture}">`:esc((nm||'G').charAt(0).toUpperCase());
@@ -1071,7 +1071,7 @@ window.sendMsg=(id,kind)=>{
   if(!c.phone){ toast('No phone number saved'); return; }
   const b=custBal(c);
   const cdate=(c.log&&c.log[0]&&c.log[0].d)?fmtDate(c.log[0].d):'';
-  const msg=`Assalam-o-Alaikum ${c.name}!\n${DB.profile.name} se apka khata:\n`+
+  const msg=`Hello ${c.name}!\nYour account at ${DB.profile.name}:\n`+
     `ID: ${c.custId}\n`+(c.product?`Item: ${c.product}\n`:'')+
     (cdate?`Date: ${cdate}\n`:'')+
     `Credit given: ${pkr(c.credit)}\nReceived: ${pkr(c.received)}\nBalance due: ${pkr(b)}`+
@@ -1157,7 +1157,7 @@ function bulkNext(){
 function openWA(c){
   const b=custBal(c);
   const cdate=(c.log&&c.log[0]&&c.log[0].d)?fmtDate(c.log[0].d):'';
-  const msg=`Assalam-o-Alaikum ${c.name}!\n${DB.profile.name} se apka khata:\nID: ${c.custId}\n`+
+  const msg=`Hello ${c.name}!\nYour account at ${DB.profile.name}:\nID: ${c.custId}\n`+
     (c.product?`Item: ${c.product}\n`:'')+(cdate?`Date: ${cdate}\n`:'')+
     `Credit: ${pkr(c.credit)}\nReceived: ${pkr(c.received)}\nBalance due: ${pkr(b)}`+
     (c.promiseDate?`\nPromise: ${fmtDate(c.promiseDate)}${c.promiseTime?' '+c.promiseTime:''}`:'');
