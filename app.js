@@ -331,29 +331,49 @@ $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sal
 let saleCart=[];
 $('sale-psearch').oninput=e=>{ salePickId=null; renderSaleDD(e.target.value.toLowerCase().trim()); };
 document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')){ $('sale-dd').classList.add('hidden'); const w=$('ws-dd'); if(w) w.classList.add('hidden'); } });
+function stockLbl(p){
+  if(p.qty<=0) return '<span class="dd-na">Not available</span>';
+  if(p.qty<=5) return '<span class="dd-low">Only '+p.qty+' left!</span>';
+  return p.qty+' in stock';
+}
+function paintSaleDisc(){ const box=$('sale-disc-pill'); if(!box) return;
+  const p=DB.products.find(x=>x.id===salePickId);
+  const staged=p?(p.sell*(parseInt($('sale-qty').value)||1)):0;
+  const sub=saleCart.reduce((s,l)=>s+l.qty*l.unit,0)+staged;
+  const bill=parseFloat($('sale-total-in').value)||0;
+  box.innerHTML=(bill>0&&sub>bill)?`<span class="disc-pill">✓ ${pkr(sub-bill)} discount applied</span>`:'';
+}
+function paintWsDisc(){ const box=$('ws-disc-pill'); if(!box) return;
+  const tt=parseFloat($('ws-total').value)||0, sub=wsGrand();
+  box.innerHTML=(tt>0&&sub>tt)?`<span class="disc-pill">✓ ${pkr(sub-tt)} discount applied</span>`:'';
+}
 function renderSaleDD(q){
   const dd=$('sale-dd');
   if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.qty>0&&(p.name.toLowerCase().includes(q)||String(p.itemId).includes(q))).slice(0,8);
+  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,8);
   dd.innerHTML=list.map(p=>`
     <div class="dd-item" onclick="pickSaleDD(${p.id})">${pimg(p,'dd-img')}
-      <div style="flex:1;min-width:0"><div class="nm">${esc(p.name)}</div>
-      <div class="sp">Sell Price <span class="dots">:</span> <b class="r">${pkr(p.sell)}</b></div>
-      <div class="sub">left: ${p.qty} ${esc(p.unit)}</div></div>
+      <div style="flex:1;min-width:0">${p.brand?`<span class="dd-brand">${esc(p.brand)}</span>`:''}
+      <div class="nm">${esc(p.name)}</div>
+      <div class="sub">${stockLbl(p)}${p.unit?' · '+esc(p.unit):''}</div></div>
+      <b class="r">${pkr(p.sell)}</b>
     </div>`).join('')||'<p class="note">No product found</p>';
   dd.classList.remove('hidden');
 }
 window.pickSaleDD=id=>{
   const p=DB.products.find(x=>x.id===id); if(!p) return;
+  if(p.qty<=0){ toast('Not available — out of stock'); return; }
   salePickId=id;
   $('sale-psearch').value=p.name;
   $('sale-dd').classList.add('hidden');
   $('sale-cost').value=p.cost.toFixed(2);
   $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); // running bill total
+  paintSaleDisc();
 };
 $('sale-qty').oninput=()=>{ const p=DB.products.find(x=>x.id===salePickId);
-  if(p) $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); };
+  if(p) $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); paintSaleDisc(); };
 const saleQtyStep=d=>{ const el=$('sale-qty'); el.value=Math.max(1,(parseInt(el.value)||1)+d); el.oninput(); };
+$('sale-total-in').oninput=paintSaleDisc;
 $('sale-qty-minus').onclick=()=>saleQtyStep(-1);
 $('sale-qty-plus').onclick=()=>saleQtyStep(1);
 function cartGrand(){ return saleCart.reduce((s,i)=>s+i.total,0); }
@@ -365,6 +385,7 @@ function renderSaleCart(){
     <div class="cart-step"><button class="mini-btn" onclick="saleStep(${ix},-1)">−</button><b>${i.qty}</b><button class="mini-btn" onclick="saleStep(${ix},1)">+</button></div>
     <button class="cart-x" onclick="rmCartItem(${ix})">✕</button></div>`).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(cartGrand())}</b></div></div>`;
+  paintSaleDisc();
 }
 window.rmCartItem=ix=>{ saleCart.splice(ix,1); renderSaleCart(); };
 window.saleStep=(ix,d)=>{ const l=saleCart[ix]; if(!l) return;
@@ -432,22 +453,24 @@ $('ws-date').onchange=e=>{ if(e.target.value){ wsDate=e.target.value; $('ws-date
 function renderWsDD(q){
   const dd=$('ws-dd'); if(!dd) return;
   if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.qty>0&&(p.name.toLowerCase().includes(q)||String(p.itemId).includes(q))).slice(0,8);
+  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,8);
   dd.innerHTML=list.map(p=>`
     <div class="dd-item" onclick="pickWsDD(${p.id})">${pimg(p,'dd-img')}
-      <div style="flex:1;min-width:0"><div class="nm">${esc(p.name)}</div>
-      <div class="sp">Shop Rate <span class="dots">:</span> <b class="r">${pkr(p.sell)}</b></div>
-      <div class="sub">left: ${p.qty} ${esc(p.unit)}</div></div>
+      <div style="flex:1;min-width:0">${p.brand?`<span class="dd-brand">${esc(p.brand)}</span>`:''}
+      <div class="nm">${esc(p.name)}</div>
+      <div class="sub">${stockLbl(p)}${p.unit?' · '+esc(p.unit):''}</div></div>
+      <b class="r">${pkr(p.sell)}</b>
     </div>`).join('')||'<p class="note">No product found</p>';
   dd.classList.remove('hidden');
 }
 window.pickWsDD=id=>{
   const p=DB.products.find(x=>x.id===id); if(!p) return;
+  if(p.qty<=0){ toast('Not available — out of stock'); return; }
   wsPickId=id; $('ws-psearch').value=p.name; $('ws-dd').classList.add('hidden');
   $('ws-rate').value=p.sell; wsPreview();
 };
 const wsPreview=()=>{ const r=parseFloat($('ws-rate').value)||0;
-  $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); };
+  $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); paintWsDisc(); };
 $('ws-qty').oninput=wsPreview; $('ws-rate').oninput=wsPreview;
 const wsQtyStep=d=>{ const el=$('ws-qty'); el.value=Math.max(1,(parseInt(el.value)||1)+d); wsPreview(); };
 $('ws-qty-minus').onclick=()=>wsQtyStep(-1);
@@ -461,6 +484,7 @@ function renderWsCart(){
     <div class="cart-step"><button class="mini-btn" onclick="wsStep(${ix},-1)">\u2212</button><b>${i.qty}</b><button class="mini-btn" onclick="wsStep(${ix},1)">+</button></div>
     <button class="cart-x" onclick="rmWsItem(${ix})">\u2715</button></div>`).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(wsGrand())}</b></div></div>`;
+  paintWsDisc();
 }
 window.rmWsItem=ix=>{ wsCart.splice(ix,1); renderWsCart(); $('ws-total').value=wsGrand().toFixed(0); };
 window.wsStep=(ix,d)=>{ const l=wsCart[ix]; if(!l) return;
@@ -746,7 +770,7 @@ function renderEsPick(q){
   const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickEsItem(${p.id})">
-      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} \u00B7 left ${p.qty}</div></div>
+      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} \u00B7 ${stockLbl(p)}</div></div>
     </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickEsItem=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
@@ -1022,7 +1046,7 @@ function renderCredPick(){
   const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickCred(${p.id})">
-      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · Cost ${pkr(p.cost)} · left ${p.qty}</div></div>
+      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · Cost ${pkr(p.cost)} · ${stockLbl(p)}</div></div>
     </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
@@ -1115,7 +1139,7 @@ function renderMorePick(q){
   const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickMoreCred(${p.id})">
-      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · left ${p.qty}</div></div>
+      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · ${stockLbl(p)}</div></div>
     </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickMoreCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
@@ -1190,7 +1214,7 @@ function renderEditPick(q){
   const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickEditItem(${p.id})">
-      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · left ${p.qty}</div></div>
+      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · ${stockLbl(p)}</div></div>
     </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickEditItem=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
