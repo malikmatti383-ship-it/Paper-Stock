@@ -321,8 +321,10 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 .mpl{font-size:11px;margin-left:5px}
 .mp-pos{color:#16a34a}
 .mp-neg{color:#dc2626}
-.rate-in{width:74px;border:1px solid #cfe3ee;border-radius:8px;padding:3px 6px;font-size:12px;background:#fff;color:#0f172a}
-.qty-num{cursor:pointer;min-width:26px;text-align:center;display:inline-block;border-bottom:1px dashed #94a3b8}
+.rate-in{width:60px;border:1px solid #cfe3ee;border-radius:8px;padding:2px 5px;font-size:12px;background:#fff;color:#0f172a}
+.nowrap{white-space:nowrap;overflow:hidden}
+.stk{font-size:11px;color:#64748b;font-weight:400}
+.qty-num{cursor:pointer;min-width:30px;text-align:center;display:inline-block;border:1px solid #cfe3ee;border-radius:8px;background:#f8fafc;padding:2px 6px;font-size:14px;color:#0f172a}
 .qty-in{width:62px;text-align:center;border:2px solid #0e86b8;border-radius:8px;padding:2px 4px;font-size:14px;background:#fff;color:#0f172a}
 .msg-btn.pdf{background:#7c3aed;color:#fff}
 .cbtn{width:44px;height:44px;min-width:44px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--cbtn-g1,#102c6b),var(--cbtn-g2,#4a86f5));cursor:pointer;align-self:center;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.20);padding:0}

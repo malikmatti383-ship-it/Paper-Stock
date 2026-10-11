@@ -430,17 +430,24 @@ window.pickSaleDD=id=>{
   $('sale-psearch').value=p.name;
   $('sale-dd').classList.add('hidden');
   $('sale-cost').value=p.cost.toFixed(2);
+  $('sale-rate').value=p.sell;
   $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); // running bill total
   paintSaleDisc(); paintSaleCostWarn(); paintSaleQtyWarn();
 };
-$('sale-qty').oninput=()=>{ const p=DB.products.find(x=>x.id===salePickId);
-  if(p) $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); paintSaleDisc(); paintSaleCostWarn(); paintSaleQtyWarn(); };
+$('sale-rate').oninput=()=>{ const q=Math.max(1,parseInt($('sale-qty').value)||1);
+  const r=Math.max(0,parseFloat($('sale-rate').value)||0);
+  $('sale-total-in').value=(cartGrand()+r*q).toFixed(0); paintSaleDisc(); paintSaleCostWarn(); paintSaleQtyWarn(); };
+$('sale-qty').oninput=()=>{ const r=Math.max(0,parseFloat($('sale-rate').value)||0);
+  $('sale-total-in').value=(cartGrand()+r*($('sale-qty').value||1)).toFixed(0); paintSaleDisc(); paintSaleCostWarn(); paintSaleQtyWarn(); };
 const saleQtyStep=d=>{ const el=$('sale-qty');
   const p=DB.products.find(x=>x.id===salePickId);
   let v=(parseInt(el.value)||1)+d; v=Math.max(1,v);
   if(p&&v>p.qty){ v=p.qty; toast('Only '+p.qty+' available'); }
   el.value=v; el.oninput(); };
-$('sale-total-in').oninput=()=>{ paintSaleDisc(); paintSaleCostWarn(); };
+$('sale-total-in').oninput=()=>{ const q=Math.max(1,parseInt($('sale-qty').value)||1);
+  const bill=parseFloat($('sale-total-in').value)||0, r=(bill-cartGrand())/q;
+  if(r>=0) $('sale-rate').value=+r.toFixed(2);
+  paintSaleDisc(); paintSaleCostWarn(); };
 $('sale-qty-minus').onclick=()=>saleQtyStep(-1);
 $('sale-qty-plus').onclick=()=>saleQtyStep(1);
 function cartGrand(){ return saleCart.reduce((s,i)=>s+i.total,0); }
@@ -449,7 +456,7 @@ function renderSaleCart(){
   if(!saleCart.length){ box.innerHTML=''; return; }
   box.innerHTML='<div class="cart-box">'+saleCart.map((i,ix)=>`
     <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(i.name)}</b><div class="sub">${i.qty} × ${pkr(i.unit)} = ${pkr(i.total)}</div></div>
-    <div class="cart-step"><button class="mini-btn" onclick="saleStep(${ix},-1)">−</button><b>${i.qty}</b><button class="mini-btn" onclick="saleStep(${ix},1)">+</button></div>
+    <div class="cart-step"><button class="mini-btn" onclick="saleStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('sale',${ix},this)" title="Tap to type quantity">${i.qty}</b><button class="mini-btn" onclick="saleStep(${ix},1)">+</button></div>
     <button class="cart-x" onclick="rmCartItem(${ix})">✕</button></div>`).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(cartGrand())}</b></div></div>`;
   paintSaleDisc(); paintSaleCostWarn();
@@ -468,10 +475,11 @@ function stageLine(){
   if(q>p.qty){ toast('Only '+p.qty+' in stock!'); return 'err'; }
   const bill=parseFloat($('sale-total-in').value)||0;
   let lineTotal=bill-cartGrand();
-  if(!(lineTotal>0)) lineTotal=q*p.sell;
-  return {productId:p.id,name:p.name,qty:q,unit:p.sell,total:lineTotal,cost:p.cost};
+  const unit=Math.max(0,parseFloat($('sale-rate').value)||p.sell);
+  if(!(lineTotal>0)) lineTotal=q*unit;
+  return {productId:p.id,name:p.name,qty:q,unit,total:lineTotal,cost:p.cost};
 }
-function clearStaging(){ salePickId=null; $('sale-psearch').value=''; $('sale-cost').value=''; $('sale-qty').value=1;
+function clearStaging(){ salePickId=null; $('sale-psearch').value=''; $('sale-cost').value=''; $('sale-rate').value=''; $('sale-qty').value=1;
   $('sale-total-in').value=cartGrand().toFixed(0); }
 $('btn-add-item').onclick=()=>{
   const it=stageLine();
@@ -567,7 +575,7 @@ function renderWsCart(){
   if(!wsCart.length){ box.innerHTML=''; return; }
   box.innerHTML='<div class="cart-box">'+wsCart.map((i,ix)=>`
     <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(i.name)}</b><div class="sub">${i.qty} \u00D7 ${pkr(i.unit)} = ${pkr(i.total)}</div></div>
-    <div class="cart-step"><button class="mini-btn" onclick="wsStep(${ix},-1)">\u2212</button><b>${i.qty}</b><button class="mini-btn" onclick="wsStep(${ix},1)">+</button></div>
+    <div class="cart-step"><button class="mini-btn" onclick="wsStep(${ix},-1)">\u2212</button><b class="qty-num" onclick="qtyTap('ws',${ix},this)" title="Tap to type quantity">${i.qty}</b><button class="mini-btn" onclick="wsStep(${ix},1)">+</button></div>
     <button class="cart-x" onclick="rmWsItem(${ix})">\u2715</button></div>`).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(wsGrand())}</b></div></div>`;
   paintWsDisc(); paintWsCostWarn();
@@ -1173,15 +1181,25 @@ $('btn-add-credit').onclick=()=>{
   $('cc-psearch').oninput=e=>{ credPickQ=e.target.value.toLowerCase(); renderCredPick(); };
   renderCredPick(); renderCredCart();
 };
+/* Tap any editable number/text field -> its content gets selected, so typing
+   replaces it (no need to delete the old value first). Tapping elsewhere changes nothing. */
+document.addEventListener('focusin',e=>{
+  const t=e.target;
+  if(!t||t.tagName!=='INPUT'||t.readOnly||t.disabled) return;
+  const ty=(t.type||'text').toLowerCase();
+  if(ty!=='number'&&ty!=='text'&&ty!=='tel'&&ty!=='decimal') return;
+  try{ t.select(); }catch(_){}
+});
 /* ---- shared qty helpers (New Credit / Add credit / Edit customer) ---- */
 let editCust=null;
-function cartFor(kind){ return kind==='cred'?credCart:kind==='more'?moreCart:editItems; }
-function renderCartFor(kind){ if(kind==='cred')renderCredCart(); else if(kind==='more')renderMoreCart(); else renderEditItems(); }
+function findProd(pid){ return DB.products.find(x=>x.id===pid)||DB.products.find(x=>String(x.id)===String(pid)); }
+function cartFor(kind){ return kind==='cred'?credCart:kind==='more'?moreCart:kind==='edit'?editItems:kind==='sale'?saleCart:wsCart; }
+function renderCartFor(kind){ if(kind==='cred')renderCredCart(); else if(kind==='more')renderMoreCart(); else if(kind==='edit')renderEditItems(); else if(kind==='sale')renderSaleCart(); else renderWsCart(); }
 function maxFor(kind,l){
-  const p=DB.products.find(x=>x.id===l.productId);
-  const base=p?p.qty:1e9;
+  const p=findProd(l.productId);
+  const base=p&&p.qty!=null?p.qty:1e9;
   if(kind==='edit'&&editCust!=null){ const c=DB.customers.find(x=>x.id===editCust);
-    if(c) return base+((c.items||[]).filter(x=>x.productId===l.productId).reduce((s,x)=>s+x.qty,0)); }
+    if(c) return base+((c.items||[]).filter(x=>String(x.productId)===String(l.productId)).reduce((s,x)=>s+x.qty,0)); }
   return base;
 }
 /* tap the qty number -> type quantity directly (for 20, 25, ...) */
@@ -1195,8 +1213,12 @@ window.qtyTap=(kind,ix,el)=>{
     if(ok){ const v=parseInt(inp.value,10);
       if(!(v>=1)){ /* ignore bad input */ }
       else if(v>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); }
-      else l.qty=v; }
-    renderCartFor(kind); };
+      else { const oq=l.qty; l.qty=v;
+        /* sale/ws rows store total (may include bill adjustments) — scale proportionally */
+        if((kind==='sale'||kind==='ws')&&l.total!=null&&oq>0) l.total=Math.round(l.total*v/oq*100)/100; } }
+    renderCartFor(kind);
+    if(kind==='sale'&&$('sale-total-in')) $('sale-total-in').value=cartGrand().toFixed(0);
+    if(kind==='ws'&&$('ws-total')) $('ws-total').value=wsGrand().toFixed(0); };
   inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); done(true); } };
   inp.onblur=()=>done(true);
   el.replaceWith(inp); inp.focus(); inp.select();
@@ -1223,9 +1245,9 @@ function renderCredCart(){
   if(!credCart.length){ box.innerHTML=''; if(mw) mw.innerHTML=''; return; }
   if(mw) mw.innerHTML='<button class="btn-addmore" onclick="$(\'cc-psearch\').focus()">+ Add more products</button>';
   box.innerHTML='<div class="cart-box">'+credCart.map((l,ix)=>{
-    const p=DB.products.find(x=>x.id===l.productId), over=p&&l.qty>p.qty;
-    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
-      <div class="sub">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="credRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
+    const p=findProd(l.productId), over=p&&l.qty>p.qty;
+    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span>
+      <div class="sub nowrap">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="credRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
       <div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div>
       <button class="cart-x" onclick="credRm(${ix})">✕</button></div>`; }).join('')+
@@ -1243,8 +1265,8 @@ window.saveCredit=()=>{
   const cid=parseInt($('cc-id').value)||DB.seq.c;
   const camt=Math.max(0,parseFloat($('cc-credit').value)||0);
   if(!credCart.length&&!camt){ toast('Add a product or enter credit amount'); return; }
-  for(const l of credCart){ const p=DB.products.find(x=>x.id===l.productId);
-    if(p&&l.qty>p.qty){ toast('⚠️ Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
+  for(const l of credCart){ const p=findProd(l.productId);
+    if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
   for(const l of credCart){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const items=credCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
   const newId=DB.seq.c++;
@@ -1324,9 +1346,9 @@ function renderMoreCart(){
   const box=$('m-cart'); if(!box) return;
   if(!moreCart.length){ box.innerHTML=''; const mw0=$('m-more'); if(mw0)mw0.innerHTML=''; return; }
   box.innerHTML='<div class="cart-box">'+moreCart.map((l,ix)=>{
-    const p=DB.products.find(x=>x.id===l.productId), over=p&&l.qty>p.qty;
-    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
-      <div class="sub">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="moreRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
+    const p=findProd(l.productId), over=p&&l.qty>p.qty;
+    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span>
+      <div class="sub nowrap">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="moreRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
       <div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div>
       <button class="cart-x" onclick="moreRm(${ix})">✕</button></div>`; }).join('')+
@@ -1343,8 +1365,8 @@ window.moreRm=ix=>{ moreCart.splice(ix,1); renderMoreCart(); };
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
   const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
-  for(const l of items){ const p=DB.products.find(x=>x.id===l.productId);
-    if(p&&l.qty>p.qty){ toast('⚠️ Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
+  for(const l of items){ const p=findProd(l.productId);
+    if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
   for(const l of items){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   c.credit+=a;
   if(items.length){ c.items=(c.items||[]).concat(items);
@@ -1375,7 +1397,7 @@ function renderEditItems(){
   box.innerHTML=editItems.length?'<div class="cart-box">'+editItems.map((l,ix)=>{
     const mx=maxFor('edit',l), over=l.qty>mx;
     return `
-    <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
+    <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b> <span class="stk">· ${mx} in stock</span>
       <div class="sub"><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
       ${over?`<div class="red-sub">Only ${mx} in stock!</div>`:''}</div>
       <div class="fld-in" style="width:110px"><input type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value)"><span class="pkr" data-cur>${curCode()}</span></div>
@@ -1410,11 +1432,10 @@ window.saveEditCustomer=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const name=$('e-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
   // effective availability = current stock + old lines coming back
-  const effAvail=pid=>{ const p=DB.products.find(x=>x.id===pid); if(!p) return 1e9;
-    return p.qty+(c.items||[]).filter(l=>l.productId===pid).reduce((s,l)=>s+l.qty,0); };
-  for(const l of editItems){ if(l.qty>effAvail(l.productId)){
-    const p=DB.products.find(x=>x.id===l.productId);
-    toast('⚠️ Only '+effAvail(l.productId)+' "'+l.name+'" in stock!'); return; } }
+  const effAvail=pid=>{ const p=findProd(pid); if(!p||p.qty==null) return 0;
+    return p.qty+(c.items||[]).filter(l=>String(l.productId)===String(pid)).reduce((s,l)=>s+l.qty,0); };
+  for(const l of editItems){ const av=effAvail(l.productId);
+    if(!(av>=l.qty)){ toast('⚠️ Only '+av+' "'+l.name+'" in stock!'); return; } }
   for(const l of (c.items||[])){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty+=l.qty; }
   for(const l of editItems){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const camt=Math.max(0,parseFloat($('e-credit').value)||0);

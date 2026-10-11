@@ -58,10 +58,14 @@
         </div>
         <label class="fl">ITEM NAME</label>
         <input id="add-name" placeholder="e.g. A4 Rim 80gsm">
-        <label class="fl">UNIT</label>
-        <select id="add-unit"><option>Rim</option><option>Ream</option><option>Kg</option><option>Bundle</option><option>Piece</option><option>Packet</option></select>
-        <label class="fl">QUANTITY</label>
-        <input id="add-qty" type="number" min="0" value="1">
+        <div class="two-col">
+          <div><label class="fl">UNIT</label>
+            <select id="add-unit"><option>Rim</option><option>Ream</option><option>Kg</option><option>Bundle</option><option>Piece</option><option>Packet</option></select>
+          </div>
+          <div><label class="fl">QUANTITY</label>
+            <input id="add-qty" type="number" min="0" value="1">
+          </div>
+        </div>
         <div class="two-col">
           <div><label class="fl">COST PRICE</label><div class="pkr-wrap"><input id="add-cost" type="number" min="0" value="0"><span data-cur>PKR</span></div></div>
           <div><label class="fl">SELLING PRICE</label><div class="pkr-wrap"><input id="add-sell" type="number" min="0" value="0"><span data-cur>PKR</span></div></div>
@@ -93,7 +97,10 @@
             <div id="sale-dd" class="dd-list hidden"></div>
           </div>
           <div id="sale-cart"></div>
-          <div class="fld"><span class="fld-lbl">Cost per item</span><div class="fld-in"><input id="sale-cost" readonly tabindex="-1" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
+          <div class="two-col">
+          <div class="fld"><span class="fld-lbl">Cost</span><div class="fld-in"><input id="sale-cost" readonly tabindex="-1" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
+          <div class="fld"><span class="fld-lbl">Rate</span><div class="fld-in"><input id="sale-rate" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
+          </div>
           <div class="fld"><span class="fld-lbl">Quantity sold</span><div class="qty-step"><button class="mini-btn" id="sale-qty-minus" type="button">−</button><input id="sale-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="sale-qty-plus" type="button">+</button></div></div><div id="sale-qty-warn"></div>
           <button class="btn-addmore" id="btn-add-item">+ Add more items</button>
           <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
@@ -117,8 +124,10 @@
             <div id="ws-dd" class="dd-list hidden"></div>
           </div>
           <div id="ws-cart"></div>
+          <div class="two-col">
           <div class="fld"><span class="fld-lbl">Cost</span><div class="fld-in"><input id="ws-cost" readonly tabindex="-1" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
           <div class="fld"><span class="fld-lbl">Rate</span><div class="fld-in"><input id="ws-rate" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
+          </div>
           <div class="fld"><span class="fld-lbl">Quantity</span><div class="qty-step"><button class="mini-btn" id="ws-qty-minus" type="button">−</button><input id="ws-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="ws-qty-plus" type="button">+</button></div></div><div id="ws-qty-warn"></div>
           <button class="btn-addmore" id="btn-ws-add">+ Add more items</button>
           <div class="fld"><span class="fld-lbl">Total (at stock rates)</span><div class="fld-in"><input id="ws-total" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
