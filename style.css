@@ -321,6 +321,8 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 .mpl{font-size:11px;margin-left:5px}
 .mp-pos{color:#16a34a}
 .mp-neg{color:#dc2626}
+.rate-in{width:74px;border:1px solid #cfe3ee;border-radius:8px;padding:3px 6px;font-size:12px;background:#fff;color:#0f172a}
+.msg-btn.pdf{background:#7c3aed;color:#fff}
 .cbtn{width:44px;height:44px;min-width:44px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--cbtn-g1,#102c6b),var(--cbtn-g2,#4a86f5));cursor:pointer;align-self:center;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.20);padding:0}
 .cbtn svg{width:30px;height:30px;display:block}
 /* Contact icon (#24 verified) follows the active app theme */
