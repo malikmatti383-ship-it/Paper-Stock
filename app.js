@@ -881,7 +881,7 @@ function renderDaySales(){
     const hasCost=its.some(it=>it.cost!=null);
     const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
     const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
-    const miniPL=hasCost?its.map(it=>{ const lp=lineP(it); return lp>0?'<span class="mpl mp-pos" title="Profit">▲</span>':(lp<0?'<span class="mpl mp-neg" title="Loss">▼</span>':''); }).join(''):'';
+    const miniPL=hasCost?((its.some(it=>lineP(it)>0)?'<span class="mpl mp-pos" title="Profit">▲</span>':'')+(its.some(it=>lineP(it)<0)?'<span class="mpl mp-neg" title="Loss">▼</span>':'')):'';
     const det=open?`<div class="sale-det">`+its.map((it,ix)=>{
       const lp=hasCost?lineP(it):0;
       return `
