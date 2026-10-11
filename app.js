@@ -881,7 +881,6 @@ function renderDaySales(){
     const hasCost=its.some(it=>it.cost!=null);
     const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
     const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
-    const miniPL=hasCost?its.map(it=>{ const lp=lineP(it); return lp>0?'<span class="mpl mp-pos" title="Profit">▲</span>':(lp<0?'<span class="mpl mp-neg" title="Loss">▼</span>':''); }).join(''):'';
     const det=open?`<div class="sale-det">`+its.map((it,ix)=>{
       const lp=hasCost?lineP(it):0;
       return `
@@ -895,7 +894,7 @@ function renderDaySales(){
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
       <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.kind==='wholesale'?'<span class="ws-pill">🏪 Wholesale</span>':'<span class="sl-pill">🛒 Sale</span>'}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
-      <div class="sub">${sub}${s.customer?' · '+esc(s.customer):''}${miniPL}</div></div>
+      <div class="sub">${sub}${s.customer?' · '+esc(s.customer):''}</div></div>
       <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
   }).join('');
   const expRows=exps.map(e=>`
