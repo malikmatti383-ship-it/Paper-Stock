@@ -353,6 +353,9 @@ window.pickSaleDD=id=>{
 };
 $('sale-qty').oninput=()=>{ const p=DB.products.find(x=>x.id===salePickId);
   if(p) $('sale-total-in').value=(cartGrand()+p.sell*($('sale-qty').value||1)).toFixed(0); };
+const saleQtyStep=d=>{ const el=$('sale-qty'); el.value=Math.max(1,(parseInt(el.value)||1)+d); el.oninput(); };
+$('sale-qty-minus').onclick=()=>saleQtyStep(-1);
+$('sale-qty-plus').onclick=()=>saleQtyStep(1);
 function cartGrand(){ return saleCart.reduce((s,i)=>s+i.total,0); }
 function renderSaleCart(){
   const box=$('sale-cart');
@@ -446,6 +449,9 @@ window.pickWsDD=id=>{
 const wsPreview=()=>{ const r=parseFloat($('ws-rate').value)||0;
   $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); };
 $('ws-qty').oninput=wsPreview; $('ws-rate').oninput=wsPreview;
+const wsQtyStep=d=>{ const el=$('ws-qty'); el.value=Math.max(1,(parseInt(el.value)||1)+d); wsPreview(); };
+$('ws-qty-minus').onclick=()=>wsQtyStep(-1);
+$('ws-qty-plus').onclick=()=>wsQtyStep(1);
 function wsGrand(){ return wsCart.reduce((s,i)=>s+i.total,0); }
 function renderWsCart(){
   const box=$('ws-cart'); if(!box) return;

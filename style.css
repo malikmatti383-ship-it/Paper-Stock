@@ -311,6 +311,9 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 .profit-line{color:#16a34a;font-weight:800;font-size:14px;text-align:center;margin:10px 0 2px}
 .edit-sale-btn{display:block;width:100%;margin:10px 0;background:#eef1f6;border:none;border-radius:12px;padding:11px;font-weight:800;font-size:14px;cursor:pointer;color:#1c2733}
 #sales-day-title{cursor:pointer}
+.qty-step{display:flex;align-items:center;gap:10px}
+.qty-step input{flex:1;min-width:0;text-align:center}
+.qty-step .mini-btn{width:40px;height:40px;font-size:20px}
 .icon-btn{font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
 .sync-pill{background:#fff;color:var(--pp-teal-d);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);margin-left:auto;white-space:nowrap}
 .sync-pill .spin{display:inline-block;animation:pprot 1s linear infinite;font-size:14px}
