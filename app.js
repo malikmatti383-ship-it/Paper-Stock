@@ -255,6 +255,8 @@ const THEMES=[
  {id:'grey',name:'Slate Grey',g:'linear-gradient(135deg,#1a2332,#78828f)'},
  {id:'cyan',name:'Aqua Cyan',g:'linear-gradient(135deg,#0d3d52,#2fd8f2)'},
  {id:'classic',name:'Classic Blue',g:'linear-gradient(135deg,#1268b1,#14b2d6)'},
+ {id:'whitegold',name:'White Gold',g:'linear-gradient(135deg,#fbf7ec,#d4af37)'},
+ {id:'blackgold',name:'Black Gold',g:'linear-gradient(135deg,#0c0a06,#d4af37)'},
 ];
 function curTheme(){ const id=DB&&DB.profile&&DB.profile.theme; return THEMES.some(x=>x.id===id)?id:'ocean'; }
 function applyTheme(id){ document.body.dataset.theme=id; }
