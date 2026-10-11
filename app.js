@@ -367,8 +367,9 @@ function renderSales(){
   $('sale-dd').classList.add('hidden'); renderSaleCart();
   const wdd=$('ws-dd'); if(wdd) wdd.classList.add('hidden');
   if($('ws-date-txt')) $('ws-date-txt').textContent=fmtDate(wsDate);
-  renderWsCart(); renderDaySales();
+  renderWsCart(); renderDaySales(); paintNextIds();
 }
+function paintNextIds(){ const t='ID'+DB.seq.s; const a=$('sale-next-id'),b=$('ws-next-id'); if(a)a.textContent=t; if(b)b.textContent=t; }
 function fmtDate(ds){ const d=new Date(ds+'T12:00'); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function setSeg(id){ ['seg-sale','seg-ws','seg-exp'].forEach(x=>$(x).classList.toggle('active',x===id));
   $('sale-form').classList.toggle('hidden',id!=='seg-sale');
@@ -866,8 +867,10 @@ function renderDaySales(){
   else if(fType==='wholesale') list=list.filter(s=>s.kind==='wholesale');
   else if(fType==='expense') list=[];
   const fq=fQ.trim();
-  if(fq){ const exact=list.filter(s=>String(s.id)===fq);
-    list=exact.length?exact:list.filter(s=>(((s.customer||'')+' '+(s.phone||'')+' '+(s.name||'')+' '+s.id+' '+saleItems(s).map(it=>it.name||'').join(' '))).toLowerCase().includes(fq)); }
+  if(fq){ const m=fq.match(/^id\s*0*(\d+)$/); const eid=m?parseInt(m[1],10):(/^\d+$/.test(fq)?parseInt(fq,10):null);
+    const exact=eid!=null?list.filter(s=>s.id===eid):[];
+    const rest=list.filter(s=>exact.indexOf(s)<0).filter(s=>(((s.customer||'')+' '+(s.phone||'')+' '+(s.name||'')+' '+s.id+' id'+s.id+' '+saleItems(s).map(it=>it.name||'').join(' '))).toLowerCase().includes(fq));
+    list=exact.concat(rest).sort((a,b)=>(exact.indexOf(b)-exact.indexOf(a))||(b.id-a.id)); }
   list=list.sort((a,b)=>b.id-a.id);
   let exps=DB.expenses.filter(e=>e.date===saleDay).sort((a,b)=>b.id-a.id);
   if(fType==='sale'||fType==='wholesale') exps=[];
@@ -895,7 +898,7 @@ function renderDaySales(){
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
       <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.kind==='wholesale'?'<span class="ws-pill">🏪 Wholesale</span>':'<span class="sl-pill">🛒 Sale</span>'}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
-      <div class="sub">${sub}${s.customer?' · '+esc(s.customer):''}${miniPL}</div></div>
+      <div class="sub"><span class="id-box">ID${s.id}</span> ${sub}${s.customer?' · '+esc(s.customer):''}${miniPL}</div></div>
       <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
   }).join('');
   const expRows=exps.map(e=>`
