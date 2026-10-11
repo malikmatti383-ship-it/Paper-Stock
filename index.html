@@ -113,9 +113,10 @@
             <div id="ws-dd" class="dd-list hidden"></div>
           </div>
           <div id="ws-cart"></div>
+          <div class="fld"><span class="fld-lbl">Rate</span><div class="fld-in"><input id="ws-rate" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <div class="fld"><span class="fld-lbl">Quantity</span><input id="ws-qty" type="number" min="1" value="1" autocomplete="off"></div>
           <button class="btn-addmore" id="btn-ws-add">+ Add more items</button>
-          <div class="fld"><span class="fld-lbl">Total (at stock rates)</span><div class="fld-in"><input id="ws-total" readonly tabindex="-1" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
+          <div class="fld"><span class="fld-lbl">Total (at stock rates)</span><div class="fld-in"><input id="ws-total" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <button id="btn-ws-sold" class="btn-save blue">SOLD</button>
         </div>
         <div id="exp-form" class="hidden">
@@ -127,7 +128,8 @@
           <button id="btn-exp-add" class="btn-save blue">ADD EXPENSE</button>
         </div>
       </div>
-      <div class="row-between"><button class="nav-arrow" id="day-prev">‹</button><h3 id="sales-day-title">Today · 0 sales</h3><button class="nav-arrow" id="day-next">›</button></div>
+      <div class="row-between"><button class="nav-arrow" id="day-prev">‹</button><h3 id="sales-day-title" title="Tap to pick a date">Today · 0 sales</h3><button class="nav-arrow" id="day-next">›</button></div>
+      <input type="date" id="day-jump" class="hidden">
       <div id="sales-day-list"></div>
     </div>
   </section>
@@ -186,7 +188,7 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js?v=47"></script>
+    <script src="app.js?v=48"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
