@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css?v=3">
-<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{try{navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{try{r.update()}catch(e){}}).catch(()=>{})}catch(e){}});}</script>
 </head>
 <body>
 <div id="app">
@@ -206,12 +206,15 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js?v=69"></script>
+    <script src="app.js"></script>
 <script src="auth.js?v=1"></script>
 <script>
 /* Auto-reload when a new service worker takes over, so updates appear on first reopen.
-   Only reloads if the update happened right at launch (15s guard avoids mid-work reloads). */
+   Only reloads if the update happened right at launch/foreground (15s guard avoids mid-work reloads).
+   Also re-checks for updates whenever the app comes back to the foreground (covers minimize→reopen). */
 if('serviceWorker' in navigator){ var _swt0=Date.now();
+  function _swCheck(){ try{ navigator.serviceWorker.getRegistration().then(function(r){ if(r){ try{r.update()}catch(e){} } }); }catch(e){} _swt0=Date.now(); }
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) _swCheck(); });
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     if(Date.now()-_swt0<15000) window.location.reload(); }); }
 </script>
