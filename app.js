@@ -1172,6 +1172,34 @@ $('btn-add-credit').onclick=()=>{
   $('cc-psearch').oninput=e=>{ credPickQ=e.target.value.toLowerCase(); renderCredPick(); };
   renderCredPick(); renderCredCart();
 };
+/* ---- shared qty helpers (New Credit / Add credit / Edit customer) ---- */
+let editCust=null;
+function cartFor(kind){ return kind==='cred'?credCart:kind==='more'?moreCart:editItems; }
+function renderCartFor(kind){ if(kind==='cred')renderCredCart(); else if(kind==='more')renderMoreCart(); else renderEditItems(); }
+function maxFor(kind,l){
+  const p=DB.products.find(x=>x.id===l.productId);
+  const base=p?p.qty:1e9;
+  if(kind==='edit'&&editCust!=null){ const c=DB.customers.find(x=>x.id===editCust);
+    if(c) return base+((c.items||[]).filter(x=>x.productId===l.productId).reduce((s,x)=>s+x.qty,0)); }
+  return base;
+}
+/* tap the qty number -> type quantity directly (for 20, 25, ...) */
+window.qtyTap=(kind,ix,el)=>{
+  const cart=cartFor(kind), l=cart[ix]; if(!l||!el||el.dataset.e) return; el.dataset.e='1';
+  const mx=maxFor(kind,l);
+  const inp=document.createElement('input');
+  inp.type='number'; inp.min='1'; inp.value=l.qty; inp.className='qty-in';
+  let settled=false;
+  const done=ok=>{ if(settled) return; settled=true;
+    if(ok){ const v=parseInt(inp.value,10);
+      if(!(v>=1)){ /* ignore bad input */ }
+      else if(v>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); }
+      else l.qty=v; }
+    renderCartFor(kind); };
+  inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); done(true); } };
+  inp.onblur=()=>done(true);
+  el.replaceWith(inp); inp.focus(); inp.select();
+};
 let credCart=[];
 function renderCredPick(){
   const q=(credPickQ||'').trim(), box=$('cc-pick-list'); if(!box) return;
@@ -1198,13 +1226,16 @@ function renderCredCart(){
     return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
       <div class="sub">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="credRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
-      <div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b>${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div>
+      <div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div>
       <button class="cart-x" onclick="credRm(${ix})">✕</button></div>`; }).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(credCartTotal())}</b></div></div>`;
   $('cc-credit').value=credCartTotal().toFixed(0);
 }
 window.credRate=(ix,v)=>{ const l=credCart[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); renderCredCart(); };
-window.credStep=(ix,d)=>{ const l=credCart[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderCredCart(); };
+window.credStep=(ix,d)=>{ const l=credCart[ix]; if(!l) return;
+  if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
+    if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
+  l.qty=Math.max(1,l.qty+d); renderCredCart(); };
 window.credRm=ix=>{ credCart.splice(ix,1); renderCredCart(); };
 window.saveCredit=()=>{
   const name=$('cc-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
@@ -1266,6 +1297,7 @@ window.addCreditMore=id=>{
   openSheet(`<h3>➕ Add credit — ${esc(c.name)}</h3>
     <div class="search-wrap">🔍 <input id="m-psearch" placeholder="Type product name..."></div>
     <div id="m-pick-list"></div>
+    <div id="m-more"></div>
     <div id="m-cart"></div>
     <input id="m-amt" type="number" placeholder="Credit amount">
     <div class="sub">Tap a product to add it below — search clears for the next item</div>
@@ -1289,18 +1321,23 @@ window.pickMoreCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
 function moreCartTotal(){ return moreCart.reduce((s,l)=>s+l.qty*l.rate,0); }
 function renderMoreCart(){
   const box=$('m-cart'); if(!box) return;
-  if(!moreCart.length){ box.innerHTML=''; return; }
+  if(!moreCart.length){ box.innerHTML=''; const mw0=$('m-more'); if(mw0)mw0.innerHTML=''; return; }
   box.innerHTML='<div class="cart-box">'+moreCart.map((l,ix)=>{
     const p=DB.products.find(x=>x.id===l.productId), over=p&&l.qty>p.qty;
     return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
-      <div class="sub">${l.qty} × ${pkr(l.rate)} = ${pkr(l.qty*l.rate)}</div>
+      <div class="sub">${l.qty} × <input class="rate-in" type="number" min="0" value="${l.rate}" onchange="moreRate(${ix},this.value)"> = ${pkr(l.qty*l.rate)}</div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
-      <div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b>${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div>
+      <div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div>
       <button class="cart-x" onclick="moreRm(${ix})">✕</button></div>`; }).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(moreCartTotal())}</b></div></div>`;
   $('m-amt').value=moreCartTotal().toFixed(0);
+  const mw=$('m-more'); if(mw) mw.innerHTML='<button class="btn-addmore" onclick="$(\'m-psearch\').focus()">+ Add more products</button>';
 }
-window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
+window.moreRate=(ix,v)=>{ const l=moreCart[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); renderMoreCart(); };
+window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return;
+  if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
+    if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
+  l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
 window.moreRm=ix=>{ moreCart.splice(ix,1); renderMoreCart(); };
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
@@ -1315,6 +1352,7 @@ window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
 let editItems=[];
 window.editCustomer=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  editCust=id;
   editItems=(c.items||[]).map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit}));
   openSheet(`<h3>✏️ Edit — ${esc(c.name)}</h3>
     <input id="e-name" placeholder="Customer name" value="${esc(c.name)}">
@@ -1333,16 +1371,22 @@ window.editCustomer=id=>{
 function editItemsTotal(){ return editItems.reduce((s,l)=>s+l.qty*l.rate,0); }
 function renderEditItems(){
   const box=$('e-items'); if(!box) return;
-  box.innerHTML=editItems.length?'<div class="cart-box">'+editItems.map((l,ix)=>`
+  box.innerHTML=editItems.length?'<div class="cart-box">'+editItems.map((l,ix)=>{
+    const mx=maxFor('edit',l), over=l.qty>mx;
+    return `
     <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
-      <div class="sub"><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b>${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div></div>
+      <div class="sub"><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
+      ${over?`<div class="red-sub">Only ${mx} in stock!</div>`:''}</div>
       <div class="fld-in" style="width:110px"><input type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value)"><span class="pkr" data-cur>${curCode()}</span></div>
-      <button class="cart-x" onclick="editRm(${ix})">✕</button></div>`).join('')+
+      <button class="cart-x" onclick="editRm(${ix})">✕</button></div>`; }).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(editItemsTotal())}</b></div></div>`
     :'<p class="note">No items — add products below or leave empty.</p>';
   const ca=$('e-credit'); if(ca&&editItems.length) ca.value=editItemsTotal().toFixed(0);
 }
-window.editStep=(ix,d)=>{ const l=editItems[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderEditItems(); };
+window.editStep=(ix,d)=>{ const l=editItems[ix]; if(!l) return;
+  if(d>0){ const mx=maxFor('edit',l);
+    if(l.qty+1>mx){ toast('Only '+mx+' "'+l.name+'" in stock!'); return; } }
+  l.qty=Math.max(1,l.qty+d); renderEditItems(); };
 window.editRate=(ix,v)=>{ const l=editItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0);
   const t=$('e-items'); if(t){ const el=t.querySelector('.cart-total b'); if(el) el.textContent=pkr(editItemsTotal()); }
   const ca=$('e-credit'); if(ca) ca.value=editItemsTotal().toFixed(0); };
