@@ -1040,7 +1040,7 @@ $('btn-bell').onclick=()=>{
     const list=due.filter(c=>(c.name||'').toLowerCase().includes(q)||String(c.custId).includes(q));
     $('rem-list').innerHTML=list.length?list.map(c=>`<div class="remind-card"><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span>
       <div style="margin:6px 0">⏰ Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</div>
-      <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} to receive</div>
+      <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} pending</div>
       <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button></div></div>`).join('')
       :'<p class="note">No reminders. Overdue promises will appear here.</p>';
   };
