@@ -983,7 +983,7 @@ window.creditDetail=id=>{
   openSheet(`<h3>${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3>
     <div class="kv"><span>📞 Number</span><b>${esc(c.phone||'—')}</b></div>
     ${(c.items&&c.items.length)?c.items.map(l=>`<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
-    ${c.saleRate?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
+    ${(c.saleRate&&!(c.items&&c.items.length))?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
     <div class="kv"><span>💵 Received</span><b>${pkr(c.received)}</b></div>
@@ -992,6 +992,7 @@ window.creditDetail=id=>{
     <div class="mrow">
       <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Receive</button>
       <button class="btn-ghost" onclick="addCreditMore(${c.id})">➕ Add credit</button>
+      <button class="btn-ghost" onclick="editCustomer(${c.id})">✏️ Edit</button>
     </div>
     <div class="msg-btns">
       <button class="msg-btn wa" onclick="sendMsg(${c.id},'wa')">💬 WhatsApp</button>
@@ -1061,6 +1062,73 @@ window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(items.length){ c.items=(c.items||[]).concat(items);
     const nm=items.map(l=>l.name).join(', '); c.product=c.product?c.product+', '+nm:nm; }
   c.log.push({t:'Credit',a,d:dstr()}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
+let editItems=[];
+window.editCustomer=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  editItems=(c.items||[]).map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit}));
+  openSheet(`<h3>✏️ Edit — ${esc(c.name)}</h3>
+    <input id="e-name" placeholder="Customer name" value="${esc(c.name)}">
+    <input id="e-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel" value="${esc(c.phone||'')}">
+    <div class="fl" style="margin-top:6px">Items</div>
+    <div id="e-items"></div>
+    <div class="search-wrap">🔍 <input id="e-psearch" placeholder="Add product..."></div>
+    <div id="e-pick-list"></div>
+    <input id="e-credit" type="number" placeholder="Credit amount">
+    <div class="two-col"><div><label class="fl" style="margin-top:4px">Promise date</label><input id="e-promise" type="date" value="${c.promiseDate||''}"></div>
+    <div><label class="fl" style="margin-top:4px">Promise time</label><input id="e-ptime" type="time" value="${c.promiseTime||'10:00'}"></div></div>
+    <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveEditCustomer(${id})">Save</button></div>`);
+  renderEditItems();
+  $('e-psearch').oninput=e=>renderEditPick(e.target.value.toLowerCase().trim());
+};
+function editItemsTotal(){ return editItems.reduce((s,l)=>s+l.qty*l.rate,0); }
+function renderEditItems(){
+  const box=$('e-items'); if(!box) return;
+  box.innerHTML=editItems.length?'<div class="cart-box">'+editItems.map((l,ix)=>`
+    <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
+      <div class="sub"><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b>${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div></div>
+      <div class="fld-in" style="width:110px"><input type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value)"><span class="pkr" data-cur>${curCode()}</span></div>
+      <button class="cart-x" onclick="editRm(${ix})">✕</button></div>`).join('')+
+    `<div class="cart-total"><span>Items total</span><b>${pkr(editItemsTotal())}</b></div></div>`
+    :'<p class="note">No items — add products below or leave empty.</p>';
+  const ca=$('e-credit'); if(ca&&editItems.length) ca.value=editItemsTotal().toFixed(0);
+}
+window.editStep=(ix,d)=>{ const l=editItems[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderEditItems(); };
+window.editRate=(ix,v)=>{ const l=editItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); renderEditItems(); };
+window.editRm=ix=>{ editItems.splice(ix,1); renderEditItems(); };
+function renderEditPick(q){
+  const box=$('e-pick-list'); if(!box) return;
+  if(!q){ box.innerHTML=''; return; }
+  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  box.innerHTML=list.map(p=>`
+    <div class="pick-item" onclick="pickEditItem(${p.id})">
+      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · left ${p.qty}</div></div>
+    </div>`).join('')||'<p class="note">No product found</p>';
+}
+window.pickEditItem=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  const ex=editItems.find(x=>x.productId===id);
+  if(ex) ex.qty++; else editItems.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  $('e-psearch').value=''; renderEditPick(''); renderEditItems();
+  toast('✅ Added: '+p.name); };
+window.saveEditCustomer=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  const name=$('e-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
+  // effective availability = current stock + old lines coming back
+  const effAvail=pid=>{ const p=DB.products.find(x=>x.id===pid); if(!p) return 1e9;
+    return p.qty+(c.items||[]).filter(l=>l.productId===pid).reduce((s,l)=>s+l.qty,0); };
+  for(const l of editItems){ if(l.qty>effAvail(l.productId)){
+    const p=DB.products.find(x=>x.id===l.productId);
+    toast('⚠️ Only '+effAvail(l.productId)+' "'+l.name+'" in stock!'); return; } }
+  for(const l of (c.items||[])){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty+=l.qty; }
+  for(const l of editItems){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
+  const camt=Math.max(0,parseFloat($('e-credit').value)||0);
+  c.name=name; c.phone=$('e-phone').value.trim();
+  c.items=editItems.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  if(c.items.length) c.product=c.items.map(l=>l.name).join(', ');
+  c.qty=c.items.reduce((s,l)=>s+l.qty,0);
+  c.credit=camt; c.saleRate=0;
+  c.promiseDate=$('e-promise').value||''; c.promiseTime=$('e-ptime').value||'';
+  save(); renderStock(); creditDetail(id); renderCredit(); updateBellBadge(); toast('✅ Updated');
+};
 window.delCustomer=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!c) return;
   confirmDlg('Delete customer?','Are you sure you want to delete "'+c.name+'"?','DELETE',()=>{
