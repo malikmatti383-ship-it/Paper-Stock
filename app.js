@@ -544,6 +544,7 @@ window.pickWsDD=id=>{
   const p=DB.products.find(x=>x.id===id); if(!p) return;
   if(p.qty<=0){ toast('Not available — out of stock'); return; }
   wsPickId=id; $('ws-psearch').value=p.name; $('ws-dd').classList.add('hidden');
+  $('ws-cost').value=p.cost.toFixed(2);
   $('ws-rate').value=p.sell; wsPreview();
 };
 const wsPreview=()=>{ const r=parseFloat($('ws-rate').value)||0;
@@ -584,7 +585,7 @@ function stageWsLine(){
   const unit=Math.max(0,parseFloat($('ws-rate').value)||p.sell);
   return {productId:p.id,name:p.name,qty:q,unit,total:q*unit,cost:p.cost};
 }
-function clearWsStaging(){ wsPickId=null; $('ws-psearch').value=''; $('ws-qty').value=1; $('ws-rate').value='';
+function clearWsStaging(){ wsPickId=null; $('ws-psearch').value=''; $('ws-qty').value=1; $('ws-rate').value=''; $('ws-cost').value='';
   $('ws-total').value=wsGrand().toFixed(0); }
 $('btn-ws-add').onclick=()=>{
   const it=stageWsLine();
