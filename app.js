@@ -167,9 +167,15 @@ function confirmDlg(title,msg,okLabel,cb){
   $('dlg-ok').onclick=()=>{ closeSheet(); cb(); };
 }
 function lossConfirm(kind,lossLines,cb){
+  if(DB.profile.lossAsk===false){ cb(); return; }
   const rows=lossLines.map(l=>'\u2022 '+esc(l.name)+' \u2014 rate '+pkr(l.unit)+' (cost '+pkr(l.cost)+')').join('<br>');
-  confirmDlg('Sell at a loss?', rows+'<br><br>Are you sure you want to '+kind+' at this rate?', 'YES, SELL', cb);
+  openDlg(`<div class="dlg"><h2>Sell at a loss?</h2><p>${rows}<br><br>Are you sure you want to ${kind} at this rate?</p>
+  <label class="dont-ask"><input type="checkbox" id="loss-noask"> Don't ask again</label>
+  <div class="dlg-btns"><button class="dlg-cancel" onclick="closeSheet()">CANCEL</button>
+  <button class="dlg-ok" id="dlg-ok">YES, SELL</button></div></div>`);
+  $('dlg-ok').onclick=()=>{ if($('loss-noask')&&$('loss-noask').checked){ DB.profile.lossAsk=false; save(); } closeSheet(); cb(); };
 }
+window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save(); $('btn-profile').click(); };
 $('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
 /* Clean trash icon used for every delete option */
 const TRASH='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
@@ -240,6 +246,7 @@ $('btn-profile').onclick=()=>{
     </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
     <div class="menu-row" onclick="openThemePicker()"><span class="ic">${themeDot(curTheme())}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
+    <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">\u26a0\ufe0f</span> Loss warning <span class="sub">${DB.profile.lossAsk===false?'Off':'On'}</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
