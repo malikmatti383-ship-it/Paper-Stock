@@ -360,6 +360,9 @@ body[data-theme="sunset"]{--cbtn-g1:#7933e0;--cbtn-g2:#f7a716;--cbtn-check:#f7a7
 body[data-theme="grey"]{--cbtn-g1:#1a2332;--cbtn-g2:#78828f;--cbtn-check:#78828f}
 body[data-theme="cyan"]{--cbtn-g1:#0d3d52;--cbtn-g2:#2fd8f2;--cbtn-check:#2fd8f2}
 body[data-theme="classic"]{--cbtn-g1:#1268b1;--cbtn-g2:#14b2d6;--cbtn-check:#14b2d6}
+.mpl{font-size:11px;margin-left:5px}
+.mp-pos{color:#16a34a}
+.mp-neg{color:#dc2626}
 .loss-tag{display:inline-block;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:800;border-radius:999px;padding:2px 10px;margin-left:8px;vertical-align:middle}
 .profit-tag{display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:800;border-radius:999px;padding:2px 10px;margin-left:8px;vertical-align:middle}
 .edit-sale-btn{display:block;width:100%;margin:10px 0;background:#eef1f6;border:none;border-radius:12px;padding:11px;font-weight:800;font-size:14px;cursor:pointer;color:#1c2733}
