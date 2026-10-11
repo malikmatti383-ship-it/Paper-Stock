@@ -94,7 +94,7 @@
           </div>
           <div id="sale-cart"></div>
           <div class="fld"><span class="fld-lbl">Cost per item</span><div class="fld-in"><input id="sale-cost" readonly tabindex="-1" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
-          <div class="fld"><span class="fld-lbl">Quantity sold</span><div class="qty-step"><button class="mini-btn" id="sale-qty-minus" type="button">−</button><input id="sale-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="sale-qty-plus" type="button">+</button></div></div>
+          <div class="fld"><span class="fld-lbl">Quantity sold</span><div class="qty-step"><button class="mini-btn" id="sale-qty-minus" type="button">−</button><input id="sale-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="sale-qty-plus" type="button">+</button></div></div><div id="sale-qty-warn"></div>
           <button class="btn-addmore" id="btn-add-item">+ Add more items</button>
           <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <div id="sale-disc-pill"></div>
@@ -116,7 +116,7 @@
           </div>
           <div id="ws-cart"></div>
           <div class="fld"><span class="fld-lbl">Rate</span><div class="fld-in"><input id="ws-rate" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
-          <div class="fld"><span class="fld-lbl">Quantity</span><div class="qty-step"><button class="mini-btn" id="ws-qty-minus" type="button">−</button><input id="ws-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="ws-qty-plus" type="button">+</button></div></div>
+          <div class="fld"><span class="fld-lbl">Quantity</span><div class="qty-step"><button class="mini-btn" id="ws-qty-minus" type="button">−</button><input id="ws-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="ws-qty-plus" type="button">+</button></div></div><div id="ws-qty-warn"></div>
           <button class="btn-addmore" id="btn-ws-add">+ Add more items</button>
           <div class="fld"><span class="fld-lbl">Total (at stock rates)</span><div class="fld-in"><input id="ws-total" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <div id="ws-disc-pill"></div>
@@ -192,7 +192,7 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js?v=55"></script>
+    <script src="app.js?v=56"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
