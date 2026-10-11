@@ -174,7 +174,12 @@ function showView(id){
 document.querySelectorAll('.tt').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 
 /* ---------- Profile / backup ---------- */
-function renderStoreName(){ $('store-name').textContent = DB.profile.name||'Paper Store';
+function renderStoreName(){ const nm=DB.profile.name||'Paper Store', el=$('store-name');
+  el.innerHTML=`<span class="sn-txt" id="sn-txt">${esc(nm)}</span>`;
+  requestAnimationFrame(()=>{ const t=$('sn-txt'); if(!t) return;
+    if(el.scrollWidth>el.clientWidth+8){ el.classList.add('marquee-on');
+      t.innerHTML=esc(nm)+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'+esc(nm); }
+    else el.classList.remove('marquee-on'); });
   $('btn-profile').innerHTML = DB.profile.logo?`<img class="tb-logo" src="${DB.profile.logo}">`:'👤'; }
 window.setStoreLogo=input=>{ readImg(input.files[0],url=>{ if(!url) return;
   DB.profile.logo=url; save(); renderStoreName(); $('btn-profile').click(); toast('✅ Store photo updated'); }); };
@@ -822,61 +827,67 @@ function renderCredit(){
       ${c.promiseDate?`<div class="pd">⏰ Promise: ${fmtDate(c.promiseDate)}</div>`:''}
     </div>`; }).join('')||'<p class="note" style="color:#fff">No credit customers yet</p>';
 }
-let credPickId=null, credPickQ='';
+let credPickQ='';
 $('btn-add-credit').onclick=()=>{
-  const cid=DB.seq.c; credPickId=null; credPickQ='';
+  const cid=DB.seq.c; credPickQ='';
   openSheet(`<h3>New Credit</h3>
     <div class="id-row"><input id="cc-id" value="${cid}"><button class="link-btn" onclick="$('cc-id').value=${DB.seq.c}">AUTO</button></div>
     <input id="cc-name" placeholder="Customer name">
     <input id="cc-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel">
     <div class="search-wrap">🔍 <input id="cc-psearch" placeholder="Type product name..."></div>
     <div id="cc-pick-list"></div>
-    <input id="cc-product" placeholder="Product name (e.g. A4 Rim)">
-    <div class="two-col"><div><input id="cc-rate" type="number" placeholder="Sale rate"></div>
-    <div><input id="cc-disc" type="number" placeholder="Discount rate"></div></div>
-    <div class="two-col"><div><input id="cc-qty" type="number" value="1" min="1" placeholder="Qty"></div>
-    <div><input id="cc-credit" type="number" placeholder="Credit amount PKR"></div></div>
-    <div class="red-sub hidden" id="cc-stock-warn"></div>
-    <div class="sub" id="cc-cost-note"></div>
+    <div id="cc-cart"></div>
+    <input id="cc-credit" type="number" placeholder="Credit amount PKR">
+    <div class="sub">Tap a product to add it below — search clears for the next item</div>
     <div class="two-col"><div><label class="fl" style="margin-top:4px">Promise date</label><input id="cc-promise" type="date"></div>
     <div><label class="fl" style="margin-top:4px">Promise time</label><input id="cc-ptime" type="time" value="10:00"></div></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button><button class="btn-go" onclick="saveCredit()">Save</button></div>`);
   $('cc-psearch').oninput=e=>{ credPickQ=e.target.value.toLowerCase(); renderCredPick(); };
-  renderCredPick();
-  const stockWarn=()=>{ const w=$('cc-stock-warn'); if(!w) return;
-    const p=DB.products.find(x=>x.id===credPickId), q=parseFloat($('cc-qty').value)||1;
-    if(p&&q>p.qty){ w.textContent='⚠️ Only '+p.qty+' in stock!'; w.classList.remove('hidden'); }
-    else { w.textContent=''; w.classList.add('hidden'); } };
-  const calc=()=>{ const r=parseFloat($('cc-rate').value)||0, d=parseFloat($('cc-disc').value)||0, q=parseFloat($('cc-qty').value)||1;
-    $('cc-credit').value=Math.max(0,(r-d)*q).toFixed(0); stockWarn(); };
-  $('cc-rate').oninput=calc; $('cc-disc').oninput=calc; $('cc-qty').oninput=calc;
+  renderCredPick(); renderCredCart();
 };
+let credCart=[];
 function renderCredPick(){
-  const q=(credPickQ||'').trim();
-  let list=[];
-  if(q) list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
-  else if(credPickId){ const sp=DB.products.find(p=>p.id===credPickId); if(sp) list=[sp]; }
-  $('cc-pick-list').innerHTML=list.map(p=>`
-    <div class="pick-item ${credPickId===p.id?'sel':''}" onclick="pickCred(${p.id})">
+  const q=(credPickQ||'').trim(), box=$('cc-pick-list'); if(!box) return;
+  if(!q){ box.innerHTML=''; return; }
+  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  box.innerHTML=list.map(p=>`
+    <div class="pick-item" onclick="pickCred(${p.id})">
       ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · Cost ${pkr(p.cost)} · left ${p.qty}</div></div>
-    </div>`).join('')||(q?'<p class="note">No product found</p>':'');
+    </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
-  credPickId=id; $('cc-product').value=p.name; $('cc-rate').value=p.sell;
-  $('cc-cost-note').textContent='Buy cost: '+pkr(p.cost)+' / '+p.unit+' · Profit: '+pkr(p.sell-p.cost);
-  const q=parseFloat($('cc-qty').value)||1, d=parseFloat($('cc-disc').value)||0;
-  $('cc-credit').value=Math.max(0,(p.sell-d)*q).toFixed(0);
-  stockWarn(); renderCredPick(); };
+  const ex=credCart.find(x=>x.productId===id);
+  if(ex) ex.qty++; else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  $('cc-psearch').value=''; credPickQ=''; renderCredPick(); renderCredCart();
+  toast('✅ Added: '+p.name); };
+function credCartTotal(){ return credCart.reduce((s,l)=>s+l.qty*l.rate,0); }
+function renderCredCart(){
+  const box=$('cc-cart'); if(!box) return;
+  if(!credCart.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="cart-box">'+credCart.map((l,ix)=>{
+    const p=DB.products.find(x=>x.id===l.productId), over=p&&l.qty>p.qty;
+    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
+      <div class="sub">${l.qty} × ${pkr(l.rate)} = ${pkr(l.qty*l.rate)}</div>
+      ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
+      <div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b>${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div>
+      <button class="cart-x" onclick="credRm(${ix})">✕</button></div>`; }).join('')+
+    `<div class="cart-total"><span>Items total</span><b>${pkr(credCartTotal())}</b></div></div>`;
+  $('cc-credit').value=credCartTotal().toFixed(0);
+}
+window.credStep=(ix,d)=>{ const l=credCart[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderCredCart(); };
+window.credRm=ix=>{ credCart.splice(ix,1); renderCredCart(); };
 window.saveCredit=()=>{
   const name=$('cc-name').value.trim(); if(!name){ toast('Enter customer name'); return; }
   const cid=parseInt($('cc-id').value)||DB.seq.c;
   const camt=Math.max(0,parseFloat($('cc-credit').value)||0);
-  const qty=parseFloat($('cc-qty').value)||1;
-  const p=DB.products.find(x=>x.id===credPickId); // stock link: picked product
-  if(p){ if(qty>p.qty){ toast('⚠️ Only '+p.qty+' "'+p.name+'" in stock!'); return; } p.qty-=qty; }
+  if(!credCart.length&&!camt){ toast('Add a product or enter credit amount'); return; }
+  for(const l of credCart){ const p=DB.products.find(x=>x.id===l.productId);
+    if(p&&l.qty>p.qty){ toast('⚠️ Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
+  for(const l of credCart){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
+  const items=credCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
   DB.customers.push({ id:DB.seq.c++, custId:cid, name, phone:$('cc-phone').value.trim(),
-    product:$('cc-product').value.trim(), saleRate:parseFloat($('cc-rate').value)||0, discount:parseFloat($('cc-disc').value)||0,
-    qty,
+    product:items.map(l=>l.name).join(', '), items, saleRate:camt, discount:0,
+    qty:items.reduce((s,l)=>s+l.qty,0),
     credit:camt, received:0,
     promiseDate:$('cc-promise').value||'', promiseTime:$('cc-ptime').value||'',
     log:[{t:'Credit',a:camt,d:dstr()}] });
@@ -888,7 +899,7 @@ window.creditDetail=id=>{
   const b=custBal(c);
   openSheet(`<h3>${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3>
     <div class="kv"><span>📞 Number</span><b>${esc(c.phone||'—')}</b></div>
-    ${c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:''}
+    ${(c.items&&c.items.length)?c.items.map(l=>`<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
     ${c.saleRate?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
@@ -915,17 +926,58 @@ window.addWusool=id=>{
 window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('w-amt').value)||0); if(!a){toast('Enter amount');return;}
   c.received+=a; c.log.push({t:'Received',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
+let moreCart=[];
 window.addCreditMore=id=>{
-  const c=DB.customers.find(x=>x.id===id);
+  const c=DB.customers.find(x=>x.id===id); moreCart=[];
   openSheet(`<h3>➕ Add credit — ${esc(c.name)}</h3>
+    <div class="search-wrap">🔍 <input id="m-psearch" placeholder="Type product name..."></div>
+    <div id="m-pick-list"></div>
+    <div id="m-cart"></div>
     <input id="m-amt" type="number" placeholder="Credit amount">
-    <input id="m-prod" placeholder="Product (optional)" value="${esc(c.product||'')}">
+    <div class="sub">Tap a product to add it below — search clears for the next item</div>
     <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveCreditMore(${id})">Save</button></div>`);
+  $('m-psearch').oninput=e=>renderMorePick(e.target.value.toLowerCase().trim());
 };
+function renderMorePick(q){
+  const box=$('m-pick-list'); if(!box) return;
+  if(!q){ box.innerHTML=''; return; }
+  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  box.innerHTML=list.map(p=>`
+    <div class="pick-item" onclick="pickMoreCred(${p.id})">
+      ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · left ${p.qty}</div></div>
+    </div>`).join('')||'<p class="note">No product found</p>';
+}
+window.pickMoreCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  const ex=moreCart.find(x=>x.productId===id);
+  if(ex) ex.qty++; else moreCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  $('m-psearch').value=''; renderMorePick(''); renderMoreCart();
+  toast('✅ Added: '+p.name); };
+function moreCartTotal(){ return moreCart.reduce((s,l)=>s+l.qty*l.rate,0); }
+function renderMoreCart(){
+  const box=$('m-cart'); if(!box) return;
+  if(!moreCart.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="cart-box">'+moreCart.map((l,ix)=>{
+    const p=DB.products.find(x=>x.id===l.productId), over=p&&l.qty>p.qty;
+    return `<div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(l.name)}</b>
+      <div class="sub">${l.qty} × ${pkr(l.rate)} = ${pkr(l.qty*l.rate)}</div>
+      ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}</div>
+      <div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b>${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div>
+      <button class="cart-x" onclick="moreRm(${ix})">✕</button></div>`; }).join('')+
+    `<div class="cart-total"><span>Items total</span><b>${pkr(moreCartTotal())}</b></div></div>`;
+  $('m-amt').value=moreCartTotal().toFixed(0);
+}
+window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
+window.moreRm=ix=>{ moreCart.splice(ix,1); renderMoreCart(); };
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
-  c.credit+=a; if($('m-prod').value.trim()) c.product=$('m-prod').value.trim();
-  c.log.push({t:'Credit',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
+  const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  for(const l of items){ const p=DB.products.find(x=>x.id===l.productId);
+    if(p&&l.qty>p.qty){ toast('⚠️ Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
+  for(const l of items){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
+  c.credit+=a;
+  if(items.length){ c.items=(c.items||[]).concat(items);
+    const nm=items.map(l=>l.name).join(', '); c.product=c.product?c.product+', '+nm:nm; }
+  c.log.push({t:'Credit',a,d:dstr()}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
 window.delCustomer=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!c) return;
   confirmDlg('Delete customer?','Are you sure you want to delete "'+c.name+'"?','DELETE',()=>{
@@ -988,7 +1040,7 @@ $('btn-bell').onclick=()=>{
     const list=due.filter(c=>(c.name||'').toLowerCase().includes(q)||String(c.custId).includes(q));
     $('rem-list').innerHTML=list.length?list.map(c=>`<div class="remind-card"><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span>
       <div style="margin:6px 0">⏰ Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</div>
-      <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} lena hai</div>
+      <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} to receive</div>
       <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button></div></div>`).join('')
       :'<p class="note">No reminders. Overdue promises will appear here.</p>';
   };

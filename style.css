@@ -297,7 +297,14 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 
 /* Header */
 .topbar{background:transparent;padding:14px 16px 8px;position:sticky;top:0;z-index:20}
-.store-name{text-align:left;font-size:21px;margin-left:10px;text-shadow:0 1px 3px rgba(0,0,0,.2)}
+.store-name{text-align:left;font-size:21px;margin-left:10px;text-shadow:0 1px 3px rgba(0,0,0,.2);min-width:0;overflow:hidden;white-space:nowrap}
+.sn-txt{display:inline-block;will-change:transform}
+.store-name.marquee-on .sn-txt{animation:ppmarq 9s linear infinite}
+@keyframes ppmarq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.top-icons{flex:none}
+.cart-step{display:flex;align-items:center;gap:6px;flex:none}
+.cart-step .mini-btn{width:28px;height:28px;font-size:16px}
+.cart-step b{min-width:20px;text-align:center;font-size:15px}
 .icon-btn{font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
 .sync-pill{background:#fff;color:var(--pp-teal-d);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);margin-left:auto;white-space:nowrap}
 .sync-pill .spin{display:inline-block;animation:pprot 1s linear infinite;font-size:14px}
