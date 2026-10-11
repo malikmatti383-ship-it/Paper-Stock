@@ -745,13 +745,47 @@ $('day-prev').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getD
 $('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getDate()+1); if(dstr(d)>dstr()){toast('Future date not allowed');return;} saleDay=dstr(d); renderDaySales(); };
 $('sales-day-title').onclick=()=>$('day-jump').click();
 $('day-jump').onchange=e=>{ if(e.target.value){ saleDay=e.target.value; renderDaySales(); } };
+$('f-paid').onclick=openPaidFilter;
+$('f-type').onclick=openTypeFilter;
+$('f-search-btn').onclick=()=>{ const r=$('day-search-row'); r.classList.toggle('hidden'); const i=$('day-search'); if(!r.classList.contains('hidden')) setTimeout(()=>i.focus(),100); else { i.value=''; fQ=''; renderDaySales(); } };
+$('day-search').oninput=e=>{ fQ=e.target.value.toLowerCase(); renderDaySales(); };
 let expSaleId=null;
 window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales(); };
 function hhmm(ts){ try{ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
 function saleItems(s){ return (s.items&&s.items.length)?s.items:[{qty:s.qty||0,price:(s.total||0)/Math.max(1,s.qty||1),name:s.name,productId:s.productId}]; }
+let fPaid='all', fType='all', fQ='';
+function paintFPills(){
+  const b1=$('f-paid'), b2=$('f-type');
+  if(b1){ b1.innerHTML=(fPaid==='all'?'All':fPaid==='paid'?'Paid':'Unpaid')+' \u25BE'; b1.classList.toggle('on',fPaid!=='all'); }
+  if(b2){ const lbl={all:'Type',sale:'🛒 Sale',wholesale:'🏪 Wholesale',expense:'📋 Expense'}[fType]; b2.innerHTML=lbl+' \u25BE'; b2.classList.toggle('on',fType!=='all'); }
+}
+window.openPaidFilter=()=>{
+  const all=DB.sales.filter(s=>s.date===saleDay);
+  const nP=all.filter(s=>!s.unpaid).length, nU=all.filter(s=>s.unpaid).length;
+  const row=(v,lbl,n)=>`<div class="cur-row${fPaid===v?' sel':''}" onclick="setPaidFilter('${v}')"><div style="flex:1"><b>${lbl}</b> <span class="sub">(${n})</span></div><div>${fPaid===v?'🟢':'\u26AA'}</div></div>`;
+  openSheet(`<h3>Payment <button class="link-btn" style="float:right" onclick="closeSheet()">Done</button></h3>`+row('all','All',all.length)+row('paid','Paid',nP)+row('unpaid','Unpaid',nU));
+};
+window.setPaidFilter=v=>{ fPaid=v; paintFPills(); closeSheet(); renderDaySales(); };
+window.openTypeFilter=()=>{
+  const row=(v,lbl)=>`<div class="cur-row${fType===v?' sel':''}" onclick="setTypeFilter('${v}')"><div style="flex:1"><b>${lbl}</b></div><div>${fType===v?'🟢':'\u26AA'}</div></div>`;
+  openSheet(`<h3>Record type <button class="link-btn" style="float:right" onclick="closeSheet()">Done</button></h3>`+row('all','All')+row('sale','🛒 Sale')+row('wholesale','🏪 Wholesale')+row('expense','📋 Expense'));
+};
+window.setTypeFilter=v=>{ fType=v; paintFPills(); closeSheet(); renderDaySales(); };
 function renderDaySales(){
-  const list=DB.sales.filter(s=>s.date===saleDay).sort((a,b)=>b.id-a.id);
-  const exps=DB.expenses.filter(e=>e.date===saleDay).sort((a,b)=>b.id-a.id);
+  paintFPills();
+  let list=DB.sales.filter(s=>s.date===saleDay);
+  if(fPaid==='paid') list=list.filter(s=>!s.unpaid);
+  else if(fPaid==='unpaid') list=list.filter(s=>s.unpaid);
+  if(fType==='sale') list=list.filter(s=>s.kind!=='wholesale');
+  else if(fType==='wholesale') list=list.filter(s=>s.kind==='wholesale');
+  else if(fType==='expense') list=[];
+  const fq=fQ.trim();
+  if(fq){ const exact=list.filter(s=>String(s.id)===fq);
+    list=exact.length?exact:list.filter(s=>(((s.customer||'')+' '+(s.phone||'')+' '+(s.name||'')+' '+s.id+' '+saleItems(s).map(it=>it.name||'').join(' '))).toLowerCase().includes(fq)); }
+  list=list.sort((a,b)=>b.id-a.id);
+  let exps=DB.expenses.filter(e=>e.date===saleDay).sort((a,b)=>b.id-a.id);
+  if(fType==='sale'||fType==='wholesale') exps=[];
+  if(fq) exps=exps.filter(e=>(e.title||'').toLowerCase().includes(fq));
   const dlbl=saleDay===dstr()?'Today':fmtDate(saleDay);
   $('sales-day-title').textContent=dlbl+' · '+list.length+' sales';
   const saleRows=list.map(s=>{

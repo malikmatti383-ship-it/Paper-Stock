@@ -134,6 +134,8 @@
       </div>
       <div class="row-between"><button class="nav-arrow" id="day-prev">‹</button><h3 id="sales-day-title" title="Tap to pick a date">Today · 0 sales</h3><button class="nav-arrow" id="day-next">›</button></div>
       <input type="date" id="day-jump" class="hidden">
+      <div class="day-filters"><button class="f-pill" id="f-paid">All ▾</button><button class="f-pill" id="f-type">Type ▾</button><button class="f-pill" id="f-search-btn">🔍</button></div>
+      <div class="day-search hidden" id="day-search-row"><div class="search-wrap grow">🔍 <input id="day-search" placeholder="Search name, ID, customer..." autocomplete="off"></div></div>
       <div id="sales-day-list"></div>
     </div>
   </section>
@@ -192,7 +194,7 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js?v=56"></script>
+    <script src="app.js?v=57"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
