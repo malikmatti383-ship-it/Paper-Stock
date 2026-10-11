@@ -257,6 +257,7 @@ const THEMES=[
  {id:'classic',name:'Classic Blue',g:'linear-gradient(135deg,#1268b1,#14b2d6)'},
  {id:'whitegold',name:'White Gold',g:'linear-gradient(135deg,#fbf7ec,#d4af37)'},
  {id:'blackgold',name:'Black Gold',g:'linear-gradient(135deg,#0c0a06,#d4af37)'},
+ {id:'darknavy',name:'Dark Navy',g:'linear-gradient(135deg,#0a0f1e,#5b8def)'},
 ];
 function curTheme(){ const id=DB&&DB.profile&&DB.profile.theme; return THEMES.some(x=>x.id===id)?id:'ocean'; }
 function applyTheme(id){ document.body.dataset.theme=id; }
@@ -265,8 +266,14 @@ function themeDot(id){ const x=THEMES.find(y=>y.id===id)||THEMES[0]; return `<sp
 window.setTheme=id=>{ if(!THEMES.some(x=>x.id===id)) return; DB.profile.theme=id; save(); applyTheme(id); openThemePicker(); };
 window.openThemePicker=()=>{
   const c=curTheme();
+  const row=x=>`<div class="menu-row" onclick="setTheme('${x.id}')"><span class="ic"><span class="theme-dot sm" style="background:${x.g}"></span></span><span>${x.name}</span>${x.id===c?'<span class="arw" style="color:var(--teal)">✓</span>':'<span class="arw">›</span>'}</div>`;
+  const sec=t=>`<div style="font-weight:800;font-size:13px;margin:12px 2px 6px;color:var(--teal)">${t}</div>`;
+  const bizIds=['ocean','darknavy','emerald','blackgold','whitegold','grey'];
+  const biz=bizIds.map(id=>THEMES.find(t=>t.id===id)).filter(Boolean);
+  const rest=THEMES.filter(t=>!bizIds.includes(t.id));
   openSheet(`<h3>🎨 Colors Theme</h3><div class="sub" style="margin-bottom:8px">Pick a theme — it stays until you change it.</div>`+
-   THEMES.map(x=>`<div class="menu-row" onclick="setTheme('${x.id}')"><span class="ic"><span class="theme-dot sm" style="background:${x.g}"></span></span><span>${x.name}</span>${x.id===c?'<span class="arw" style="color:var(--teal)">✓</span>':'<span class="arw">›</span>'}</div>`).join('')+
+   sec('💼 Business Themes')+biz.map(row).join('')+
+   sec('🎨 More Themes')+rest.map(row).join('')+
    `<div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 $('btn-profile').onclick=()=>{

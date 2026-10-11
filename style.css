@@ -450,6 +450,7 @@ body[data-theme="grey"]{--pp-grad:linear-gradient(165deg,#1a2332 0%,#414c5e 55%,
 body[data-theme="classic"]{--pp-grad:linear-gradient(165deg,#1268b1 0%,#108ec2 55%,#14b2d6 100%);--pp-teal:#0b83b8;--pp-teal-l:#12a5cc;--pp-teal-d:#095f86;--pp-teal-dd:#1268b1;--pp-soft:#ddf1f9;--pp-btn-ink:#fff;--teal:#0b83b8;--teal-d:#095f86}
 body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,#2fd8f2 100%);--pp-teal:#0e7490;--pp-teal-l:#22d3ee;--pp-teal-d:#155e75;--pp-teal-dd:#0d3d52;--pp-soft:#cffafe;--pp-btn-ink:#fff;--teal:#0e7490;--teal-d:#155e75}
 body[data-theme="whitegold"]{--pp-grad:linear-gradient(165deg,#7a5f16 0%,#b08d2e 55%,#e0c565 100%);--pp-teal:#a8842c;--pp-teal-l:#d4af37;--pp-teal-d:#8a6d1b;--pp-teal-dd:#5c4a12;--pp-soft:#faf3dd;--pp-btn-ink:#3a2f10;--teal:#a8842c;--teal-d:#8a6d1b}
+body[data-theme="darknavy"]{--pp-grad:linear-gradient(165deg,#0a0f1e 0%,#16233c 55%,#24344f 100%);--pp-teal:#3b6fd4;--pp-teal-l:#5b8def;--pp-teal-d:#2a4f9e;--pp-teal-dd:#0a0f1e;--pp-soft:#dbe4f5;--pp-btn-ink:#fff;--teal:#3b6fd4;--teal-d:#2a4f9e}
 body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c 55%,#4a3a14 100%);--pp-teal:#d4af37;--pp-teal-l:#f6d365;--pp-teal-d:#b8860b;--pp-teal-dd:#241c0c;--pp-soft:#faf3dd;--pp-btn-ink:#241a05;--teal:#d4af37;--teal-d:#b8860b}
 
 /* Theme picker dots in profile sheet */
