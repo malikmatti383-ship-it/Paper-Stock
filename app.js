@@ -847,6 +847,32 @@ $('sales-day-title').onclick=()=>openDatePicker('day-jump');
 $('day-jump').onchange=e=>{ if(e.target.value){ saleDay=e.target.value; renderDaySales(); } };
 let expSaleId=null;
 window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales(); };
+let expExpId=null;
+window.toggleExp=id=>{ expExpId=(expExpId===id?null:id); renderDaySales(); };
+/* ---- Expense history: edit + return (like sale/wholesale) ---- */
+window.editExpense=id=>{
+  const e=DB.expenses.find(x=>x.id===id); if(!e) return;
+  openSheet(`<h3>✏️ Edit expense</h3>
+    <div class="fld"><span class="fld-lbl">Title</span><div class="fld-in"><input id="ee-title" value="${esc(e.title||'')}" maxlength="60"></div></div>
+    <div class="fld"><span class="fld-lbl">Amount</span><div class="fld-in"><input id="ee-amt" type="number" min="0" inputmode="decimal" value="${e.amount||0}"><span class="pkr" data-cur>PKR</span></div></div>
+    <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Back</button><button class="btn-go" onclick="saveEditExpense(${id})">Save</button></div>`);
+};
+window.saveEditExpense=id=>{
+  const e=DB.expenses.find(x=>x.id===id); if(!e) return;
+  e.title=$('ee-title').value.trim()||'Expense';
+  e.amount=Math.max(0,parseFloat($('ee-amt').value)||0);
+  save(); closeSheet(); renderSales(); toast('✅ Expense updated');
+};
+window.returnExpense=id=>{
+  const e=DB.expenses.find(x=>x.id===id); if(!e) return;
+  openSheet(`<h3>⤺ Return expense</h3>
+    <div class="sub" style="margin-bottom:10px">Remove <b>${esc(e.title)}</b> (${pkr(e.amount)}) from expenses? The money came back.</div>
+    <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Back</button><button class="btn-go" onclick="doReturnExpense(${id})">Return</button></div>`);
+};
+window.doReturnExpense=id=>{
+  const i=DB.expenses.findIndex(x=>x.id===id); if(i<0) return;
+  DB.expenses.splice(i,1); expExpId=null; save(); closeSheet(); renderSales(); toast('✅ Expense returned');
+};
 function hhmm(ts){ try{ return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
 function saleItems(s){ return (s.items&&s.items.length)?s.items:[{qty:s.qty||0,price:(s.total||0)/Math.max(1,s.qty||1),name:s.name,productId:s.productId}]; }
 let fPaid='all', fType='all', fQ='';
@@ -914,9 +940,15 @@ function renderDaySales(){
       <div class="sub"><span class="id-box">ID${s.id}</span> ${sub}${s.customer?' · '+esc(s.customer):''}${miniPL}</div></div>
       <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
   }).join('');
-  const expRows=exps.map(e=>`
-    <div class="hist-row exp-row"><div><div class="d">${esc(e.title)}<span class="ex-pill">📋 Expense</span></div></div>
-    <div class="a">− ${pkr(e.amount)}</div></div>`).join('');
+  const expRows=exps.map(e=>{
+    const open=expExpId===e.id;
+    const det=open?`<div class="sale-det">
+      <button class="edit-sale-btn" onclick="event.stopPropagation();editExpense(${e.id})">✏️ Edit expense</button>
+      <button class="return-bundle" onclick="event.stopPropagation();returnExpense(${e.id})">⤺ Return expense</button></div>`:'';
+    return `<div class="sale-card exp-row${open?' open':''}"><div class="sale-top" onclick="toggleExp(${e.id})">
+      <div style="flex:1;min-width:0"><div class="d">${esc(e.title)}<span class="ex-pill">📋 Expense</span><span class="t">${e.ts?hhmm(e.ts):''}</span></div>
+      <div class="sub"><span class="id-box">ID${e.id}</span></div></div>
+      <div class="a">${pkrMinus(e.amount)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`; }).join('');
   $('sales-day-list').innerHTML=(saleRows+expRows)||'<p class="note" style="color:#fff">No records this day</p>';
 }
 
@@ -1362,7 +1394,7 @@ window.creditDetail=id=>{
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
     <div class="kv"><span>💵 Received</span><b style="color:var(--green)">${pkr(c.received)}</b></div>
-    <div class="kv"><span>📌 Balance due</span><b style="color:var(--red)">${pkr(b)}</b></div>
+    <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Balance due</span><b style="color:var(--red)">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
     ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
     <div class="mrow">
       <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Receive</button>
@@ -1386,6 +1418,24 @@ window.addWusool=id=>{
 window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('w-amt').value)||0); if(!a){toast('Enter amount');return;}
   c.received+=a; c.log.push({t:'Received',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
+/* ---- direct balance edit: sets Received so balance becomes the typed value ---- */
+window.editBalance=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  const b=custBal(c);
+  openSheet(`<h3>✏️ Edit balance — ${esc(c.name)}</h3>
+    <div class="sub" style="margin-bottom:8px">Current balance: <b>${pkr(b)}</b> (Credit ${pkr(c.credit||0)} − Received ${pkr(c.received||0)})</div>
+    <div class="fld"><span class="fld-lbl">New balance</span><div class="fld-in"><input id="eb-amt" type="number" inputmode="decimal" value="${b}"><span class="pkr" data-cur>PKR</span></div></div>
+    <div class="sub">Naya balance likho — Received khud adjust ho jayega.</div>
+    <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveBalance(${id})">Save</button></div>`);
+};
+window.saveBalance=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  const v=parseFloat($('eb-amt').value); if(isNaN(v)){toast('Enter amount');return;}
+  const nb=Math.round(v*100)/100;
+  c.received=Math.round(((c.credit||0)-nb)*100)/100;
+  c.log=c.log||[]; c.log.push({t:'Balance edit',a:nb,d:dstr()});
+  save(); creditDetail(id); renderCredit(); toast('✅ Balance updated');
+};
 let moreCart=[];
 window.addCreditMore=id=>{
   const c=DB.customers.find(x=>x.id===id); moreCart=[];
