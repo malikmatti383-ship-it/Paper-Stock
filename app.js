@@ -166,6 +166,10 @@ function confirmDlg(title,msg,okLabel,cb){
   <button class="dlg-ok" id="dlg-ok">${okLabel}</button></div></div>`);
   $('dlg-ok').onclick=()=>{ closeSheet(); cb(); };
 }
+function lossConfirm(kind,lossLines,cb){
+  const rows=lossLines.map(l=>'\u2022 '+esc(l.name)+' \u2014 rate '+pkr(l.unit)+' (cost '+pkr(l.cost)+')').join('<br>');
+  confirmDlg('Sell at a loss?', rows+'<br><br>Are you sure you want to '+kind+' at this rate?', 'YES, SELL', cb);
+}
 $('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
 /* Clean trash icon used for every delete option */
 const TRASH='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
@@ -469,12 +473,14 @@ $('btn-sold').onclick=()=>{
   const base=rateSum>0?rateSum:1;
   let acc=0;
   const items=lines.map((l,ix)=>{
-    const pr=DB.products.find(x=>x.id===l.productId); pr.qty-=l.qty;
+    const pr=DB.products.find(x=>x.id===l.productId);
     let share;
     if(ix<lines.length-1){ share=Math.round(bill*(l.qty*l.unit/base)*100)/100; acc+=share; }
     else share=Math.round((bill-acc)*100)/100; // last line absorbs rounding
     return {productId:l.productId,name:l.name,qty:l.qty,price:share/l.qty,cost:pr.cost};
   });
+  const go=()=>{
+    items.forEach(it=>{ const pr=DB.products.find(x=>x.id===it.productId); if(pr) pr.qty-=it.qty; });
   const firstBrand=lines.length===1?((DB.products.find(x=>x.id===lines[0].productId)||{}).brand||''):'';
   const sale={id:DB.seq.s++, productId:lines.length===1?lines[0].productId:null,
     name:lines.length===1?lines[0].name:(lines.length+' items'), brand:firstBrand,
@@ -484,6 +490,10 @@ $('btn-sold').onclick=()=>{
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
   save(); saleCart=[]; renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
+  };
+  const sLoss=items.filter(it=>it.price<(it.cost||0));
+  if(sLoss.length) lossConfirm('sell',sLoss.map(l=>({name:l.name,unit:l.price,cost:l.cost})),go);
+  else go();
 };
 /* ================= WHOLESALE (shopkeeper sales at stock rates) ================= */
 let wsPickId=null, wsDate=dstr(), wsCart=[];
@@ -512,6 +522,10 @@ window.pickWsDD=id=>{
 const wsPreview=()=>{ const r=parseFloat($('ws-rate').value)||0;
   $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); paintWsDisc(); paintWsCostWarn(); paintWsQtyWarn(); };
 $('ws-qty').oninput=wsPreview; $('ws-rate').oninput=wsPreview;
+$('ws-total').oninput=()=>{ const t2=parseFloat($('ws-total').value)||0;
+  const q2=Math.max(1,parseInt($('ws-qty').value)||1);
+  $('ws-rate').value=+Math.max(0,(t2-wsGrand())/q2).toFixed(2);
+  paintWsDisc(); paintWsCostWarn(); paintWsQtyWarn(); };
 const wsQtyStep=d=>{ const el=$('ws-qty');
   const p=DB.products.find(x=>x.id===wsPickId);
   let v=(parseInt(el.value)||1)+d; v=Math.max(1,v);
@@ -562,6 +576,7 @@ $('btn-ws-sold').onclick=()=>{
   if(!lines.length){ toast('Select a product first'); return; }
   for(const l of lines){ const pr=DB.products.find(x=>x.id===l.productId);
     if(!pr||l.qty>pr.qty){ toast('Out of stock: '+l.name); return; } }
+  const go=()=>{
   // Wholesale: each line billed EXACTLY at its stock sell rate — no bill dividing
   const items=lines.map(l=>{ const pr=DB.products.find(x=>x.id===l.productId); pr.qty-=l.qty;
     return {productId:l.productId,name:l.name,qty:l.qty,price:l.unit,cost:pr.cost}; });
@@ -575,6 +590,10 @@ $('btn-ws-sold').onclick=()=>{
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()});
   save(); wsCart=[]; renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
   renderSales(); renderStock(); updatePrintBadge(); toast('\u2705 Wholesale sold! '+pkr(total));
+  };
+  const wsLoss=lines.filter(l=>l.unit<(l.cost||0));
+  if(wsLoss.length) lossConfirm('wholesale',wsLoss.map(l=>({name:l.name,unit:l.unit,cost:l.cost})),go);
+  else go();
 };
 
 /* ---- Return: single item or whole bundle (NADIR style) ---- */
@@ -802,7 +821,7 @@ function renderDaySales(){
       <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
       ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
       <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
-      (hasCost?((posP>0&&negL>0)?`<div class="pl-row"><span class="pl-pos">💰 Profit: ${pkr(posP)}</span><span class="pl-neg">📉 Loss: ${pkr(negL)}</span></div>`:(posP>0?`<div class="profit-line">💰 Profit: ${pkr(posP)}</div>`:(negL>0?`<div class="loss-line">📉 Loss: ${pkr(negL)}</div>`:`<div class="profit-line">💰 Profit: ${pkr(0)}</div>`))):'')+
+      (hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
       `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
       <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
