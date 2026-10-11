@@ -370,7 +370,10 @@ function renderSales(){
   const tot=DB.sales.reduce((s,x)=>s+x.total,0);
   const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
   $('s-total').textContent=pkr(tot); $('s-exp').textContent='- '+pkr(exp); paintCur();
-  $('s-profit').textContent=pkr(grossProfit()-exp); // expense minus from profit
+  const np=grossProfit()-exp; // expenses cut from ALL-TIME profit (today + past days), not just today
+  $('s-profit').textContent=np<0?'- '+pkr(-np):pkr(np);
+  $('s-profit').classList.toggle('red-num',np<0); // loss -> stays red until profit recovers
+  $('s-profit').classList.toggle('green-num',np>=0); // recovered -> green again
   $('sale-date-txt').textContent=fmtDate(saleDate);
   if(!$('exp-date').value) $('exp-date').value=dstr();
   $('sale-dd').classList.add('hidden'); renderSaleCart();
