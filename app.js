@@ -171,12 +171,15 @@ function lossConfirm(kind,lossLines,cb){
   $('dlg-ok').onclick=()=>{ if($('loss-noask')&&$('loss-noask').checked){ DB.profile.lossAsk=false; save(); } closeSheet(); cb(); };
 }
 window.openSettings=()=>{
+  const on=DB.profile.lossAsk!==false;
   openSheet(`<h3>⚙️ Settings</h3>
   <div class="lbl" style="margin:8px 0 2px">WARNINGS</div>
-  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span> Loss warning <span class="sub">${DB.profile.lossAsk===false?'Off':'On'}</span><span class="arw">›</span></div>
+  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span> Loss warning <button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
-window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save(); openSettings(); };
+window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save();
+  const on=DB.profile.lossAsk!==false, btn=document.querySelector('#loss-tswitch');
+  if(btn){ btn.classList.toggle('on',on); btn.querySelector('.tlbl').textContent=on?'On':'Off'; } };
 window.__ppContactCbs={};
 window.__ppContact=(id,n,ph)=>{ const cb=window.__ppContactCbs[id]; delete window.__ppContactCbs[id]; if(cb) cb(n||'',ph||''); };
 function pickContact(cb){
