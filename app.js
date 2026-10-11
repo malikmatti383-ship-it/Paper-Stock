@@ -170,7 +170,28 @@ function lossConfirm(kind,lossLines,cb){
   <button class="dlg-ok" id="dlg-ok">YES, SELL</button></div></div>`);
   $('dlg-ok').onclick=()=>{ if($('loss-noask')&&$('loss-noask').checked){ DB.profile.lossAsk=false; save(); } closeSheet(); cb(); };
 }
-window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save(); openThemePicker(); };
+window.openSettings=()=>{
+  openSheet(`<h3>⚙️ Settings</h3>
+  <div class="lbl" style="margin:8px 0 2px">WARNINGS</div>
+  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span> Loss warning <span class="sub">${DB.profile.lossAsk===false?'Off':'On'}</span><span class="arw">›</span></div>
+  <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
+};
+window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save(); openSettings(); };
+window.__ppContactCbs={};
+window.__ppContact=(id,n,ph)=>{ const cb=window.__ppContactCbs[id]; delete window.__ppContactCbs[id]; if(cb) cb(n||'',ph||''); };
+function pickContact(cb){
+  const id='c'+Date.now().toString(36)+Math.floor(Math.random()*999);
+  window.__ppContactCbs[id]=cb;
+  try{ if(window.AndroidApp&&AndroidApp.pickContact){ AndroidApp.pickContact(id); return; } }catch(e){}
+  if(navigator.contacts&&navigator.contacts.select){
+    navigator.contacts.select(['name','tel'],{multiple:false}).then(a=>{ const c=a[0]||{};
+      cb((c.name&&c.name[0])||'',(c.tel&&c.tel[0])||''); delete window.__ppContactCbs[id];
+    }).catch(()=>{ delete window.__ppContactCbs[id]; toast('Contact picker closed'); });
+    return;
+  }
+  delete window.__ppContactCbs[id]; toast('Contact picker not available');
+}
+window.pickCreditContact=()=>pickContact((n,ph)=>{ if(n) $('cc-name').value=n; if(ph) $('cc-phone').value=ph; });
 $('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
 /* Clean trash icon used for every delete option */
 const TRASH='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
@@ -225,9 +246,7 @@ window.openThemePicker=()=>{
   const c=curTheme();
   openSheet(`<h3>🎨 Colors Theme</h3><div class="sub" style="margin-bottom:8px">Pick a theme — it stays until you change it.</div>`+
    THEMES.map(x=>`<div class="menu-row" onclick="setTheme('${x.id}')"><span class="ic"><span class="theme-dot sm" style="background:${x.g}"></span></span><span>${x.name}</span>${x.id===c?'<span class="arw" style="color:var(--teal)">✓</span>':'<span class="arw">›</span>'}</div>`).join('')+
-   `<div class="lbl" style="margin:10px 0 2px">WARNINGS</div>
-   <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">\u26a0\ufe0f</span> Loss warning <span class="sub">${DB.profile.lossAsk===false?'Off':'On'}</span><span class="arw">›</span></div>
-   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
+   `<div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
@@ -243,6 +262,7 @@ $('btn-profile').onclick=()=>{
     </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
     <div class="menu-row" onclick="openThemePicker()"><span class="ic">${themeDot(curTheme())}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
+    <div class="menu-row" onclick="openSettings()"><span class="ic">⚙️</span> Settings<span class="arw">›</span></div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
@@ -461,6 +481,9 @@ $('btn-add-item').onclick=()=>{
   renderSaleCart(); toast('✅ Added: '+it.name);
 };
 $('sale-add-cust').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-cust-phone').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden'); $('sale-cust').focus(); };
+$('sale-contact').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-cust-phone').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden');
+  pickContact((n,ph)=>{ if(n) $('sale-cust').value=n; if(ph) $('sale-cust-phone').value=ph; }); };
+$('ws-contact').onclick=()=>{ pickContact((n,ph)=>{ if(n) $('ws-shop').value=n; if(ph) $('ws-phone').value=ph; }); };
 $('btn-sold').onclick=()=>{
   const lines=[...saleCart];
   const st=stageLine();
@@ -1135,7 +1158,7 @@ $('btn-add-credit').onclick=()=>{
   openSheet(`<h3>New Credit</h3>
     <div class="id-row"><input id="cc-id" value="${cid}"><button class="link-btn" onclick="$('cc-id').value=${DB.seq.c}">AUTO</button></div>
     <input id="cc-name" placeholder="Customer name">
-    <input id="cc-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel">
+    <div style="display:flex;gap:8px"><input id="cc-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel" style="flex:1;min-width:0"><button class="cbtn" onclick="pickCreditContact()" title="Pick from contacts">📇</button></div>
     <div class="search-wrap">🔍 <input id="cc-psearch" placeholder="Type product name..."></div>
     <div id="cc-pick-list"></div>
     <div id="cc-cart"></div>

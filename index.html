@@ -99,7 +99,8 @@
           <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <div id="sale-disc-pill"></div>
           <div id="sale-cost-warn"></div>
-          <button class="link-btn" id="sale-add-cust">+ Add Customer Name/Number</button>
+          <div style="display:flex;gap:8px;align-items:center"><button class="link-btn" id="sale-add-cust">+ Add Customer Name/Number</button>
+          <button class="cbtn" id="sale-contact" title="Pick from contacts">📇</button></div>
           <input id="sale-cust" class="hidden" placeholder="Customer name">
           <input id="sale-cust-phone" class="hidden" placeholder="Customer number" inputmode="tel">
           <button id="btn-sold" class="btn-save blue">SOLD</button>
@@ -109,7 +110,8 @@
           <input type="date" id="ws-date" class="hidden">
           <p class="note">Shop rate = each stock's own sell rate. No bill dividing.</p>
           <input id="ws-shop" placeholder="Shop name *" autocomplete="off">
-          <input id="ws-phone" placeholder="Shop phone number *" inputmode="tel" autocomplete="off">
+          <div style="display:flex;gap:8px"><input id="ws-phone" placeholder="Shop phone number *" inputmode="tel" autocomplete="off" style="flex:1;min-width:0">
+          <button class="cbtn" id="ws-contact" title="Pick from contacts">📇</button></div>
           <div class="dd-wrap">
             <div class="search-wrap">🔍 <input id="ws-psearch" placeholder="Product ID / Name" autocomplete="off"></div>
             <div id="ws-dd" class="dd-list hidden"></div>
@@ -194,7 +196,7 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js?v=64"></script>
+    <script src="app.js?v=65"></script>
 <script src="auth.js?v=1"></script>
 </body>
 </html>
