@@ -4,6 +4,7 @@ let DB = null;
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pkr = n => curCode() + ' ' + Number(n||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pkrMinus = n => curCode() + ' -' + Number(n||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2}); // minus with the NUMBER: PKR -7,500.00
 const dstr = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 (function(){
   const isFld=el=>el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT');
@@ -369,9 +370,9 @@ function grossProfit(){ return DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+
 function renderSales(){
   const tot=DB.sales.reduce((s,x)=>s+x.total,0);
   const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
-  $('s-total').textContent=pkr(tot); $('s-exp').textContent='- '+pkr(exp); paintCur();
+  $('s-total').textContent=pkr(tot); $('s-exp').textContent=exp>0?pkrMinus(exp):pkr(0); paintCur();
   const np=grossProfit()-exp; // expenses cut from ALL-TIME profit (today + past days), not just today
-  $('s-profit').textContent=np<0?'- '+pkr(-np):pkr(np);
+  $('s-profit').textContent=np<0?pkrMinus(-np):pkr(np);
   $('s-profit').classList.toggle('red-num',np<0); // loss -> stays red until profit recovers
   $('s-profit').classList.toggle('green-num',np>=0); // recovered -> green again
   $('sale-date-txt').textContent=fmtDate(saleDate);
