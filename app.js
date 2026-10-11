@@ -737,13 +737,18 @@ function renderDaySales(){
   const saleRows=list.map(s=>{
     const its=saleItems(s), open=expSaleId===s.id;
     const sub=its.length>1?its.length+' items':'× '+s.qty;
-    const profit=its.reduce((a,it)=>a+(it.qty||0)*((it.price||0)-(it.cost||0)),0);
+    const lineP=it=>(it.qty||0)*((it.price||0)-(it.cost||0));
     const hasCost=its.some(it=>it.cost!=null);
-    const det=open?`<div class="sale-det">`+its.map((it,ix)=>`
-      <div class="sdet-row"><div><b>${esc(it.name||s.name)}</b><div class="sub">${it.qty} × ${pkr(it.price)}</div></div>
-      <div class="sdet-r"><b>${pkr(it.qty*it.price)}</b>
-      <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`).join('')+
-      (hasCost?`<div class="profit-line">💰 Profit: ${pkr(profit)}</div>`:'')+
+    const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
+    const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
+    const det=open?`<div class="sale-det">`+its.map((it,ix)=>{
+      const lp=hasCost?lineP(it):0;
+      return `
+      <div class="sdet-row"><div><b>${esc(it.name||s.name)}</b>${hasCost&&lineP(it)<0?'<span class="loss-tag">🔻 LOSS</span>':''}<div class="sub">${it.qty} × ${pkr(it.price)}</div></div>
+      <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
+      ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
+      <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
+      (hasCost?((posP>0?`<div class="profit-line">💰 Profit: ${pkr(posP)}</div>`:'')+(negL>0?`<div class="loss-line">📉 Loss: ${pkr(negL)}</div>`:'')+((posP===0&&negL===0)?`<div class="profit-line">💰 Profit: ${pkr(0)}</div>`:'')):'')+
       `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
       <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
