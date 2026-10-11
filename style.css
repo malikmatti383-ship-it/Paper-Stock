@@ -321,7 +321,23 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 .mpl{font-size:11px;margin-left:5px}
 .mp-pos{color:#16a34a}
 .mp-neg{color:#dc2626}
-.cbtn{width:44px;height:44px;min-width:44px;border-radius:50%;border:1px solid #cfe3ee;background:#eaf6fd;font-size:20px;cursor:pointer;align-self:center}
+.cbtn{width:44px;height:44px;min-width:44px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--cbtn-g1,#102c6b),var(--cbtn-g2,#4a86f5));cursor:pointer;align-self:center;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.20);padding:0}
+.cbtn svg{width:30px;height:30px;display:block}
+/* Contact icon (#24 verified) follows the active app theme */
+:root,body[data-theme="ocean"]{--cbtn-g1:#102c6b;--cbtn-g2:#4a86f5;--cbtn-check:#4a86f5}
+body[data-theme="emerald"]{--cbtn-g1:#0f6b49;--cbtn-g2:#16c475;--cbtn-check:#16c475}
+body[data-theme="purple"]{--cbtn-g1:#471c7d;--cbtn-g2:#875ff0;--cbtn-check:#875ff0}
+body[data-theme="orange"]{--cbtn-g1:#8a3a1c;--cbtn-g2:#e5862c;--cbtn-check:#e5862c}
+body[data-theme="midnight"]{--cbtn-g1:#131c2e;--cbtn-g2:#3e4c60;--cbtn-check:#3e4c60}
+body[data-theme="red"]{--cbtn-g1:#521010;--cbtn-g2:#e03232;--cbtn-check:#e03232}
+body[data-theme="pink"]{--cbtn-g1:#5c1630;--cbtn-g2:#e03283;--cbtn-check:#e03283}
+body[data-theme="brown"]{--cbtn-g1:#362115;--cbtn-g2:#976637;--cbtn-check:#976637}
+body[data-theme="olive"]{--cbtn-g1:#223a08;--cbtn-g2:#70b012;--cbtn-check:#70b012}
+body[data-theme="wine"]{--cbtn-g1:#360b14;--cbtn-g2:#c42544;--cbtn-check:#c42544}
+body[data-theme="sunset"]{--cbtn-g1:#7933e0;--cbtn-g2:#f7a716;--cbtn-check:#f7a716}
+body[data-theme="grey"]{--cbtn-g1:#1a2332;--cbtn-g2:#78828f;--cbtn-check:#78828f}
+body[data-theme="cyan"]{--cbtn-g1:#0d3d52;--cbtn-g2:#2fd8f2;--cbtn-check:#2fd8f2}
+body[data-theme="classic"]{--cbtn-g1:#1268b1;--cbtn-g2:#14b2d6;--cbtn-check:#14b2d6}
 .loss-tag{display:inline-block;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:800;border-radius:999px;padding:2px 10px;margin-left:8px;vertical-align:middle}
 .profit-tag{display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:800;border-radius:999px;padding:2px 10px;margin-left:8px;vertical-align:middle}
 .edit-sale-btn{display:block;width:100%;margin:10px 0;background:#eef1f6;border:none;border-radius:12px;padding:11px;font-weight:800;font-size:14px;cursor:pointer;color:#1c2733}

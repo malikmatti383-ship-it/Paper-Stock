@@ -1159,7 +1159,7 @@ $('btn-add-credit').onclick=()=>{
   openSheet(`<h3>New Credit</h3>
     <div class="id-row"><input id="cc-id" value="${cid}"><button class="link-btn" onclick="$('cc-id').value=${DB.seq.c}">AUTO</button></div>
     <input id="cc-name" placeholder="Customer name">
-    <div style="display:flex;gap:8px"><input id="cc-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel" style="flex:1;min-width:0"><button class="cbtn" onclick="pickCreditContact()" title="Pick from contacts">📇</button></div>
+    <div style="display:flex;gap:8px"><input id="cc-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel" style="flex:1;min-width:0"><button class="cbtn" onclick="pickCreditContact()" title="Pick from contacts"><svg viewBox="0 0 64 64"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="#fff" transform="translate(14,13) scale(1.25)"/><circle cx="46" cy="46" r="11" fill="#fff"/><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" style="fill:var(--cbtn-check,#4a86f5)" transform="translate(38.8,38.8) scale(0.6)"/></svg></button></div>
     <div class="search-wrap">🔍 <input id="cc-psearch" placeholder="Type product name..."></div>
     <div id="cc-pick-list"></div>
     <div id="cc-cart"></div>
