@@ -544,3 +544,6 @@ body[data-theme="cyan"]{--pp-grad:linear-gradient(165deg,#0d3d52 0%,#12809c 55%,
 .btn-paid{width:100%;background:#fff;border:1.5px solid var(--pp-teal);color:#16a34a;font-weight:800;font-size:16px;border-radius:14px;padding:13px;margin:6px 0 10px;cursor:pointer;letter-spacing:.5px}
 .form-h3{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .id-box{display:inline-block;border:1.5px solid #0e7490;color:#0e7490;background:#ecfeff;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap;vertical-align:middle}
+@keyframes bellRing{0%,100%{transform:rotate(0)}12%{transform:rotate(20deg)}24%{transform:rotate(-17deg)}36%{transform:rotate(14deg)}48%{transform:rotate(-11deg)}60%{transform:rotate(8deg)}72%{transform:rotate(-5deg)}84%{transform:rotate(2.5deg)}}
+.bell-ringing svg{animation:bellRing 1.8s ease-in-out infinite;transform-origin:50% 6px}
+.mini-edit{flex:none;width:34px;height:34px;border-radius:50%;background:var(--pp-soft);color:var(--pp-teal-d);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}

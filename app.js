@@ -175,6 +175,8 @@ window.openSettings=()=>{
   openSheet(`<h3>⚙️ Settings</h3>
   <div class="lbl" style="margin:8px 0 2px">WARNINGS</div>
   <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Asks before selling an item below its cost price</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="lbl" style="margin:8px 0 2px">NOTIFICATIONS</div>
+  <div class="menu-row" onclick="toggleBellAlert()"><span class="ic">🔔</span><div><div>Overdue bell alert</div><div class="sub">Bell rings when a promise date passes</div></div><button id="bell-tswitch" class="tswitch${DB.profile.bellAlert!==false?' on':''}" onclick="event.stopPropagation();toggleBellAlert()"><span class="tlbl">${DB.profile.bellAlert!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
   <div class="menu-row" onclick="openTabOrder()"><span class="ic">📑</span><div><div>Tab order</div><div class="sub">${tabOrder().map(k=>TAB_LABEL[k]).join(', ')} — tap to change</div></div><span class="arw">›</span></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
@@ -188,6 +190,9 @@ window.openTabOrder=()=>{
   <div class="mrow"><button class="btn-ghost" onclick="openSettings()">Back</button></div>`);
 };
 window.setTabOrder=i=>{ DB.profile.tabOrder=i; save(); applyTabOrder(true); openTabOrder(); toast('✅ Tab order updated'); };
+window.toggleBellAlert=()=>{ DB.profile.bellAlert=DB.profile.bellAlert===false; save(); updateBellBadge();
+  const on=DB.profile.bellAlert!==false, btn=document.querySelector('#bell-tswitch');
+  if(btn){ btn.classList.toggle('on',on); btn.querySelector('.tlbl').textContent=on?'On':'Off'; } };
 window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save();
   const on=DB.profile.lossAsk!==false, btn=document.querySelector('#loss-tswitch');
   if(btn){ btn.classList.toggle('on',on); btn.querySelector('.tlbl').textContent=on?'On':'Off'; } };
@@ -1558,8 +1563,9 @@ function updateBellBadge(){
   const n=DB.customers.filter(promiseDue).length;
   const b=$('bell-badge');
   b.classList.toggle('hidden',!n); b.textContent=n;
+  $('btn-bell').classList.toggle('bell-ringing', n>0 && DB.profile.bellAlert!==false);
 }
-$('btn-bell').onclick=()=>{
+window.openBellSheet=(tab)=>{
   if('Notification' in window && Notification.permission==='default'){
     Notification.requestPermission().then(()=>{});
   }
@@ -1586,7 +1592,7 @@ $('btn-bell').onclick=()=>{
     $('rem-list').innerHTML=list.length?list.map(c=>`<div class="remind-card"><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span>
       <div style="margin:6px 0">⏰ Promise: ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</div>
       <div style="font-weight:800;color:var(--red)">${pkr(custBal(c))} pending</div>
-      <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button></div></div>`).join('')
+      <div class="mrow"><button class="btn-go" onclick="sendMsg(${c.id},'wa')">💬 Remind on WhatsApp</button><button class="btn-ghost" onclick="editPromise(${c.id},'rem')">✏️ Edit date/time</button></div></div>`).join('')
       :'<p class="note">No reminders. Overdue promises will appear here.</p>';
   };
   renderRemList('');
@@ -1595,12 +1601,33 @@ $('btn-bell').onclick=()=>{
     const list=withBal.filter(c=>(c.name||'').toLowerCase().includes(q)||String(c.custId).includes(q));
     $('bulk-list').innerHTML=list.map(c=>`
       <label class="check-row"><input type="checkbox" class="bulk-cb" value="${c.id}">
-      <span><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span><br><span style="color:var(--red);font-weight:700">${pkr(custBal(c))}</span></span></label>`).join('')||'<p class="note">No pending dues</p>';
+      <span style="flex:1;min-width:0"><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span><br><span style="color:var(--red);font-weight:700">${pkr(custBal(c))}</span>${c.promiseDate?`<br><span class="sub">⏰ ${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</span>`:''}</span>
+      <span class="mini-edit" onclick="event.preventDefault();event.stopPropagation();editPromise(${c.id},'send')" title="Edit date/time">✏️</span></label>`).join('')||'<p class="note">No pending dues</p>';
   };
   renderBulkList('');
   $('bulk-search').oninput=e=>renderBulkList(e.target.value.toLowerCase());
-  $('bell-t-rem').onclick=()=>{ $('bell-t-rem').classList.add('active'); $('bell-t-send').classList.remove('active'); $('bell-rem').classList.remove('hidden'); $('bell-send').classList.add('hidden'); };
-  $('bell-t-send').onclick=()=>{ $('bell-t-send').classList.add('active'); $('bell-t-rem').classList.remove('active'); $('bell-send').classList.remove('hidden'); $('bell-rem').classList.add('hidden'); };
+  const showTab=t=>{ const rem=t!=='send';
+    $('bell-t-rem').classList.toggle('active',rem); $('bell-t-send').classList.toggle('active',!rem);
+    $('bell-rem').classList.toggle('hidden',!rem); $('bell-send').classList.toggle('hidden',rem); };
+  $('bell-t-rem').onclick=()=>showTab('rem');
+  $('bell-t-send').onclick=()=>showTab('send');
+  showTab(tab==='send'?'send':'rem');
+};
+$('btn-bell').onclick=()=>openBellSheet('rem');
+/* Edit promise date/time (reminder + bulk send) — updates the credit record directly */
+window.editPromise=(id,backTab)=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  openDlg(`<div class="dlg"><h2>⏰ Promise date/time</h2>
+    <p><b>${esc(c.name)}</b> <span class="sub">ID ${c.custId}</span></p>
+    <div class="two-col"><div><label class="fl">Date</label><input id="ep-date" type="date" value="${c.promiseDate||''}"></div>
+    <div><label class="fl">Time</label><input id="ep-time" type="time" value="${c.promiseTime||''}"></div></div>
+    <div class="dlg-btns"><button class="dlg-cancel" onclick="openBellSheet('${backTab==='send'?'send':'rem'}')">Back</button>
+    <button class="dlg-ok" onclick="savePromise(${id},'${backTab==='send'?'send':'rem'}')">Save</button></div></div>`);
+};
+window.savePromise=(id,backTab)=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  c.promiseDate=$('ep-date').value||''; c.promiseTime=$('ep-time').value||'';
+  save(); updateBellBadge(); openBellSheet(backTab); toast('✅ Promise date/time updated');
 };
 window.bulkToggleAll=on=>{ document.querySelectorAll('.bulk-cb').forEach(cb=>cb.checked=on); };
 let bulkQueue=[], bulkActive=false;
