@@ -358,11 +358,17 @@ function renderSaleCart(){
   const box=$('sale-cart');
   if(!saleCart.length){ box.innerHTML=''; return; }
   box.innerHTML='<div class="cart-box">'+saleCart.map((i,ix)=>`
-    <div class="cart-row"><div><b>${esc(i.name)}</b><div class="sub">${i.qty} × ${pkr(i.unit)} = ${pkr(i.total)}</div></div>
+    <div class="cart-row"><div style="flex:1;min-width:0"><b>${esc(i.name)}</b><div class="sub">${i.qty} × ${pkr(i.unit)} = ${pkr(i.total)}</div></div>
+    <div class="cart-step"><button class="mini-btn" onclick="saleStep(${ix},-1)">−</button><b>${i.qty}</b><button class="mini-btn" onclick="saleStep(${ix},1)">+</button></div>
     <button class="cart-x" onclick="rmCartItem(${ix})">✕</button></div>`).join('')+
     `<div class="cart-total"><span>Items total</span><b>${pkr(cartGrand())}</b></div></div>`;
 }
 window.rmCartItem=ix=>{ saleCart.splice(ix,1); renderSaleCart(); };
+window.saleStep=(ix,d)=>{ const l=saleCart[ix]; if(!l) return;
+  if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
+    if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' in stock!'); return; } }
+  l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderSaleCart();
+  $('sale-total-in').value=cartGrand().toFixed(0); };
 /* Staged product -> a sale line. Line total = bill field minus cart sum (item's share of the bill). */
 function stageLine(){
   const p=DB.products.find(x=>x.id===salePickId);
