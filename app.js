@@ -312,17 +312,25 @@ function renderSales(){
   $('s-profit').textContent=pkr(grossProfit()-exp); // expense minus from profit
   $('sale-date-txt').textContent=fmtDate(saleDate);
   if(!$('exp-date').value) $('exp-date').value=dstr();
-  $('sale-dd').classList.add('hidden'); renderSaleCart(); renderDaySales();
+  $('sale-dd').classList.add('hidden'); renderSaleCart();
+  const wdd=$('ws-dd'); if(wdd) wdd.classList.add('hidden');
+  if($('ws-date-txt')) $('ws-date-txt').textContent=fmtDate(wsDate);
+  renderWsCart(); renderDaySales();
 }
 function fmtDate(ds){ const d=new Date(ds+'T12:00'); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
-$('seg-sale').onclick=()=>{ saleMode='sale'; $('seg-sale').classList.add('active'); $('seg-exp').classList.remove('active'); $('sale-form').classList.remove('hidden'); $('exp-form').classList.add('hidden'); };
-$('seg-exp').onclick=()=>{ saleMode='exp'; $('seg-exp').classList.add('active'); $('seg-sale').classList.remove('active'); $('exp-form').classList.remove('hidden'); $('sale-form').classList.add('hidden'); };
+function setSeg(id){ ['seg-sale','seg-ws','seg-exp'].forEach(x=>$(x).classList.toggle('active',x===id));
+  $('sale-form').classList.toggle('hidden',id!=='seg-sale');
+  $('ws-form').classList.toggle('hidden',id!=='seg-ws');
+  $('exp-form').classList.toggle('hidden',id!=='seg-exp'); }
+$('seg-sale').onclick=()=>{ saleMode='sale'; setSeg('seg-sale'); };
+$('seg-ws').onclick=()=>{ saleMode='ws'; setSeg('seg-ws'); };
+$('seg-exp').onclick=()=>{ saleMode='exp'; setSeg('seg-exp'); };
 $('sale-date-pill').onclick=()=>$('sale-date').click();
 $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sale-date-txt').textContent=fmtDate(saleDate); } };
 /* ---- NADIR-style search dropdown + multi-item cart ---- */
 let saleCart=[];
 $('sale-psearch').oninput=e=>{ salePickId=null; renderSaleDD(e.target.value.toLowerCase().trim()); };
-document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')) $('sale-dd').classList.add('hidden'); });
+document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')){ $('sale-dd').classList.add('hidden'); const w=$('ws-dd'); if(w) w.classList.add('hidden'); } });
 function renderSaleDD(q){
   const dd=$('sale-dd');
   if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
@@ -407,6 +415,81 @@ $('btn-sold').onclick=()=>{
   save(); saleCart=[]; renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
 };
+/* ================= WHOLESALE (shopkeeper sales at stock rates) ================= */
+let wsPickId=null, wsDate=dstr(), wsCart=[];
+$('ws-psearch').oninput=e=>{ wsPickId=null; renderWsDD(e.target.value.toLowerCase().trim()); };
+$('ws-date-pill').onclick=()=>$('ws-date').click();
+$('ws-date').onchange=e=>{ if(e.target.value){ wsDate=e.target.value; $('ws-date-txt').textContent=fmtDate(wsDate); } };
+function renderWsDD(q){
+  const dd=$('ws-dd'); if(!dd) return;
+  if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
+  const list=DB.products.filter(p=>p.qty>0&&(p.name.toLowerCase().includes(q)||String(p.itemId).includes(q))).slice(0,8);
+  dd.innerHTML=list.map(p=>`
+    <div class="dd-item" onclick="pickWsDD(${p.id})">${pimg(p,'dd-img')}
+      <div style="flex:1;min-width:0"><div class="nm">${esc(p.name)}</div>
+      <div class="sp">Shop Rate <span class="dots">:</span> <b class="r">${pkr(p.sell)}</b></div>
+      <div class="sub">left: ${p.qty} ${esc(p.unit)}</div></div>
+    </div>`).join('')||'<p class="note">No product found</p>';
+  dd.classList.remove('hidden');
+}
+window.pickWsDD=id=>{
+  const p=DB.products.find(x=>x.id===id); if(!p) return;
+  wsPickId=id; $('ws-psearch').value=p.name; $('ws-dd').classList.add('hidden');
+  $('ws-total').value=(wsGrand()+p.sell*(parseInt($('ws-qty').value)||1)).toFixed(0);
+};
+$('ws-qty').oninput=()=>{ const p=DB.products.find(x=>x.id===wsPickId);
+  if(p) $('ws-total').value=(wsGrand()+p.sell*(parseInt($('ws-qty').value)||1)).toFixed(0); };
+function wsGrand(){ return wsCart.reduce((s,i)=>s+i.total,0); }
+function renderWsCart(){
+  const box=$('ws-cart'); if(!box) return;
+  if(!wsCart.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="cart-box">'+wsCart.map((i,ix)=>`
+    <div class="cart-row"><div><b>${esc(i.name)}</b><div class="sub">${i.qty} \u00D7 ${pkr(i.unit)} = ${pkr(i.total)}</div></div>
+    <button class="cart-x" onclick="rmWsItem(${ix})">\u2715</button></div>`).join('')+
+    `<div class="cart-total"><span>Items total</span><b>${pkr(wsGrand())}</b></div></div>`;
+}
+window.rmWsItem=ix=>{ wsCart.splice(ix,1); renderWsCart(); };
+function stageWsLine(){
+  const p=DB.products.find(x=>x.id===wsPickId);
+  if(!p||!$('ws-psearch').value.trim()) return null;
+  const q=Math.max(1,parseInt($('ws-qty').value)||1);
+  if(q>p.qty){ toast('Only '+p.qty+' in stock!'); return 'err'; }
+  return {productId:p.id,name:p.name,qty:q,unit:p.sell,total:q*p.sell,cost:p.cost};
+}
+function clearWsStaging(){ wsPickId=null; $('ws-psearch').value=''; $('ws-qty').value=1;
+  $('ws-total').value=wsGrand().toFixed(0); }
+$('btn-ws-add').onclick=()=>{
+  const it=stageWsLine();
+  if(it==='err') return;
+  if(!it){ toast('Search and select a product first'); return; }
+  wsCart.push(it); clearWsStaging(); renderWsCart(); toast('\u2705 Added: '+it.name);
+};
+$('btn-ws-sold').onclick=()=>{
+  const shop=$('ws-shop').value.trim(), phone=$('ws-phone').value.trim();
+  if(!shop){ toast('Enter shop name'); $('ws-shop').focus(); return; }
+  if(!phone){ toast('Enter shop phone number'); $('ws-phone').focus(); return; }
+  const lines=[...wsCart];
+  const st=stageWsLine();
+  if(st==='err') return;
+  if(st) lines.push(st);
+  if(!lines.length){ toast('Select a product first'); return; }
+  for(const l of lines){ const pr=DB.products.find(x=>x.id===l.productId);
+    if(!pr||l.qty>pr.qty){ toast('Out of stock: '+l.name); return; } }
+  // Wholesale: each line billed EXACTLY at its stock sell rate — no bill dividing
+  const items=lines.map(l=>{ const pr=DB.products.find(x=>x.id===l.productId); pr.qty-=l.qty;
+    return {productId:l.productId,name:l.name,qty:l.qty,price:l.unit,cost:pr.cost}; });
+  const total=items.reduce((s,i)=>s+i.qty*i.price,0);
+  const sale={id:DB.seq.s++, kind:'wholesale',
+    productId:lines.length===1?lines[0].productId:null,
+    name:lines.length===1?lines[0].name:(lines.length+' items'),
+    qty:lines.reduce((s,l)=>s+l.qty,0), total,
+    customer:shop, phone, date:wsDate, ts:new Date(wsDate+'T12:00').getTime(), items};
+  DB.sales.push(sale);
+  DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()});
+  save(); wsCart=[]; renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
+  renderSales(); renderStock(); updatePrintBadge(); toast('\u2705 Wholesale sold! '+pkr(total));
+};
+
 /* ---- Return: single item or whole bundle (NADIR style) ---- */
 // Return item — bottom sheet like reference: stepper, refund, mark as unpaid
 window.returnItem=(saleId,ix)=>{
@@ -592,7 +675,7 @@ function renderDaySales(){
       `<button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
-      <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
+      <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.kind==='wholesale'?'<span class="ws-pill">🏪 Wholesale</span>':''}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
       <div class="sub">${sub}${s.customer?' · '+esc(s.customer):''}</div></div>
       <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
   }).join('');

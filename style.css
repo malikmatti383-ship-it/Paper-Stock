@@ -305,6 +305,7 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 .cart-step{display:flex;align-items:center;gap:6px;flex:none}
 .cart-step .mini-btn{width:28px;height:28px;font-size:16px}
 .cart-step b{min-width:20px;text-align:center;font-size:15px}
+.ws-pill{display:inline-block;background:#fef3c7;color:#92400e;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle;white-space:nowrap}
 .icon-btn{font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
 .sync-pill{background:#fff;color:var(--pp-teal-d);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);margin-left:auto;white-space:nowrap}
 .sync-pill .spin{display:inline-block;animation:pprot 1s linear infinite;font-size:14px}
