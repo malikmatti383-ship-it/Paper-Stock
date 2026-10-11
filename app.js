@@ -6,15 +6,10 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const pkr = n => curCode() + ' ' + Number(n||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2});
 const dstr = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 (function(){
-  const vv=window.visualViewport;
-  function upd(){
-    const nav=document.querySelector('nav.toptabs'); if(!nav) return;
-    const open=vv?(vv.height<window.innerHeight-140):false;
-    nav.classList.toggle('kb-hidden',open);
-  }
-  if(vv) vv.addEventListener('resize',upd);
-  document.addEventListener('focusin',e=>{ if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) setTimeout(upd,300); });
-  document.addEventListener('focusout',()=>setTimeout(upd,300));
+  const isFld=el=>el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT');
+  function setKb(open){ const nav=document.querySelector('nav.toptabs'); if(nav) nav.classList.toggle('kb-hidden',open); }
+  document.addEventListener('focusin',e=>{ if(isFld(e.target)) setKb(true); });
+  document.addEventListener('focusout',()=>setTimeout(()=>setKb(isFld(document.activeElement)),250));
 })();
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.remove('hidden'); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.add('hidden'),2400); }
 
@@ -175,7 +170,7 @@ function lossConfirm(kind,lossLines,cb){
   <button class="dlg-ok" id="dlg-ok">YES, SELL</button></div></div>`);
   $('dlg-ok').onclick=()=>{ if($('loss-noask')&&$('loss-noask').checked){ DB.profile.lossAsk=false; save(); } closeSheet(); cb(); };
 }
-window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save(); $('btn-profile').click(); };
+window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save(); openThemePicker(); };
 $('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
 /* Clean trash icon used for every delete option */
 const TRASH='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
@@ -230,7 +225,9 @@ window.openThemePicker=()=>{
   const c=curTheme();
   openSheet(`<h3>🎨 Colors Theme</h3><div class="sub" style="margin-bottom:8px">Pick a theme — it stays until you change it.</div>`+
    THEMES.map(x=>`<div class="menu-row" onclick="setTheme('${x.id}')"><span class="ic"><span class="theme-dot sm" style="background:${x.g}"></span></span><span>${x.name}</span>${x.id===c?'<span class="arw" style="color:var(--teal)">✓</span>':'<span class="arw">›</span>'}</div>`).join('')+
-   `<div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
+   `<div class="lbl" style="margin:10px 0 2px">WARNINGS</div>
+   <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">\u26a0\ufe0f</span> Loss warning <span class="sub">${DB.profile.lossAsk===false?'Off':'On'}</span><span class="arw">›</span></div>
+   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
@@ -246,7 +243,6 @@ $('btn-profile').onclick=()=>{
     </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
     <div class="menu-row" onclick="openThemePicker()"><span class="ic">${themeDot(curTheme())}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">\u26a0\ufe0f</span> Loss warning <span class="sub">${DB.profile.lossAsk===false?'Off':'On'}</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
