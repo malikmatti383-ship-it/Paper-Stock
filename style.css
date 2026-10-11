@@ -349,13 +349,9 @@ body,#app{background:var(--pp-grad);background-attachment:fixed}
 :root,body[data-theme="ocean"]{--cbtn-g1:#102c6b;--cbtn-g2:#4a86f5;--cbtn-check:#4a86f5}
 body[data-theme="emerald"]{--cbtn-g1:#0f6b49;--cbtn-g2:#16c475;--cbtn-check:#16c475}
 body[data-theme="purple"]{--cbtn-g1:#471c7d;--cbtn-g2:#875ff0;--cbtn-check:#875ff0}
-body[data-theme="orange"]{--cbtn-g1:#8a3a1c;--cbtn-g2:#e5862c;--cbtn-check:#e5862c}
-body[data-theme="midnight"]{--cbtn-g1:#131c2e;--cbtn-g2:#3e4c60;--cbtn-check:#3e4c60}
 body[data-theme="red"]{--cbtn-g1:#521010;--cbtn-g2:#e03232;--cbtn-check:#e03232}
 body[data-theme="pink"]{--cbtn-g1:#5c1630;--cbtn-g2:#e03283;--cbtn-check:#e03283}
-body[data-theme="brown"]{--cbtn-g1:#362115;--cbtn-g2:#976637;--cbtn-check:#976637}
 body[data-theme="olive"]{--cbtn-g1:#223a08;--cbtn-g2:#70b012;--cbtn-check:#70b012}
-body[data-theme="wine"]{--cbtn-g1:#360b14;--cbtn-g2:#c42544;--cbtn-check:#c42544}
 body[data-theme="sunset"]{--cbtn-g1:#7933e0;--cbtn-g2:#f7a716;--cbtn-check:#f7a716}
 body[data-theme="grey"]{--cbtn-g1:#1a2332;--cbtn-g2:#78828f;--cbtn-check:#78828f}
 body[data-theme="cyan"]{--cbtn-g1:#0d3d52;--cbtn-g2:#2fd8f2;--cbtn-check:#2fd8f2}
@@ -438,13 +434,9 @@ h3{font-size:19px}
 /* ================= Theme variants (Profile → App theme) ================= */
 body[data-theme="emerald"]{--pp-grad:linear-gradient(165deg,#0f6b49 0%,#129a5e 55%,#16c475 100%);--pp-teal:#0c8a52;--pp-teal-l:#15b96d;--pp-teal-d:#0b5e3f;--pp-teal-dd:#0c5238;--pp-soft:#dcf5e7;--pp-btn-ink:#fff;--teal:#0c8a52;--teal-d:#0b5e3f}
 body[data-theme="purple"]{--pp-grad:linear-gradient(165deg,#471c7d 0%,#6530c2 55%,#875ff0 100%);--pp-teal:#6d28d9;--pp-teal-l:#8b5cf6;--pp-teal-d:#5b21b6;--pp-teal-dd:#471c7d;--pp-soft:#ede9fe;--pp-btn-ink:#fff;--teal:#6d28d9;--teal-d:#5b21b6}
-body[data-theme="orange"]{--pp-grad:linear-gradient(165deg,#8a3a1c 0%,#c05f10 55%,#e5862c 100%);--pp-teal:#c2570b;--pp-teal-l:#e8930c;--pp-teal-d:#9a3412;--pp-teal-dd:#8a3a1c;--pp-soft:#fef0dc;--pp-btn-ink:#fff;--teal:#c2570b;--teal-d:#9a3412}
-body[data-theme="midnight"]{--pp-grad:linear-gradient(165deg,#131c2e 0%,#253242 60%,#3e4c60 100%);--pp-teal:#b98a1f;--pp-teal-l:#e3b93e;--pp-teal-d:#8a6d1b;--pp-teal-dd:#131c2e;--pp-soft:#faf3dd;--pp-btn-ink:#231a04;--teal:#b98a1f;--teal-d:#8a6d1b}
 body[data-theme="red"]{--pp-grad:linear-gradient(165deg,#521010 0%,#a82424 55%,#e03232 100%);--pp-teal:#b91c1c;--pp-teal-l:#ef4444;--pp-teal-d:#991b1b;--pp-teal-dd:#521010;--pp-soft:#fee2e2;--pp-btn-ink:#fff;--teal:#b91c1c;--teal-d:#991b1b}
 body[data-theme="pink"]{--pp-grad:linear-gradient(165deg,#5c1630 0%,#aa1f57 55%,#e03283 100%);--pp-teal:#be185d;--pp-teal-l:#ec4899;--pp-teal-d:#9d174d;--pp-teal-dd:#5c1630;--pp-soft:#fce7f3;--pp-btn-ink:#fff;--teal:#be185d;--teal-d:#9d174d}
-body[data-theme="brown"]{--pp-grad:linear-gradient(165deg,#362115 0%,#684830 55%,#976637 100%);--pp-teal:#6f4a26;--pp-teal-l:#a06a35;--pp-teal-d:#5b3a24;--pp-teal-dd:#362115;--pp-soft:#f3e9dc;--pp-btn-ink:#fff;--teal:#6f4a26;--teal-d:#5b3a24}
 body[data-theme="olive"]{--pp-grad:linear-gradient(165deg,#223a08 0%,#4a6e16 55%,#70b012 100%);--pp-teal:#4d7c0f;--pp-teal-l:#84cc16;--pp-teal-d:#3f6212;--pp-teal-dd:#223a08;--pp-soft:#eef7da;--pp-btn-ink:#fff;--teal:#4d7c0f;--teal-d:#3f6212}
-body[data-theme="wine"]{--pp-grad:linear-gradient(165deg,#360b14 0%,#8d2334 55%,#c42544 100%);--pp-teal:#9f1d33;--pp-teal-l:#d43a52;--pp-teal-d:#7f1d2d;--pp-teal-dd:#360b14;--pp-soft:#fbe4e8;--pp-btn-ink:#fff;--teal:#9f1d33;--teal-d:#7f1d2d}
 body[data-theme="sunset"]{--pp-grad:linear-gradient(165deg,#7933e0 0%,#cd4c84 50%,#f7a716 100%);--pp-teal:#c2417a;--pp-teal-l:#f59e0b;--pp-teal-d:#9d174d;--pp-teal-dd:#7933e0;--pp-soft:#fce7f3;--pp-btn-ink:#fff;--teal:#c2417a;--teal-d:#9d174d}
 body[data-theme="grey"]{--pp-grad:linear-gradient(165deg,#1a2332 0%,#414c5e 55%,#78828f 100%);--pp-teal:#4b5563;--pp-teal-l:#9ca3af;--pp-teal-d:#374151;--pp-teal-dd:#1a2332;--pp-soft:#e5e7eb;--pp-btn-ink:#fff;--teal:#4b5563;--teal-d:#374151}
 body[data-theme="classic"]{--pp-grad:linear-gradient(165deg,#1268b1 0%,#108ec2 55%,#14b2d6 100%);--pp-teal:#0b83b8;--pp-teal-l:#12a5cc;--pp-teal-d:#095f86;--pp-teal-dd:#1268b1;--pp-soft:#ddf1f9;--pp-btn-ink:#fff;--teal:#0b83b8;--teal-d:#095f86}
