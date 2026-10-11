@@ -5,6 +5,17 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pkr = n => curCode() + ' ' + Number(n||0).toLocaleString('en-PK',{minimumFractionDigits:2,maximumFractionDigits:2});
 const dstr = d => { d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+(function(){
+  const vv=window.visualViewport;
+  function upd(){
+    const nav=document.querySelector('nav.toptabs'); if(!nav) return;
+    const open=vv?(vv.height<window.innerHeight-140):false;
+    nav.classList.toggle('kb-hidden',open);
+  }
+  if(vv) vv.addEventListener('resize',upd);
+  document.addEventListener('focusin',e=>{ if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) setTimeout(upd,300); });
+  document.addEventListener('focusout',()=>setTimeout(upd,300));
+})();
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.remove('hidden'); clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.add('hidden'),2400); }
 
 /* ================= CURRENCY: country list [name, iso2, code, symbol] ================= */
@@ -331,6 +342,7 @@ $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sal
 let saleCart=[];
 $('sale-psearch').oninput=e=>{ salePickId=null; renderSaleDD(e.target.value.toLowerCase().trim()); };
 document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')){ $('sale-dd').classList.add('hidden'); const w=$('ws-dd'); if(w) w.classList.add('hidden'); } });
+function pmatch(p,q){ return p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)||(p.brand||'').toLowerCase().includes(q); }
 function stockLbl(p){
   if(p.qty<=0) return '<span class="dd-na">Not available</span>';
   if(p.qty<=5) return '<span class="dd-low">Only '+p.qty+' left!</span>';
@@ -364,7 +376,7 @@ function paintWsCostWarn(){ const box=$('ws-cost-warn'); if(!box) return;
 function renderSaleDD(q){
   const dd=$('sale-dd');
   if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,8);
+  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,8);
   dd.innerHTML=list.map(p=>`
     <div class="dd-item" onclick="pickSaleDD(${p.id})">${pimg(p,'dd-img')}
       <div style="flex:1;min-width:0">${p.brand?`<span class="dd-brand">${esc(p.brand)}</span>`:''}
@@ -467,7 +479,7 @@ $('ws-date').onchange=e=>{ if(e.target.value){ wsDate=e.target.value; $('ws-date
 function renderWsDD(q){
   const dd=$('ws-dd'); if(!dd) return;
   if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,8);
+  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,8);
   dd.innerHTML=list.map(p=>`
     <div class="dd-item" onclick="pickWsDD(${p.id})">${pimg(p,'dd-img')}
       <div style="flex:1;min-width:0">${p.brand?`<span class="dd-brand">${esc(p.brand)}</span>`:''}
@@ -781,7 +793,7 @@ window.esRm=ix=>{ esItems.splice(ix,1); renderEsItems(); };
 function renderEsPick(q){
   const box=$('es-pick-list'); if(!box) return;
   if(!q){ box.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickEsItem(${p.id})">
       ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} \u00B7 ${stockLbl(p)}</div></div>
@@ -1057,7 +1069,7 @@ let credCart=[];
 function renderCredPick(){
   const q=(credPickQ||'').trim(), box=$('cc-pick-list'); if(!box) return;
   if(!q){ box.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickCred(${p.id})">
       ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · Cost ${pkr(p.cost)} · ${stockLbl(p)}</div></div>
@@ -1150,7 +1162,7 @@ window.addCreditMore=id=>{
 function renderMorePick(q){
   const box=$('m-pick-list'); if(!box) return;
   if(!q){ box.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickMoreCred(${p.id})">
       ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · ${stockLbl(p)}</div></div>
@@ -1225,7 +1237,7 @@ window.editRm=ix=>{ editItems.splice(ix,1); renderEditItems(); };
 function renderEditPick(q){
   const box=$('e-pick-list'); if(!box) return;
   if(!q){ box.innerHTML=''; return; }
-  const list=DB.products.filter(p=>p.name.toLowerCase().includes(q)||String(p.itemId).includes(q)).slice(0,6);
+  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,6);
   box.innerHTML=list.map(p=>`
     <div class="pick-item" onclick="pickEditItem(${p.id})">
       ${pimg(p,'pick-img')}<div><b>${esc(p.name)}</b><div class="sub">Sell ${pkr(p.sell)} · ${stockLbl(p)}</div></div>
