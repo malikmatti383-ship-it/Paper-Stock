@@ -1577,7 +1577,7 @@ window.creditHistory=(id,fresh)=>{
   openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">${histSelMode?`<button class="btn-ghost" id="hist-sa-btn" onclick="histSelectAll(${id})">Select All</button><button class="btn-go" id="hist-gen-btn" onclick="genHistPDF(${id})" disabled>\ud83d\udcc4 PDF (0)</button><button class="btn-ghost" onclick="histSelModeToggle(${id},false)">\u2715</button>`:`<div class="sub">${log.length} entries \u00b7 tap a date file to open it</div><div style="display:flex;gap:6px"><button class="mini-pdf" onclick="histSelModeToggle(${id},true)">\ud83d\udcc4 PDF</button>${log.length?`<button class="hist-del" onclick="delAllHist(${id})">\ud83d\uddd1\ufe0f Delete All</button>`:''}</div>`}</div><div class="search-wrap" style="margin:2px 0 10px">🔍 <input id="hist-search" placeholder="Search date or time..." oninput="histSearchGo(this.value)"></div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
   if(histSelMode)paintHistSel(id);
 };
-window.returnHistEdit=(id,ix,back)=>{
+window.returnHistEdit=(id,ix,back,from)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix]; if(e.t!=='Balance edit') return;
   if(e.returned||e.rev){toast('Already returned');return;}
@@ -1588,10 +1588,11 @@ window.returnHistEdit=(id,ix,back)=>{
     c.credit=Math.round(((c.credit||0)-diff)*100)/100;
     e.returned=true;
     c.log.push({t:'Balance edit',a:-diff,rev:true,note:'Return: Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
-    save(); (back==='resend'?resendList(id):creditHistory(id)); renderCredit(); toast('\u21A9\uFE0F Balance edit returned');
+    save(); (back==='resend'?resendList(id,from||undefined):creditHistory(id)); renderCredit(); toast('\u21A9\uFE0F Balance edit returned');
   });
 };
-window.resendList=id=>{
+window.resendList=(id,from)=>{
+  const backFn=from==='wusool'?'addWusool':'addCreditMore';
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const edits=(c.log||[]).map((e,ix)=>({e,ix})).filter(({e})=>e.t==='Balance edit'||e.t==='Credit').reverse();
   const rows=edits.map(({e,ix})=>{
@@ -1600,10 +1601,10 @@ window.resendList=id=>{
     const det=[e.items,e.note].filter(Boolean).join(' \u00b7 ');
     const detH=det?`<br><span class="sub">${esc(det)}</span>`:'';
     const canRet=!e.returned&&!e.rev;
-    const ret=!canRet?'<span class="sub" title="Returned" style="color:var(--green)">✓</span>':(isB?`<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend')" title="Return this edit">\u21A9\uFE0F</button>`
+    const ret=!canRet?'<span class="sub" title="Returned" style="color:var(--green)">✓</span>':(isB?`<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend','${from||''}')" title="Return this edit">\u21A9\uFE0F</button>`
       :(e.a>0?`<button class="hist-del" onclick="event.stopPropagation();returnCredit(${id},${ix})" title="Return this credit">\u21A9\uFE0F</button>`:''));
-    return `<div class="kv"><span>${ic} <b>${e.t}</b>${detH}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}${ret}<button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix},'resend')" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
-  openSheet(`<h3>\u21BB Resend — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${edits.length} entries \u00b7 newest first</div>${rows||'<p class="note">No entries yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="addCreditMore(${id})">Back</button><button class="btn-go" onclick="addCreditMore(${id})">Done</button></div>`);
+    return `<div class="kv"><span>${ic} <b>${e.t}</b>${detH}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}${ret}<button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix},'resend','${from||''}')" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
+  openSheet(`<h3>\u21BB Resend — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${edits.length} entries \u00b7 newest first</div>${rows||'<p class="note">No entries yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="${backFn}(${id})">Back</button><button class="btn-go" onclick="${backFn}(${id})">Done</button></div>`);
 };
 function parseCreditItems(str){
   return String(str||'').split(',').map(x=>x.trim()).filter(Boolean).map(x=>{
@@ -1633,16 +1634,17 @@ window.returnCredit=(id,ix)=>{
     save(); resendList(id); renderCredit(); renderStock(); toast('↩️ Credit returned');
   });
 };
-window.delHist=(id,ix,back)=>{
+window.delHist=(id,ix,back,from)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix];
   const stockNote=(e.t==='Credit'&&e.items)?'<br>⚠️ Stock will NOT be returned. To undo properly (stock back + credit reversed), use ↩️ Return in Resend instead.':'';
   confirmDlg('Delete history entry?','"'+e.t+' · '+pkr(e.a)+'" ('+fmtDT(e.d)+') will be removed from history. Balances stay unchanged.'+stockNote,'DELETE',()=>{
-    c.log.splice(ix,1); save(); (back==='resend'?resendList(id):creditHistory(id)); renderCredit(); toast('🗑️ History entry deleted'); });
+    c.log.splice(ix,1); save(); (back==='resend'?resendList(id,from||undefined):creditHistory(id)); renderCredit(); toast('🗑️ History entry deleted'); });
 };
 window.addWusool=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
-  openSheet(`<h3>💵 Receive — ${esc(c.name)}</h3><div class="sub">Balance due: ${pkr(custBal(c))}</div>
+  const nReW=(c.log||[]).filter(e=>e.t==='Balance edit'||e.t==='Credit').length;
+  openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">💵 Receive — ${esc(c.name)}</h3><button class="mini-pdf" onclick="resendList(${id},'wusool')">↻ Resend${nReW?' ('+nReW+')':''}</button></div><div class="sub">Balance due: ${pkr(custBal(c))}</div>
     <input id="w-amt" type="number" placeholder="Amount received" oninput="wusoolCheck(${id})">
     <div class="red-sub hidden" id="w-warn" style="margin:6px 0 0"></div>
     <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" id="w-save" onclick="saveWusool(${id})">Save</button></div>`);
