@@ -367,14 +367,21 @@ $('btn-add-save').onclick=()=>{
 /* ================= SALES ================= */
 let saleMode='sale', salePickId=null, saleDate=dstr(), saleDay=dstr();
 function grossProfit(){ return DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+i.qty*((i.price||0)-(i.cost||0)),0),0); }
+let salesProfitNp=0;
+function paintSalesProfit(){
+  const el=$('s-profit'), eye=$('profit-eye-s'); if(!el) return;
+  if(eye) eye.textContent=DB.profitShow?'\uD83D\uDC41\uFE0F':'\uD83D\uDE48';
+  if(DB.profitShow){ el.textContent=salesProfitNp<0?pkrMinus(-salesProfitNp):pkr(salesProfitNp); el.classList.remove('masked'); }
+  else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); }
+  el.classList.toggle('red-num',salesProfitNp<0); // loss -> stays red until profit recovers
+  el.classList.toggle('green-num',salesProfitNp>=0); // recovered -> green again
+}
 function renderSales(){
   const tot=DB.sales.reduce((s,x)=>s+x.total,0);
   const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
   $('s-total').textContent=pkr(tot); $('s-exp').textContent=exp>0?pkrMinus(exp):pkr(0); paintCur();
-  const np=grossProfit()-exp; // expenses cut from ALL-TIME profit (today + past days), not just today
-  $('s-profit').textContent=np<0?pkrMinus(-np):pkr(np);
-  $('s-profit').classList.toggle('red-num',np<0); // loss -> stays red until profit recovers
-  $('s-profit').classList.toggle('green-num',np>=0); // recovered -> green again
+  salesProfitNp=grossProfit()-exp; // expenses cut from ALL-TIME profit (today + past days), not just today
+  paintSalesProfit();
   $('sale-date-txt').textContent=fmtDate(saleDate);
   if(!$('exp-date').value) $('exp-date').value=dstr();
   $('sale-dd').classList.add('hidden'); renderSaleCart();
@@ -1246,7 +1253,7 @@ function paintProfit(){
   else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); eye.textContent='\uD83D\uDE48'; }
   el.style.color=creditProfitTot<0?'var(--red)':'var(--green)';
 }
-window.toggleProfitEye=()=>{ DB.profitShow=!DB.profitShow; save(); paintProfit(); };
+window.toggleProfitEye=()=>{ DB.profitShow=!DB.profitShow; save(); paintProfit(); paintSalesProfit(); };
 function renderCredit(){
   const tot=DB.customers.reduce((s,c)=>s+custBal(c),0);
   $('c-total').textContent=pkr(tot); $('c-count').textContent=DB.customers.length+' customers';

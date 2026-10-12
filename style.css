@@ -75,6 +75,7 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .cs-num{font-size:14px;font-weight:800;margin-top:2px;white-space:nowrap}
 .eye-btn{background:none;border:none;font-size:13px;cursor:pointer;padding:0 2px;vertical-align:baseline;line-height:1}
 #c-profit.masked{letter-spacing:3px;color:var(--sub)}
+#s-profit.masked{letter-spacing:3px;color:var(--sub)}
 .split-card{display:flex;justify-content:space-between}
 .split-right{text-align:right;border-left:1px solid #e5e9f0;padding-left:12px}
 .split-right .lbl{margin-top:6px}
