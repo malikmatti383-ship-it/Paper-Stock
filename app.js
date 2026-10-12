@@ -945,7 +945,7 @@ function renderDaySales(){
     const det=open?`<div class="sale-det">
       <button class="edit-sale-btn" onclick="event.stopPropagation();editExpense(${e.id})">✏️ Edit expense</button>
       <button class="return-bundle" onclick="event.stopPropagation();returnExpense(${e.id})">⤺ Return expense</button></div>`:'';
-    return `<div class="sale-card exp-row${open?' open':''}"><div class="sale-top" onclick="toggleExp(${e.id})">
+    return `<div class="sale-card exp-card${open?' open':''}"><div class="sale-top" onclick="toggleExp(${e.id})">
       <div style="flex:1;min-width:0"><div class="d">${esc(e.title)}<span class="ex-pill">📋 Expense</span><span class="t">${e.ts?hhmm(e.ts):''}</span></div>
       <div class="sub"><span class="id-box">ID${e.id}</span></div></div>
       <div class="a">${pkrMinus(e.amount)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`; }).join('');

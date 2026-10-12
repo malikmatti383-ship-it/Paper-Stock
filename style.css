@@ -273,6 +273,8 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .sale-top .a{font-weight:800;font-size:16px;white-space:nowrap}
 .xarw{color:#9ca3af;font-size:13px}
 .sale-det{border-top:1px solid #f1f5f9;padding:4px 14px 12px}
+.exp-card{background:#fff5f4;border:1px solid #f5c6c0}
+.exp-card .a{color:var(--red)}
 .sdet-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f8fafc}
 .sdet-r{display:flex;align-items:center;gap:10px}
 .ret-one{border:none;background:#e0f2fe;color:#0284c7;width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;font-weight:700}
