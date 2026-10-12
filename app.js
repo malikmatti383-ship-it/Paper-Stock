@@ -1411,7 +1411,7 @@ window.saveCredit=()=>{
 window.creditDetail=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const b=custBal(c);
-  openSheet(`<h3>${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3>
+  openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3><button class="hist-box" onclick="creditHistory(${c.id})">📜 History${(c.log&&c.log.length)?' ('+c.log.length+')':''}</button></div>
     <div class="kv"><span>📞 Number</span><b>${esc(c.phone||'—')}</b></div>
     ${(c.items&&c.items.length)?c.items.map(l=>{const pl=l.cost!=null?(l.qty*((l.rate||0)-l.cost)>0?'<span class="mpl mp-pos">▲</span>':(l.qty*((l.rate||0)-l.cost)<0?'<span class="mpl mp-neg">▼</span>':'')):'';return `<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}${pl}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`;}).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
     ${(c.saleRate&&!(c.items&&c.items.length))?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
@@ -1420,7 +1420,6 @@ window.creditDetail=id=>{
     <div class="kv"><span>💵 Received</span><b style="color:var(--green)">${pkr(c.received)}</b></div>
     <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Balance due</span><b style="color:${Math.abs(b)<0.005?'var(--green)':'var(--red)'}">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
     ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
-    ${(c.log&&c.log.length)?`<div class="fl" style="margin:10px 0 2px">📜 History</div>`+c.log.slice().reverse().map(e=>{const ic=e.t==='Received'?'💵':(e.t==='Balance edit'?'✏️':'💰');const det=[e.items,e.note].filter(Boolean).join(' · ');return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:``}<br><span class="sub">🕒 ${fmtDT(e.d)}</span></span><b>${pkr(e.a)}</b></div>`;}).join(''):''}
     <div class="mrow">
       <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Receive</button>
       <button class="btn-ghost" onclick="addCreditMore(${c.id})">➕ Add credit</button>
@@ -1433,6 +1432,20 @@ window.creditDetail=id=>{
     </div>
     <div class="mrow"><button class="btn-ghost danger-t" onclick="delCustomer(${c.id})">Delete</button>
     <button class="btn-go" onclick="closeSheet()">Close</button></div>`);
+};
+window.creditHistory=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  const rows=(c.log&&c.log.length)?c.log.map((e,ix)=>({e,ix})).reverse().map(({e,ix})=>{
+    const ic=e.t==='Received'?'💵':(e.t==='Balance edit'?'✏️':'💰');
+    const det=[e.items,e.note].filter(Boolean).join(' · ');
+    return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:''}<br><span class="sub">🕒 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px"><b>${pkr(e.a)}</b><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix})" title="Delete entry">🗑️</button></span></div>`;}).join(''):'<p class="note">No history yet</p>';
+  openSheet(`<h3>📜 History — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${(c.log&&c.log.length)||0} entries · tap 🗑️ to delete an entry (balances stay unchanged)</div>${rows}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
+};
+window.delHist=(id,ix)=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
+  const e=c.log[ix];
+  confirmDlg('Delete history entry?','"'+e.t+' · '+pkr(e.a)+'" ('+fmtDT(e.d)+') will be removed from history. Balances stay unchanged.','DELETE',()=>{
+    c.log.splice(ix,1); save(); creditHistory(id); renderCredit(); toast('🗑️ History entry deleted'); });
 };
 window.addWusool=id=>{
   const c=DB.customers.find(x=>x.id===id);
