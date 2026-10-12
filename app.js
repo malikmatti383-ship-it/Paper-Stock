@@ -2174,15 +2174,16 @@ function dateHistPDF(c,dk,entries){
   const W=210,M=14,bw=W-2*M, prof=DB.profile, bc=billTheme();
   const hx=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
   const A=hx(bc[0]),B=hx(bc[1]),TC=hx(bc[2]),RED=[220,38,38],GREEN=[22,163,74];
-  const BH=30,GN=48;
+  const BH=46,GN=48;
   for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const WH=[255,255,255];
-  txt(String(prof.name||'Paper Store').toUpperCase(),W/2,BH*0.32,20,true,'center',WH);
-  txt('CREDIT HISTORY',W/2,BH*0.54,12,true,'center',WH);
-  let by=BH*0.74;
-  txt('Customer: '+String(c.name||'')+'   (ID '+String(c.custId||c.id)+')',W/2,by,10.5,false,'center',WH);by+=5;
-  txt('Date: '+fmtDate(dk),W/2,by,11,true,'center',WH);
+  txt(String(prof.name||'Paper Store').toUpperCase(),W/2,11,20,true,'center',WH);
+  const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
+  if(cl)txt(cl,W/2,19,9.5,false,'center',WH);
+  txt('CREDIT HISTORY',M,28,14,true,'left',WH);
+  txt('Customer: '+String(c.name||'')+'   (ID '+String(c.custId||c.id)+')',W/2,35,10.5,false,'center',WH);
+  txt('Date: '+fmtDate(dk),W/2,40.5,11,true,'center',WH);
   let y=BH+10, rh=8;
   const cols=[['S.N',12],['Date/Time',40],['Details',bw-12-40-38],['Amount',38]];
   let x=M;doc.setFillColor(TC[0],TC[1],TC[2]);cols.forEach(cc=>{doc.rect(x,y,cc[1],rh,'FD');x+=cc[1];});x=M;
@@ -2243,13 +2244,15 @@ function selectedHistPDF(c,dates){
   const W=210,M=14,bw=W-2*M, prof=DB.profile, bc=billTheme();
   const hx=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
   const A=hx(bc[0]),B=hx(bc[1]),TC=hx(bc[2]),RED=[220,38,38],GREEN=[22,163,74];
-  const WH=[255,255,255], BH=30, GN=48;
+  const WH=[255,255,255], BH=46, GN=48;
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const head=(l1,l2,l3)=>{ for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
-    txt(String(prof.name||'Paper Store').toUpperCase(),W/2,BH*0.32,20,true,'center',WH);
-    txt(l1,W/2,BH*0.54,12,true,'center',WH);
-    let by=BH*0.74;
-    if(l2){txt(l2,W/2,by,10.5,false,'center',WH);by+=5;}
+    txt(String(prof.name||'Paper Store').toUpperCase(),W/2,11,20,true,'center',WH);
+    const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
+  if(cl)txt(cl,W/2,19,9.5,false,'center',WH);
+    txt(l1,M,28,14,true,'left',WH);
+    let by=35;
+    if(l2){txt(l2,W/2,by,10.5,false,'center',WH);by+=5.5;}
     if(l3){txt(l3,W/2,by,11,true,'center',WH);}
     return BH+10; };
   const cols=[['S.N',12],['Date/Time',40],['Details',bw-12-40-38],['Amount',38]];
