@@ -1937,6 +1937,7 @@ function billPrintHtml(s){
     <div class="bp-name">${esc(String(prof.name||'Paper Store').toUpperCase())}</div>
     ${prof.address?`<div class="bp-sub">${esc(prof.address)}</div>`:''}
     ${cl?`<div class="bp-sub">${cl}</div>`:''}
+    <div class="bp-tag">${s.kind==='wholesale'?'WHOLESALE':'SHOP SALE'}</div>
   </div>
   <div class="bp-meta"><span><b>Name:</b> ${esc(s.customer||'-')}</span><span><b>Bill No. ${s.id}</b></span></div>
   <div class="bp-meta"><span><b>Contact:</b> ${esc(s.phone||'—')}</span><span><b>Date:</b> ${ds}</span></div>
