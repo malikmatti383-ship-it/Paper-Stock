@@ -2064,16 +2064,14 @@ function creditPDF(c){
   const items=(c.items&&c.items.length)?c.items:[];
   const nIt=Math.max(items.length,1);
   let f=Math.min(1,270/(205+9*nIt)); f=Math.max(f,0.55);
-  const BH=30+16*f, GN=48;
+  const BH=46+10*f, GN=48;
   for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const WH=[255,255,255],GREEN=[22,163,74],RED=[220,38,38];
-  txt(String(prof.name||'Paper Store').toUpperCase(),W/2,BH*0.34,24*f,true,'center',WH);
-  txt('CREDIT STATEMENT',W/2,BH*0.56,13*f,true,'center',WH);
-  let by=BH*0.76;
-  if(prof.address){txt(prof.address,W/2,by,11*f,false,'center',WH);by+=5.2*f;}
-  const cl=[prof.phone?('Phone: '+prof.phone):''].filter(Boolean).join(' | ');
-  if(cl)txt(cl,W/2,by,11*f,false,'center',WH);
+  txt(String(prof.name||'Paper Store').toUpperCase(),W/2,11+6*f,24*f,true,'center',WH);
+  const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
+  if(cl)txt(cl,W/2,19+6*f,10*f,false,'center',WH);
+  txt('CREDIT STATEMENT',M,28+6*f,15*f,true,'left',WH);
   let y=BH+10*f;
   const cds=(c.log&&c.log[0]&&c.log[0].d)||dstr();
   const info=(ll,lv,rl,rv)=>{doc.setFontSize(12*f);
