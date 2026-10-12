@@ -1580,12 +1580,14 @@ window.creditHistory=(id,fresh)=>{
 window.returnHistEdit=(id,ix,back)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix]; if(e.t!=='Balance edit') return;
+  if(e.returned||e.rev){toast('Already returned');return;}
   const diff=e.a||0; if(Math.abs(diff)<0.005){toast('Nothing to return');return;}
   const oldB=Math.round(custBal(c)*100)/100, nb=Math.round((oldB-diff)*100)/100;
   const ds=(diff>0?'\u2212':'+')+pkr(Math.abs(diff));
   confirmDlg('Return balance edit?','\u270F\uFE0F Balance edit '+ds+' ('+fmtDT(e.d)+') will be reversed.<br><br>Balance: '+pkr(oldB)+' \u2192 '+pkr(nb)+'<br>Received stays '+pkr(c.received||0)+'.','RETURN',()=>{
     c.credit=Math.round(((c.credit||0)-diff)*100)/100;
-    c.log.push({t:'Balance edit',a:-diff,note:'Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
+    e.returned=true;
+    c.log.push({t:'Balance edit',a:-diff,rev:true,note:'Return: Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
     save(); (back==='resend'?resendList(id):creditHistory(id)); renderCredit(); toast('\u21A9\uFE0F Balance edit returned');
   });
 };
@@ -1597,8 +1599,9 @@ window.resendList=id=>{
     const amt=`<b style="color:${(e.a||0)>=0?'var(--green)':'var(--red)'}">${(e.a||0)<0?'\u2212':'+'}${pkr(Math.abs(e.a||0))}</b>`;
     const det=[e.items,e.note].filter(Boolean).join(' \u00b7 ');
     const detH=det?`<br><span class="sub">${esc(det)}</span>`:'';
-    const ret=isB?`<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend')" title="Return this edit">\u21A9\uFE0F</button>`
-      :(e.a>0?`<button class="hist-del" onclick="event.stopPropagation();returnCredit(${id},${ix})" title="Return this credit">\u21A9\uFE0F</button>`:'');
+    const canRet=!e.returned&&!e.rev;
+    const ret=!canRet?'<span class="sub" title="Returned" style="color:var(--green)">✓</span>':(isB?`<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend')" title="Return this edit">\u21A9\uFE0F</button>`
+      :(e.a>0?`<button class="hist-del" onclick="event.stopPropagation();returnCredit(${id},${ix})" title="Return this credit">\u21A9\uFE0F</button>`:''));
     return `<div class="kv"><span>${ic} <b>${e.t}</b>${detH}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}${ret}<button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix},'resend')" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
   openSheet(`<h3>\u21BB Resend — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${edits.length} entries \u00b7 newest first</div>${rows||'<p class="note">No entries yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="addCreditMore(${id})">Back</button><button class="btn-go" onclick="addCreditMore(${id})">Done</button></div>`);
 };
@@ -1610,6 +1613,7 @@ function parseCreditItems(str){
 window.returnCredit=(id,ix)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix]; if(e.t!=='Credit') return;
+  if(e.returned||e.rev){toast('Already returned');return;}
   const a=e.a||0; if(!(a>0)){toast('Nothing to return');return;}
   const pitems=(e.pitems&&e.pitems.length)?e.pitems.map(l=>({productId:l.productId,qty:l.qty})):parseCreditItems(e.items);
   const restore=pitems.map(l=>({l,p:l.productId!=null?DB.products.find(x=>x.id===l.productId):DB.products.find(x=>String(x.name||'').toLowerCase()===String(l.name||'').toLowerCase())}));
@@ -1624,14 +1628,16 @@ window.returnCredit=(id,ix)=>{
     c.items=(c.items||[]).filter(l=>(l.qty||0)>0);
     c.product=(c.items||[]).map(l=>l.name).join(', ');
     c.credit=Math.round(((c.credit||0)-a)*100)/100;
-    c.log.push({t:'Credit',a:-a,note:'Return of credit ('+fmtDT(e.d)+')',d:dtstr(),profit:-(e.profit||0)});
+    e.returned=true;
+    c.log.push({t:'Credit',a:-a,note:'Return of credit ('+fmtDT(e.d)+')',d:dtstr(),profit:-(e.profit||0),rev:true});
     save(); resendList(id); renderCredit(); renderStock(); toast('↩️ Credit returned');
   });
 };
 window.delHist=(id,ix,back)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix];
-  confirmDlg('Delete history entry?','"'+e.t+' · '+pkr(e.a)+'" ('+fmtDT(e.d)+') will be removed from history. Balances stay unchanged.','DELETE',()=>{
+  const stockNote=(e.t==='Credit'&&e.items)?'<br>⚠️ Stock will NOT be returned. To undo properly (stock back + credit reversed), use ↩️ Return in Resend instead.':'';
+  confirmDlg('Delete history entry?','"'+e.t+' · '+pkr(e.a)+'" ('+fmtDT(e.d)+') will be removed from history. Balances stay unchanged.'+stockNote,'DELETE',()=>{
     c.log.splice(ix,1); save(); (back==='resend'?resendList(id):creditHistory(id)); renderCredit(); toast('🗑️ History entry deleted'); });
 };
 window.addWusool=id=>{
