@@ -1454,9 +1454,7 @@ window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
   $('cc-psearch').value=''; credPickQ=''; renderCredPick(); renderCredCart();
   toast('✅ Added: '+p.name); };
-window.credCost=(ix,v)=>{ const l=credCart[ix]; if(!l) return;
-  const nv=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); l.cost=nv;
-  const p=DB.products.find(x=>x.id===l.productId); if(p){ p.cost=nv; save(); } };
+
 function credCartTotal(){ return credCart.reduce((s,l)=>s+l.qty*l.rate,0); }
 function renderCredCart(){
   const box=$('cc-cart'); if(!box) return;
@@ -1470,7 +1468,7 @@ function renderCredCart(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="credRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div></div>
-        <div><label class="fl">COST</label><input class="rate-in" type="number" min="0" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="credCost(${ix},this.value)"></div>
+        <div><label class="fl">COST</label><div class="sub" style="padding:9px 2px;white-space:nowrap">${p&&p.cost!=null?('\u2713 '+pkr(p.cost)):('<span style="color:var(--red)">\u26A0\uFE0F STOCK me dalo</span>')}</div></div>
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('cred',ix)}</div></div>`; }).join('')+
@@ -1497,7 +1495,7 @@ window.saveCredit=()=>{
   for(const l of credCart){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
   for(const l of credCart){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
-  const items=credCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  const items=credCart.map(l=>{ const pp=findProd(l.productId); return {productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:pp?pp.cost:null,unit:l.unit,total:l.qty*l.rate}; });
   const newId=DB.seq.c++;
   DB.customers.push({ id:newId, custId:cid, name, phone:$('cc-phone').value.trim(),
     product:items.map(l=>l.name).join(', '), items, saleRate:camt, discount:0,
@@ -1753,7 +1751,7 @@ function renderMoreCart(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="moreRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div></div>
-        <div><label class="fl">COST</label><input class="rate-in" type="number" min="0" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="moreCost(${ix},this.value)"></div>
+        <div><label class="fl">COST</label><div class="sub" style="padding:9px 2px;white-space:nowrap">${p&&p.cost!=null?('\u2713 '+pkr(p.cost)):('<span style="color:var(--red)">\u26A0\uFE0F STOCK me dalo</span>')}</div></div>
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('more',ix)}</div></div>`; }).join('')+
@@ -1772,13 +1770,11 @@ window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return;
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
   qtyReject=null; l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
 window.moreRm=ix=>{ qtyReject=null; moreCart.splice(ix,1); renderMoreCart(); };
-window.moreCost=(ix,v)=>{ const l=moreCart[ix]; if(!l) return;
-  const nv=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); l.cost=nv;
-  const p=DB.products.find(x=>x.id===l.productId); if(p){ p.cost=nv; save(); } };
+
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!guardQtyEdit('more')) return;
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
-  const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  const items=moreCart.map(l=>{ const pp=findProd(l.productId); return {productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:pp?pp.cost:null,unit:l.unit,total:l.qty*l.rate}; });
   for(const l of items){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
   for(const l of items){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
@@ -1817,7 +1813,7 @@ function renderEditItems(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
-        <div><label class="fl">COST</label><input class="rate-in" type="number" min="0" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="editCost(${ix},this.value)"></div>
+        <div><label class="fl">COST</label><div class="sub" style="padding:9px 2px;white-space:nowrap">${(()=>{const pp=findProd(l.productId);return pp&&pp.cost!=null?('\u2713 '+pkr(pp.cost)):('<span style="color:var(--red)">\u26A0\uFE0F STOCK me dalo</span>');})()}</div></div>
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${mx} in stock!</div>`:''}${qtyWarnHtml('edit',ix)}</div></div>`; }).join('')+
@@ -1835,9 +1831,7 @@ window.editRate=(ix,v,el)=>{ const l=editItems[ix]; if(!l) return; l.rate=Math.m
   const t=$('e-items'); if(t){ const elb=t.querySelector('.cart-total b'); if(elb) elb.textContent=pkr(editItemsTotal()); }
   const ca=$('e-credit'); if(ca) ca.value=editItemsTotal().toFixed(0); };
 window.editRm=ix=>{ editItems.splice(ix,1); renderEditItems(); };
-window.editCost=(ix,v)=>{ const l=editItems[ix]; if(!l) return;
-  const nv=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); l.cost=nv;
-  const p=DB.products.find(x=>x.id===l.productId); if(p){ p.cost=nv; save(); } };
+
 function renderEditPick(q){
   const box=$('e-pick-list'); if(!box) return;
   if(!q){ box.innerHTML=''; return; }
@@ -1866,7 +1860,7 @@ window.saveEditCustomer=id=>{
   for(const l of editItems){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const camt=Math.max(0,parseFloat($('e-credit').value)||0);
   c.name=name; c.phone=$('e-phone').value.trim();
-  c.items=editItems.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  c.items=editItems.map(l=>{ const pp=findProd(l.productId); return {productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:pp?pp.cost:null,unit:l.unit,total:l.qty*l.rate}; });
   if(c.items.length) c.product=c.items.map(l=>l.name).join(', ');
   c.qty=c.items.reduce((s,l)=>s+l.qty,0);
   c.credit=camt; c.saleRate=0;
