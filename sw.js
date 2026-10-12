@@ -1,5 +1,5 @@
 /* Paper Stock offline support v13 — v82: network-first for app shell (updates apply on every online load), cache fallback offline */
-const CACHE='paper-stock-v119';
+const CACHE='paper-stock-v120';
 const ASSETS=['./','./index.html','./app.js','./auth.js?v=1','./lib/jspdf.umd.min.js','./style.css','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
