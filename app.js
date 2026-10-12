@@ -1604,16 +1604,21 @@ window.editBalance=id=>{
   openSheet(`<h3>✏️ Edit balance — ${esc(c.name)}</h3>
     <div class="sub" style="margin-bottom:8px">Current balance: <b>${pkr(b)}</b> (Credit ${pkr(c.credit||0)} − Received ${pkr(c.received||0)})</div>
     <div class="fld"><span class="fld-lbl">New balance</span><div class="fld-in"><input id="eb-amt" type="number" inputmode="decimal" value="${b}"><span class="pkr" data-cur>PKR</span></div></div>
-    <div class="sub">Naya balance likho — Received khud adjust ho jayega.</div>
+    <div class="sub">Naya balance likho — farq Credit me adjust hoga (Received same rahega).</div>
     <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveBalance(${id})">Save</button></div>`);
 };
 window.saveBalance=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const v=parseFloat($('eb-amt').value); if(isNaN(v)){toast('Enter amount');return;}
-  const nb=Math.round(v*100)/100;
-  c.received=Math.round(((c.credit||0)-nb)*100)/100;
-  c.log=c.log||[]; c.log.push({t:'Balance edit',a:nb,d:dtstr()});
-  save(); creditDetail(id); renderCredit(); toast('✅ Balance updated');
+  const nb=Math.round(v*100)/100, oldB=Math.round(custBal(c)*100)/100;
+  const diff=Math.round((nb-oldB)*100)/100;
+  if(!diff){ creditDetail(id); return; }
+  const ds=(diff>0?'+':'\u2212')+pkr(Math.abs(diff));
+  confirmDlg('Edit balance?','Are you sure you want to add '+ds+' to Credit?<br><br>Balance: '+pkr(oldB)+' \u2192 '+pkr(nb)+'<br>Received stays '+pkr(c.received||0)+'.','YES',()=>{
+    c.credit=Math.round(((c.credit||0)+diff)*100)/100;
+    c.log=c.log||[]; c.log.push({t:'Balance edit',a:diff,note:'Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
+    save(); creditDetail(id); renderCredit(); toast('\u2705 Balance updated');
+  });
 };
 let moreCart=[];
 window.addCreditMore=id=>{
