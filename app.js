@@ -1411,7 +1411,7 @@ window.saveCredit=()=>{
 window.creditDetail=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const b=custBal(c);
-  openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3><button class="hist-box" onclick="creditHistory(${c.id})">📜 History${(c.log&&c.log.length)?' ('+c.log.length+')':''}</button></div>
+  openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3><button class="hist-box" onclick="creditHistory(${c.id},1)">📜 History${(c.log&&c.log.length)?' ('+c.log.length+')':''}</button></div>
     <div class="kv"><span>📞 Number</span><b>${esc(c.phone||'—')}</b></div>
     ${(c.items&&c.items.length)?c.items.map(l=>{const pl=l.cost!=null?(l.qty*((l.rate||0)-l.cost)>0?'<span class="mpl mp-pos">▲</span>':(l.qty*((l.rate||0)-l.cost)<0?'<span class="mpl mp-neg">▼</span>':'')):'';return `<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}${pl}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`;}).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
     ${(c.saleRate&&!(c.items&&c.items.length))?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
@@ -1433,10 +1433,41 @@ window.creditDetail=id=>{
     <div class="mrow"><button class="btn-ghost danger-t" onclick="delCustomer(${c.id})">Delete</button>
     <button class="btn-go" onclick="closeSheet()">Close</button></div>`);
 };
-window.creditHistory=id=>{
+let histSelMode=false, histSelDates=[];
+window.histFileTap=(id,dk,ev)=>{
+  if(histSelMode){ window.toggleHistSel(id,dk); return; }
+  const gk=String(dk).replace(/[^0-9]/g,'')||'x';
+  const g=document.getElementById('hg-'+id+'-'+gk); if(!g) return;
+  g.classList.toggle('hidden');
+  const ar=ev.currentTarget.querySelector('.xarw'); if(ar)ar.textContent=g.classList.contains('hidden')?'\u25BC':'\u25B2';
+};
+window.toggleHistSel=(id,dk)=>{
+  const i=histSelDates.indexOf(dk);
+  if(i>=0)histSelDates.splice(i,1); else histSelDates.push(dk);
+  paintHistSel(id);
+};
+function paintHistSel(id){
+  const files=[...document.querySelectorAll('.hfile')];
+  files.forEach(f=>{ const on=histSelDates.includes(f.getAttribute('data-dk'));
+    f.classList.toggle('hsel-on',on);
+    const cb=f.querySelector('.hsel-cb'); if(cb)cb.textContent=on?'\u2611':'\u2610'; });
+  const gb=document.getElementById('hist-gen-btn');
+  if(gb){ gb.textContent='\ud83d\udcc4 PDF ('+histSelDates.length+')'; gb.disabled=!histSelDates.length; }
+  const sa=document.getElementById('hist-sa-btn');
+  if(sa)sa.textContent=(histSelDates.length&&histSelDates.length===files.length)?'Clear All':'Select All';
+}
+window.histSelectAll=id=>{
+  const all=[...document.querySelectorAll('.hfile')].map(f=>f.getAttribute('data-dk'));
+  histSelDates=(histSelDates.length===all.length)?[]:all.slice();
+  paintHistSel(id);
+};
+window.histSelModeToggle=(id,on)=>{ histSelMode=!!on; if(!histSelMode)histSelDates=[]; creditHistory(id); };
+window.creditHistory=(id,fresh)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  if(fresh){ histSelMode=false; histSelDates=[]; }
   const log=c.log||[], groups={};
   log.forEach((e,ix)=>{ const dk=String(e.d||'').split(' ')[0]||'??'; (groups[dk]=groups[dk]||[]).push({e,ix}); });
+  histSelDates=histSelDates.filter(dk=>groups[dk]);
   const ghtml=Object.keys(groups).sort().reverse().map(dk=>{
     const g=groups[dk], gk=dk.replace(/[^0-9]/g,'')||'x';
     let cr=0, rv=0; const parts=[];
@@ -1447,9 +1478,11 @@ window.creditHistory=id=>{
       const det=[e.items,e.note].filter(Boolean).join(' \u00b7 ');
       return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:''}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px"><b>${pkr(e.a)}</b><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix})" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
     const gid='hg-'+id+'-'+gk;
-    return `<div class="hfile"><div class="hfile-top" onclick="var g=document.getElementById('${gid}');g.classList.toggle('hidden');this.querySelector('.xarw').textContent=g.classList.contains('hidden')?'\u25BC':'\u25B2'"><div><b>\uD83D\uDCC5 ${dk==='??'?'??':fmtDate(dk)}</b><div class="sub">${g.length} entries${parts.length?' \u00b7 \uD83D\uDCC4 '+esc(parts.slice(0,4).join(', '))+(parts.length>4?' +'+(parts.length-4)+' more':''):''}</div></div><div style="text-align:right"><div style="font-weight:800">\uD83D\uDCB0 ${pkr(cr)}</div><div style="font-weight:800;color:var(--green)">\uD83D\uDCB5 ${pkr(rv)}</div><span class="xarw">\u25BC</span><div style="margin-top:6px"><button class="mini-pdf" onclick="event.stopPropagation();shareDateHistPDF(${id},'${dk}')">\uD83D\uDCC4 PDF</button></div></div></div><div id="${gid}" class="hidden">${rows}</div></div>`;
+    const sel=histSelDates.includes(dk);
+    return `<div class="hfile${sel?' hsel-on':''}" data-dk="${dk}"><div class="hfile-top" onclick="histFileTap(${id},'${dk}',event)">${histSelMode?`<span class="hsel-cb">${sel?'\u2611':'\u2610'}</span>`:''}<div><b>\uD83D\uDCC5 ${dk==='??'?'??':fmtDate(dk)}</b><div class="sub">${g.length} entries${parts.length?' \u00b7 \uD83D\uDCC4 '+esc(parts.slice(0,4).join(', '))+(parts.length>4?' +'+(parts.length-4)+' more':''):''}</div></div><div style="text-align:right"><div style="font-weight:800">\uD83D\uDCB0 ${pkr(cr)}</div><div style="font-weight:800;color:var(--green)">\uD83D\uDCB5 ${pkr(rv)}</div><span class="xarw">\u25BC</span><div style="margin-top:6px"><button class="mini-pdf" onclick="event.stopPropagation();shareDateHistPDF(${id},'${dk}')">\uD83D\uDCC4 PDF</button></div></div></div><div id="${gid}" class="hidden">${rows}</div></div>`;
   }).join('');
-  openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><div class="sub">${log.length} entries \u00b7 tap a date file to open it</div>${log.length?`<button class="hist-del" onclick="delAllHist(${id})">\uD83D\uDDD1\uFE0F Delete All</button>`:``}</div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
+  openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">${histSelMode?`<button class="btn-ghost" id="hist-sa-btn" onclick="histSelectAll(${id})">Select All</button><button class="btn-go" id="hist-gen-btn" onclick="genHistPDF(${id})" disabled>\ud83d\udcc4 PDF (0)</button><button class="btn-ghost" onclick="histSelModeToggle(${id},false)">\u2715</button>`:`<div class="sub">${log.length} entries \u00b7 tap a date file to open it</div><div style="display:flex;gap:6px"><button class="mini-pdf" onclick="histSelModeToggle(${id},true)">\ud83d\udcc4 PDF</button>${log.length?`<button class="hist-del" onclick="delAllHist(${id})">\ud83d\uddd1\ufe0f Delete All</button>`:''}</div>`}</div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
+  if(histSelMode)paintHistSel(id);
 };
 window.delHist=(id,ix)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
@@ -2111,6 +2144,93 @@ window.delAllHist=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log.length){toast('No history to delete');return;}
   confirmDlg('Delete ALL history?','All '+c.log.length+' history entries for '+c.name+' will be removed. Balances stay unchanged.','DELETE ALL',()=>{
     c.log=[]; save(); creditHistory(id); renderCredit(); toast('All history deleted'); });
+};
+function selectedHistPDF(c,dates){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,M=14,bw=W-2*M, prof=DB.profile;
+  const A=[127,29,29],B=[220,38,38],TC=[153,27,27],RED=[220,38,38],GREEN=[22,163,74];
+  const WH=[255,255,255], BH=30, GN=48;
+  const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
+  const head=(l1,l2,l3)=>{ for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
+    txt(String(prof.name||'Paper Store').toUpperCase(),W/2,BH*0.32,20,true,'center',WH);
+    txt(l1,W/2,BH*0.54,12,true,'center',WH);
+    let by=BH*0.74;
+    if(l2){txt(l2,W/2,by,10.5,false,'center',WH);by+=5;}
+    if(l3){txt(l3,W/2,by,11,true,'center',WH);}
+    return BH+10; };
+  const cols=[['Time',28],['Details',bw-28-38],['Amount',38]];
+  const tableHead=y=>{ const rh=8; let x=M; doc.setFillColor(TC[0],TC[1],TC[2]);
+    cols.forEach(cc=>{doc.rect(x,y,cc[1],rh,'FD');x+=cc[1];}); x=M;
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
+    cols.forEach(cc=>{doc.text(cc[0],x+cc[1]/2,y+rh/2+1.6,{align:'center'});x+=cc[1];});
+    doc.setTextColor(0,0,0); return y+rh; };
+  const srow=(y,label,val,col)=>{ const rh=8; let x3=M;
+    doc.rect(x3,y,bw-38,rh);doc.rect(x3+bw-38,y,38,rh);
+    doc.setFont('helvetica','normal');doc.setFontSize(11);
+    doc.text(label,x3+bw-38-2,y+rh/2+1.6,{align:'right'});
+    doc.setTextColor(col[0],col[1],col[2]);doc.setFont('helvetica','bold');
+    doc.text(rsFmt(val),x3+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);
+    return y+rh; };
+  const balCol=b=>Math.abs(b)<0.005?GREEN:RED;
+  const log=c.log||[];
+  let gCr=0,gRv=0;
+  dates.forEach((dk,di)=>{
+    if(di>0)doc.addPage();
+    let y=head('CREDIT HISTORY','Customer: '+String(c.name||'')+'   (ID '+String(c.custId||c.id)+')','Date: '+fmtDate(dk));
+    y=tableHead(y);
+    const entries=log.filter(e=>String(e.d||'').split(' ')[0]===dk);
+    let dCr=0,dRv=0; const rh=8;
+    entries.forEach(e=>{
+      const det=e.t+((e.items||e.note)?' - '+[e.items,e.note].filter(Boolean).join(' - '):'');
+      if(e.t==='Credit')dCr+=e.a||0; if(e.t==='Received')dRv+=e.a||0;
+      const tm=String(e.d||'').split(' ')[1]||'';
+      const nl=doc.splitTextToSize(String(det),cols[1][1]-3).length;
+      const hh=Math.max(rh,Math.min(nl,3)*6);
+      if(y+hh>282){doc.addPage();y=14;}
+      let x2=M;cols.forEach(cc=>{doc.rect(x2,y,cc[1],hh,'D');x2+=cc[1];});
+      doc.setFont('helvetica','normal');doc.setFontSize(10);
+      doc.text(tm,M+2,y+rh/2+1.2);
+      const ls=doc.splitTextToSize(String(det),cols[1][1]-3).slice(0,3);doc.text(ls,M+28+2,y+rh/2+1.2);
+      const hcol=e.t==='Received'?GREEN:(e.t==='Credit'?[0,0,0]:[180,83,9]);
+      doc.setFont('helvetica','bold');doc.setTextColor(hcol[0],hcol[1],hcol[2]);
+      doc.text(rsFmt(e.a),M+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);
+      y+=hh;});
+    const dBal=dCr-dRv;
+    y=srow(y,'Total Credit',dCr,[0,0,0]);
+    y=srow(y,'Total Received',dRv,GREEN);
+    y=srow(y,'Balance',dBal,balCol(dBal));
+    gCr+=dCr; gRv+=dRv;
+  });
+  doc.addPage();
+  let y=head('GRAND TOTAL','Customer: '+String(c.name||'')+'   (ID '+String(c.custId||c.id)+')',
+    'Dates: '+fmtDate(dates[0])+(dates.length>1?' to '+fmtDate(dates[dates.length-1]):'')+'  ('+dates.length+' date'+(dates.length>1?'s':'')+')');
+  y+=6;
+  const gBal=gCr-gRv;
+  y=srow(y,'Total Credit',gCr,[0,0,0]);
+  y=srow(y,'Total Received',gRv,GREEN);
+  doc.setFont('helvetica','bold');doc.setFontSize(14);
+  doc.setTextColor(RED[0],RED[1],RED[2]);
+  y=srow(y,'TOTAL BALANCE',gBal,balCol(gBal));
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(140,140,140);
+  doc.text('Generated by PaperPilot',W/2,y+10,{align:'center'});doc.setTextColor(0,0,0);
+  return doc.output('blob');
+}
+window.genHistPDF=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c)return;
+  if(!window.jspdf){toast('PDF engine loading...');return;}
+  const dates=histSelDates.slice().sort();
+  if(!dates.length){toast('Select at least one date');return;}
+  try{
+    const blob=selectedHistPDF(c,dates);
+    const fn='HISTORY_'+(c.custId||c.id)+'_'+dates.length+'dates.pdf';
+    const file=new File([blob],fn,{type:'application/pdf'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:'History '+dates.length+' dates'}).catch(()=>{});
+    }else{
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast('PDF downloaded');
+    }
+  }catch(e){toast('PDF failed');}
 };
 window.shareBillPDF=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s){toast('Sale not found');return;}

@@ -108,6 +108,8 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .hfile{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:8px;overflow:hidden}
 .hfile-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;cursor:pointer}
 .mini-pdf{border:1px solid #e2e8f0;background:#fff;border-radius:9px;padding:6px 10px;font-weight:800;font-size:12px;color:#1c2733;cursor:pointer}
+.hsel-cb{font-size:20px;margin-right:4px}
+.hfile.hsel-on{border-color:#16a34a;background:#f0fdf4}
 .sort-box{flex:none;border:1.5px solid #cfd6e0;background:#fff;border-radius:14px;padding:0 12px;font-weight:800;font-size:13px;color:var(--teal-d);cursor:pointer;white-space:nowrap}
 .search-row .grow{flex:1;margin:0}
 .pick-item{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #e5e9f0;border-radius:12px;margin-bottom:8px;cursor:pointer;background:#fbfcfe}
