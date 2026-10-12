@@ -1239,9 +1239,20 @@ window.openCreditSort=()=>{
 window.setCreditSort=v=>{ creditSort=v; paintCreditSort(); closeSheet(); renderCredit(); };
 $('credit-search').oninput=e=>{ creditQ=e.target.value.toLowerCase(); renderCredit(); };
 const custBal=c=>(c.credit||0)-(c.received||0);
+let creditProfitTot=0;
+function paintProfit(){
+  const el=$('c-profit'), eye=$('profit-eye'); if(!el||!eye) return;
+  if(DB.profitShow){ el.textContent=pkr(creditProfitTot); el.classList.remove('masked'); eye.textContent='\uD83D\uDC41\uFE0F'; }
+  else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); eye.textContent='\uD83D\uDE48'; }
+  el.style.color=creditProfitTot<0?'var(--red)':'var(--green)';
+}
+window.toggleProfitEye=()=>{ DB.profitShow=!DB.profitShow; save(); paintProfit(); };
 function renderCredit(){
   const tot=DB.customers.reduce((s,c)=>s+custBal(c),0);
   $('c-total').textContent=pkr(tot); $('c-count').textContent=DB.customers.length+' customers';
+  const rc=$('c-recv'); if(rc) rc.textContent=pkr(DB.customers.reduce((a,c)=>a+(c.received||0),0));
+  creditProfitTot=DB.customers.reduce((a,c)=>a+(c.items||[]).reduce((t,l)=>t+(l.cost!=null?(l.qty||0)*((l.rate||0)-(l.cost||0)):0),0),0);
+  paintProfit();
   paintCreditSort();
   const nP=DB.customers.filter(c=>custBal(c)>0).length, nC=DB.customers.filter(c=>custBal(c)<=0).length;
   const sc=(id,n)=>{const el=$(id); if(el) el.textContent='('+n+')';};
