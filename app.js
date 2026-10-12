@@ -1226,17 +1226,36 @@ window.exportCSV=kind=>{
 $('btn-export-csv').onclick=()=>exportCSV('sales');
 
 /* ================= CREDIT ================= */
-let creditQ='';
+let creditQ='', creditFilter='record', creditSort='medium';
+function paintCreditSort(){ const b=$('csort-btn'); if(b) b.textContent=(creditSort==='high'?'High':creditSort==='low'?'Low':'Sort')+' \u25BE'; }
+window.setCreditFilter=f=>{ creditFilter=f; document.querySelectorAll('#cseg .seg-btn').forEach(b=>b.classList.toggle('active',b.dataset.cf===f)); renderCredit(); };
+window.openCreditSort=()=>{
+  const row=(id,t,sub)=>`<div class="menu-row" onclick="setCreditSort('${id}')"><span class="ic">${id==='high'?'\u2B06':id==='low'?'\u2B07':'\u25AA'}</span><span>${t}<div class="sub" style="font-weight:400">${sub}</div></span>${creditSort===id?'<span class="arw" style="color:var(--teal)">\u2713</span>':'<span class="arw">\u203A</span>'}</div>`;
+  openSheet(`<h3>Sort customers</h3>`+row('high','High','Highest balance first')+row('medium','Medium','Normal order')+row('low','Low','Lowest balance first')+`<div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Back</button></div>`);
+};
+window.setCreditSort=v=>{ creditSort=v; paintCreditSort(); closeSheet(); renderCredit(); };
 $('credit-search').oninput=e=>{ creditQ=e.target.value.toLowerCase(); renderCredit(); };
 const custBal=c=>(c.credit||0)-(c.received||0);
 function renderCredit(){
   const tot=DB.customers.reduce((s,c)=>s+custBal(c),0);
   $('c-total').textContent=pkr(tot); $('c-count').textContent=DB.customers.length+' customers';
-  const list=DB.customers.filter(c=>(c.name||'').toLowerCase().includes(creditQ)||String(c.custId).includes(creditQ)).reverse();
-  $('credit-list').innerHTML=list.map(c=>{ const b=custBal(c);
+  paintCreditSort();
+  let list=DB.customers.filter(c=>(c.name||'').toLowerCase().includes(creditQ)||String(c.custId).includes(creditQ)).reverse();
+  if(creditFilter==='pending') list=list.filter(c=>custBal(c)>0);
+  else if(creditFilter==='clear') list=list.filter(c=>custBal(c)<=0);
+  if(creditSort==='high') list=list.slice().sort((a,b)=>custBal(b)-custBal(a));
+  else if(creditSort==='low') list=list.slice().sort((a,b)=>custBal(a)-custBal(b));
+  const prodShort=c=>{ const its=(c.items||[]).map(l=>l.name).filter(Boolean);
+    const src=its.length?its:(c.product?String(c.product).split(',').map(x=>x.trim()).filter(Boolean):[]);
+    if(!src.length) return '';
+    return src.length>3?esc(src.slice(0,3).join(', '))+' <b>+'+(src.length-3)+' more</b>':esc(src.join(', ')); };
+  const cpl=c=>{ const its=c.items||[]; if(!its.some(l=>l.cost!=null)) return '';
+    const p=its.some(l=>(l.qty||0)*((l.rate||0)-(l.cost||0))>0), n=its.some(l=>(l.qty||0)*((l.rate||0)-(l.cost||0))<0);
+    return (p?'<span class="mpl mp-pos" title="Profit">▲</span>':'')+(n?'<span class="mpl mp-neg" title="Loss">▼</span>':''); };
+  $('credit-list').innerHTML=list.map(c=>{ const b=custBal(c), ps=prodShort(c);
     return `<div class="cust-card" onclick="creditDetail(${c.id})">
-      <div class="nm">${esc(c.name)} <span class="sub">ID ${c.custId}</span></div>
-      <div class="meta">📞 ${esc(c.phone||'—')}${c.product?' · 📄 '+esc(c.product):''}</div>
+      <div class="nm">${esc(c.name)} <span class="sub">ID ${c.custId}</span>${cpl(c)}</div>
+      <div class="meta">📞 ${esc(c.phone||'—')}${ps?' · 📄 '+ps:''}</div>
       <div class="bal">Balance: ${pkr(b)}</div>
       ${c.promiseDate?`<div class="pd">⏰ Promise: ${fmtDate(c.promiseDate)}</div>`:''}
     </div>`; }).join('')||'<p class="note" style="color:#fff">No credit customers yet</p>';
