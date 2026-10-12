@@ -1271,7 +1271,7 @@ function renderCredit(){
   const mRecv=DB.customers.reduce((a,c)=>a+(c.log||[]).reduce((t,e)=>t+((e.t==='Received'&&String(e.d||'').slice(0,7)===mk)?(e.a||0):0),0),0);
   const rc=$('c-recv'); if(rc) rc.textContent=pkr(mRecv);
   const rm=$('c-recv-m'); if(rm) rm.textContent=mLbl;
-  creditProfitMonth=DB.customers.reduce((a,c)=>a+(c.log||[]).reduce((t,e)=>t+((e.t==='Credit'&&String(e.d||'').slice(0,7)===mk)?(e.profit||0):0),0),0);
+  creditProfitMonth=DB.customers.reduce((a,c)=>a+(c.log||[]).reduce((t,e)=>{ if(String(e.d||'').slice(0,7)!==mk) return t; if(e.t==='Credit') return t+(e.profit||0); if(e.t==='Balance edit') return t+(e.profit!=null?e.profit:(e.a||0)); return t; },0),0);
   const pm=$('c-prof-m'); if(pm) pm.textContent=mLbl;
   paintProfit();
   paintCreditSort();
@@ -1340,7 +1340,8 @@ function renderCreditHistory(keepFocus){
   rows.sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));
   const q=chQ.toLowerCase().trim();
   const fr=rows.filter(r=>!q||(r.name||'').toLowerCase().includes(q)||String(r.cid==null?'':r.cid).includes(q)||(r.phone||'').includes(q));
-  const pProf=fr.reduce((x,r)=>x+(r.t==='Credit'?(r.profit||0):0),0);
+  const beProf=DB.customers.reduce((x,c)=>x+(c.log||[]).reduce((t,e)=>{ if(e.t!=='Balance edit'||!chMatch(e)) return t; return t+(e.profit!=null?e.profit:(e.a||0)); },0),0);
+  const pProf=fr.reduce((x,r)=>x+(r.t==='Credit'?(r.profit||0):0),0)+beProf;
   const pRecv=fr.reduce((x,r)=>x+(r.t==='Received'?(r.a||0):0),0);
   const pend=DB.customers.reduce((x,c)=>x+custBal(c),0);
   const plbl=chPeriod.type==='all'?'All time':chPeriod.type==='year'?('Year '+chPeriod.key):monthName(chPeriod.key);
@@ -1611,7 +1612,7 @@ window.returnHistEdit=(id,ix,back,from)=>{
   confirmDlg('Return balance edit?','\u270F\uFE0F Balance edit '+ds+' ('+fmtDT(e.d)+') will be reversed.<br><br>Balance: '+pkr(oldB)+' \u2192 '+pkr(nb)+'<br>Received stays '+pkr(c.received||0)+'.','RETURN',()=>{
     c.credit=Math.round(((c.credit||0)-diff)*100)/100;
     e.returned=true;
-    c.log.push({t:'Balance edit',a:-diff,rev:true,note:'Return: Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
+    c.log.push({t:'Balance edit',a:-diff,profit:-diff,rev:true,note:'Return: Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
     save(); (back==='resend'?resendList(id,from||undefined):creditHistory(id)); renderCredit(); toast('\u21A9\uFE0F Balance edit returned');
   });
 };
@@ -1707,9 +1708,9 @@ window.saveBalance=id=>{
   const diff=Math.round((nb-oldB)*100)/100;
   if(!diff){ creditDetail(id); return; }
   const ds=(diff>0?'+':'\u2212')+pkr(Math.abs(diff));
-  confirmDlg('Edit balance?','Are you sure you want to add '+ds+' to Credit?<br><br>Balance: '+pkr(oldB)+' \u2192 '+pkr(nb)+'<br>Received stays '+pkr(c.received||0)+'.','YES',()=>{
+  confirmDlg('Edit balance?','Are you sure you want to add '+ds+' to Credit?<br><br>Balance: '+pkr(oldB)+' \u2192 '+pkr(nb)+'<br>Profit adjusts by '+ds+'.<br>Received stays '+pkr(c.received||0)+'.','YES',()=>{
     c.credit=Math.round(((c.credit||0)+diff)*100)/100;
-    c.log=c.log||[]; c.log.push({t:'Balance edit',a:diff,note:'Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
+    c.log=c.log||[]; c.log.push({t:'Balance edit',a:diff,profit:diff,note:'Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
     save(); creditDetail(id); renderCredit(); toast('\u2705 Balance updated');
   });
 };
