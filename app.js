@@ -1449,6 +1449,7 @@ function renderCredPick(){
     </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  if(!(p.qty>0)){ toast('\u26A0\uFE0F \u201c'+p.name+'\u201d not available in stock!'); return; }
   const ex=credCart.find(x=>x.productId===id);
   if(ex){ if(ex.qty+1>p.qty){ toast('Only '+p.qty+' "'+p.name+'" in stock!'); return; } ex.qty++; }
   else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
@@ -1495,9 +1496,9 @@ window.saveCredit=()=>{
   if(!credCart.length&&!camt){ toast('Add a product or enter credit amount'); return; }
   for(const l of credCart){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
-  for(const l of credCart){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const items=credCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
   if(belowCostAsk(items,()=>window.saveCredit())) return;
+  for(const l of items){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const newId=DB.seq.c++;
   DB.customers.push({ id:newId, custId:cid, name, phone:$('cc-phone').value.trim(),
     product:items.map(l=>l.name).join(', '), items, saleRate:camt, discount:0,
@@ -1737,6 +1738,7 @@ function renderMorePick(q){
     </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickMoreCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  if(!(p.qty>0)){ toast('\u26A0\uFE0F \u201c'+p.name+'\u201d not available in stock!'); return; }
   const ex=moreCart.find(x=>x.productId===id);
   if(ex){ if(ex.qty+1>p.qty){ toast('Only '+p.qty+' "'+p.name+'" in stock!'); return; } ex.qty++; }
   else moreCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
@@ -1788,9 +1790,9 @@ window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!guardQtyEdit('more')) return;
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
   const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
-  if(belowCostAsk(items,()=>window.saveCreditMore(id))) return;
   for(const l of items){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
+  if(belowCostAsk(items,()=>window.saveCreditMore(id))) return;
   for(const l of items){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   c.credit+=a;
   if(items.length){ c.items=(c.items||[]).concat(items);
@@ -1857,6 +1859,9 @@ function renderEditPick(q){
     </div>`).join('')||'<p class="note">No product found</p>';
 }
 window.pickEditItem=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  if(editCust!=null){ const c0=DB.customers.find(x=>x.id===editCust);
+    const back=c0?((c0.items||[]).filter(x=>String(x.productId)===String(id)).reduce((ss,x)=>ss+x.qty,0)):0;
+    if(!((p.qty||0)+back>0)){ toast('\u26A0\uFE0F \u201c'+p.name+'\u201d not available in stock!'); return; } }
   const ex=editItems.find(x=>x.productId===id);
   if(ex){ const mx=maxFor('edit',ex); if(ex.qty+1>mx){ toast('Only '+mx+' "'+p.name+'" in stock!'); return; } ex.qty++; }
   else editItems.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
