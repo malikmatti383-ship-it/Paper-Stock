@@ -196,7 +196,7 @@
       <div class="white-card"><div class="lbl">Total credit remaining</div><div class="big-num red-num" id="c-total">PKR 0.00</div><div class="sub" id="c-count"></div></div>
       <div class="search-row"><div class="search-wrap grow">🔍 <input id="credit-search" placeholder="Search name or ID..."></div>
         <button class="btn-add" id="btn-add-credit">＋</button></div>
-      <div class="crow"><div class="seg grow" id="cseg"><button class="seg-btn" data-cf="pending" onclick="setCreditFilter('pending')">Pending</button><button class="seg-btn" data-cf="clear" onclick="setCreditFilter('clear')">Clear</button><button class="seg-btn active" data-cf="record" onclick="setCreditFilter('record')">Record</button></div><button class="sort-box" id="csort-btn" onclick="openCreditSort()">Sort ▾</button></div>
+      <div class="crow"><div class="seg grow" id="cseg"><button class="seg-btn" data-cf="pending" onclick="setCreditFilter('pending')">Pending <span class="cnt" id="cf-n-pending"></span></button><button class="seg-btn" data-cf="clear" onclick="setCreditFilter('clear')">Clear <span class="cnt" id="cf-n-clear"></span></button><button class="seg-btn active" data-cf="record" onclick="setCreditFilter('record')">Record <span class="cnt" id="cf-n-record"></span></button></div><button class="sort-box" id="csort-btn" onclick="openCreditSort()">Sort ▾</button></div>
       <div id="credit-list"></div>
     </div>
   </section>

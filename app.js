@@ -1240,6 +1240,9 @@ function renderCredit(){
   const tot=DB.customers.reduce((s,c)=>s+custBal(c),0);
   $('c-total').textContent=pkr(tot); $('c-count').textContent=DB.customers.length+' customers';
   paintCreditSort();
+  const nP=DB.customers.filter(c=>custBal(c)>0).length, nC=DB.customers.filter(c=>custBal(c)<=0).length;
+  const sc=(id,n)=>{const el=$(id); if(el) el.textContent='('+n+')';};
+  sc('cf-n-pending',nP); sc('cf-n-clear',nC); sc('cf-n-record',DB.customers.length);
   let list=DB.customers.filter(c=>(c.name||'').toLowerCase().includes(creditQ)||String(c.custId).includes(creditQ)).reverse();
   if(creditFilter==='pending') list=list.filter(c=>custBal(c)>0);
   else if(creditFilter==='clear') list=list.filter(c=>custBal(c)<=0);
