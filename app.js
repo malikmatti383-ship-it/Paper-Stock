@@ -1316,7 +1316,7 @@ window.chSetCustom=v=>{ if(v) chPeriod={type:'custom',key:v}; renderCreditHistor
 window.openCreditHistory=()=>{ chPeriod={type:'month',key:curMonthKey()}; chQ=''; renderCreditHistory(); };
 function renderCreditHistory(keepFocus){
   const rows=[];
-  DB.customers.forEach(c=>{ (c.log||[]).forEach(e=>{ if(!chMatch(e)) return;
+  DB.customers.forEach(c=>{ (c.log||[]).forEach(e=>{ if(e.t==='Balance edit') return; if(!chMatch(e)) return;
     rows.push({d:e.d,t:e.t,a:e.a,items:e.items,note:e.note,profit:e.profit||0,
       name:c.name,cid:c.custId,phone:c.phone||''}); }); });
   rows.sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));
@@ -1490,7 +1490,7 @@ window.creditDetail=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const b=custBal(c);
   const ebAdj=(c.log||[]).reduce((t,e)=>(e.t==='Balance edit'&&e.note&&String(e.note).includes('\u2192'))?t+(e.a||0):t,0);
-  openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3><button class="hist-box" onclick="creditHistory(${c.id},1)">📜 History${(c.log&&c.log.length)?' ('+c.log.length+')':''}</button></div>
+  openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3><button class="hist-box" onclick="creditHistory(${c.id},1)">📜 History${((c.log||[]).filter(e=>e.t!=='Balance edit').length)?' ('+(c.log||[]).filter(e=>e.t!=='Balance edit').length+')':''}</button></div>
     <div class="kv"><span>📞 Number</span><b>${esc(c.phone||'—')}</b></div>
     ${(c.items&&c.items.length)?c.items.map(l=>{const pl=l.cost!=null?(l.qty*((l.rate||0)-l.cost)>0?'<span class="mpl mp-pos">▲</span>':(l.qty*((l.rate||0)-l.cost)<0?'<span class="mpl mp-neg">▼</span>':'')):'';return `<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}${pl}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`;}).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
     ${(c.saleRate&&!(c.items&&c.items.length))?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
@@ -1555,7 +1555,7 @@ window.creditHistory=(id,fresh)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   if(fresh){ histSelMode=false; histSelDates=[]; }
   const log=c.log||[], groups={};
-  log.forEach((e,ix)=>{ const dk=String(e.d||'').split(' ')[0]||'??'; (groups[dk]=groups[dk]||[]).push({e,ix}); });
+  log.forEach((e,ix)=>{ if(e.t==='Balance edit') return; const dk=String(e.d||'').split(' ')[0]||'??'; (groups[dk]=groups[dk]||[]).push({e,ix}); });
   histSelDates=histSelDates.filter(dk=>groups[dk]);
   const ghtml=Object.keys(groups).sort().reverse().map(dk=>{
     const g=groups[dk], gk=dk.replace(/[^0-9]/g,'')||'x';
