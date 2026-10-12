@@ -2072,7 +2072,6 @@ function creditPDF(c){
   const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
   if(cl)txt(cl,W/2,19+6*f,10*f,false,'center',WH);
   txt('CREDIT STATEMENT',M,28+6*f,15*f,true,'left',WH);
-  doc.setFillColor(220,38,38);doc.roundedRect(W-M-44,28+6*f-4,44,4,2,2,'F');
   let y=BH+10*f;
   const cds=(c.log&&c.log[0]&&c.log[0].d)||dstr();
   const info=(ll,lv,rl,rv)=>{doc.setFontSize(12*f);
@@ -2181,7 +2180,6 @@ function dateHistPDF(c,dk,entries){
   const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
   if(cl)txt(cl,W/2,19,9.5,false,'center',WH);
   txt('CREDIT HISTORY',M,28,14,true,'left',WH);
-  doc.setFillColor(220,38,38);doc.roundedRect(W-M-44,24,44,4,2,2,'F');
   txt('Customer: '+String(c.name||'')+'   (ID '+String(c.custId||c.id)+')',W/2,35,10.5,false,'center',WH);
   txt('Date: '+fmtDate(dk),W/2,40.5,11,true,'center',WH);
   let y=BH+10, rh=8;
@@ -2251,7 +2249,6 @@ function selectedHistPDF(c,dates){
     const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
   if(cl)txt(cl,W/2,19,9.5,false,'center',WH);
     txt(l1,M,28,14,true,'left',WH);
-    doc.setFillColor(220,38,38);doc.roundedRect(W-M-44,24,44,4,2,2,'F');
     let by=35;
     if(l2){txt(l2,W/2,by,10.5,false,'center',WH);by+=5.5;}
     if(l3){txt(l3,W/2,by,11,true,'center',WH);}
