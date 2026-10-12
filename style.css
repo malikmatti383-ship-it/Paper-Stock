@@ -95,6 +95,8 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .link-btn{background:none;border:none;color:var(--teal);font-size:15px;font-weight:600;cursor:pointer;padding:6px 0}
 .two-col{display:flex;gap:10px}
 .two-col>div{flex:1}
+.three-col{display:flex;gap:8px}
+.three-col>div{flex:1;min-width:0}
 .pkr-wrap{position:relative}
 .pkr-wrap span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#aab3c0;font-size:14px}
 .pkr-wrap input{padding-right:58px!important}
