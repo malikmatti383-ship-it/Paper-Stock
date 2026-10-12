@@ -386,6 +386,7 @@ function paintNextIds(){ const t='ID'+DB.seq.s; const a=$('sale-next-id'),b=$('w
 function fmtDate(ds){ const d=new Date(ds+'T12:00'); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 const dtstr=d=>{ d=d||new Date(); return dstr(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
 function fmtDT(x){ if(!x) return ''; const p=String(x).split(' '); let r=p[0]; try{ r=fmtDate(p[0]); }catch(e){} if(p[1]){ const t=p[1].split(':'); let h=parseInt(t[0],10)||0; const ap=h>=12?'PM':'AM'; h=h%12||12; r+=' \u00b7 '+h+':'+(t[1]||'00')+' '+ap; } return r; }
+function fmtDTs(x){ if(!x) return ''; const p=String(x).split(' '); let r=p[0]; try{ const d=new Date(p[0]+'T12:00'); r=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }catch(e){} if(p[1]){ const t=p[1].split(':'); let h=parseInt(t[0],10)||0; const ap=h>=12?'PM':'AM'; h=h%12||12; r+=' \u00b7 '+h+':'+(t[1]||'00')+' '+ap; } return r; }
 function setSeg(id){ ['seg-sale','seg-ws','seg-exp'].forEach(x=>$(x).classList.toggle('active',x===id));
   $('sale-form').classList.toggle('hidden',id!=='seg-sale');
   $('ws-form').classList.toggle('hidden',id!=='seg-ws');
@@ -1980,8 +1981,9 @@ function billPDF(s){
 function creditPDF(c){
   const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
   const W=210,M=14,bw=W-2*M;
-  const prof=DB.profile;
-  const A=[127,29,29],B=[220,38,38],TC=[153,27,27];
+  const prof=DB.profile, bc=billTheme();
+  const hx=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+  const A=hx(bc[0]),B=hx(bc[1]),TC=hx(bc[2]);
   const items=(c.items&&c.items.length)?c.items:[];
   const nIt=Math.max(items.length,1);
   let f=Math.min(1,270/(205+9*nIt)); f=Math.max(f,0.55);
@@ -2045,7 +2047,7 @@ function creditPDF(c){
   if(hlog.length){
     if(y>235){doc.addPage();y=14;}
     y+=4*f;doc.setFont('helvetica','bold');doc.setFontSize(12*f);
-    doc.setTextColor(RED[0],RED[1],RED[2]);doc.text('TRANSACTION HISTORY',M,y);doc.setTextColor(0,0,0);y+=7*f;
+    doc.setTextColor(TC[0],TC[1],TC[2]);doc.text('TRANSACTION HISTORY',M,y);doc.setTextColor(0,0,0);y+=7*f;
     const hc=[['Date / Time',52],['Details',bw-52-38],['Amount',38]];
     let hx0=M;doc.setFillColor(TC[0],TC[1],TC[2]);hc.forEach(cc=>{doc.rect(hx0,y,cc[1],rh,'FD');hx0+=cc[1];});hx0=M;
     doc.setFont('helvetica','bold');doc.setFontSize(11*f);doc.setTextColor(255,255,255);
@@ -2092,8 +2094,9 @@ window.shareCreditPDF=id=>{
 };
 function dateHistPDF(c,dk,entries){
   const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
-  const W=210,M=14,bw=W-2*M, prof=DB.profile;
-  const A=[127,29,29],B=[220,38,38],TC=[153,27,27],RED=[220,38,38],GREEN=[22,163,74];
+  const W=210,M=14,bw=W-2*M, prof=DB.profile, bc=billTheme();
+  const hx=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+  const A=hx(bc[0]),B=hx(bc[1]),TC=hx(bc[2]),RED=[220,38,38],GREEN=[22,163,74];
   const BH=30,GN=48;
   for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
@@ -2104,7 +2107,7 @@ function dateHistPDF(c,dk,entries){
   txt('Customer: '+String(c.name||'')+'   (ID '+String(c.custId||c.id)+')',W/2,by,10.5,false,'center',WH);by+=5;
   txt('Date: '+fmtDate(dk),W/2,by,11,true,'center',WH);
   let y=BH+10, rh=8;
-  const cols=[['S.N',12],['Time',26],['Details',bw-12-26-38],['Amount',38]];
+  const cols=[['S.N',12],['Date/Time',40],['Details',bw-12-40-38],['Amount',38]];
   let x=M;doc.setFillColor(TC[0],TC[1],TC[2]);cols.forEach(cc=>{doc.rect(x,y,cc[1],rh,'FD');x+=cc[1];});x=M;
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
   cols.forEach(cc=>{doc.text(cc[0],x+cc[1]/2,y+rh/2+1.6,{align:'center'});x+=cc[1];});doc.setTextColor(0,0,0);y+=rh;
@@ -2119,8 +2122,8 @@ function dateHistPDF(c,dk,entries){
     let x2=M;cols.forEach(cc=>{doc.rect(x2,y,cc[1],hh,'D');x2+=cc[1];});
     doc.setFont('helvetica','normal');doc.setFontSize(10);
     doc.text(String(si+1),M+2,y+rh/2+1.2);
-    doc.text(tm,M+12+2,y+rh/2+1.2);
-    const ls=doc.splitTextToSize(String(det),cols[2][1]-3).slice(0,3);doc.text(ls,M+12+26+2,y+rh/2+1.2);
+    doc.text(fmtDTs(e.d),M+12+2,y+rh/2+1.2);
+    const ls=doc.splitTextToSize(String(det),cols[2][1]-3).slice(0,3);doc.text(ls,M+12+40+2,y+rh/2+1.2);
     const hcol=e.t==='Received'?GREEN:(e.t==='Credit'?[0,0,0]:[180,83,9]);
     doc.setFont('helvetica','bold');doc.setTextColor(hcol[0],hcol[1],hcol[2]);
     doc.text(rsFmt(e.a),M+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);
@@ -2159,8 +2162,9 @@ window.delAllHist=id=>{
 };
 function selectedHistPDF(c,dates){
   const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
-  const W=210,M=14,bw=W-2*M, prof=DB.profile;
-  const A=[127,29,29],B=[220,38,38],TC=[153,27,27],RED=[220,38,38],GREEN=[22,163,74];
+  const W=210,M=14,bw=W-2*M, prof=DB.profile, bc=billTheme();
+  const hx=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+  const A=hx(bc[0]),B=hx(bc[1]),TC=hx(bc[2]),RED=[220,38,38],GREEN=[22,163,74];
   const WH=[255,255,255], BH=30, GN=48;
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const head=(l1,l2,l3)=>{ for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
@@ -2170,7 +2174,7 @@ function selectedHistPDF(c,dates){
     if(l2){txt(l2,W/2,by,10.5,false,'center',WH);by+=5;}
     if(l3){txt(l3,W/2,by,11,true,'center',WH);}
     return BH+10; };
-  const cols=[['S.N',12],['Time',26],['Details',bw-12-26-38],['Amount',38]];
+  const cols=[['S.N',12],['Date/Time',40],['Details',bw-12-40-38],['Amount',38]];
   const tableHead=y=>{ const rh=8; let x=M; doc.setFillColor(TC[0],TC[1],TC[2]);
     cols.forEach(cc=>{doc.rect(x,y,cc[1],rh,'FD');x+=cc[1];}); x=M;
     doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
@@ -2202,8 +2206,8 @@ function selectedHistPDF(c,dates){
       let x2=M;cols.forEach(cc=>{doc.rect(x2,y,cc[1],hh,'D');x2+=cc[1];});
       doc.setFont('helvetica','normal');doc.setFontSize(10);
       doc.text(String(si+1),M+2,y+rh/2+1.2);
-      doc.text(tm,M+12+2,y+rh/2+1.2);
-      const ls=doc.splitTextToSize(String(det),cols[2][1]-3).slice(0,3);doc.text(ls,M+12+26+2,y+rh/2+1.2);
+      doc.text(fmtDTs(e.d),M+12+2,y+rh/2+1.2);
+      const ls=doc.splitTextToSize(String(det),cols[2][1]-3).slice(0,3);doc.text(ls,M+12+40+2,y+rh/2+1.2);
       const hcol=e.t==='Received'?GREEN:(e.t==='Credit'?[0,0,0]:[180,83,9]);
       doc.setFont('helvetica','bold');doc.setTextColor(hcol[0],hcol[1],hcol[2]);
       doc.text(rsFmt(e.a),M+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);
