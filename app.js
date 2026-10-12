@@ -1246,20 +1246,33 @@ window.openCreditSort=()=>{
 window.setCreditSort=v=>{ creditSort=v; paintCreditSort(); closeSheet(); renderCredit(); };
 $('credit-search').oninput=e=>{ creditQ=e.target.value.toLowerCase(); renderCredit(); };
 const custBal=c=>(c.credit||0)-(c.received||0);
-let creditProfitTot=0;
+function itemsProfit(its){ return (its||[]).reduce((t,l)=>t+(l.cost!=null?(l.qty||0)*((l.rate||0)-(l.cost||0)):0),0); }
+function curMonthKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function monthName(key){ try{ const p=String(key).split('-'); return new Date(+p[0],+p[1]-1,1).toLocaleDateString('en-GB',{month:'short',year:'numeric'}); }catch(e){ return key; } }
+let profitBackfilled=false;
+function backfillCreditProfit(){ if(profitBackfilled) return; profitBackfilled=true; let ch=false;
+  DB.customers.forEach(c=>{ const cr=(c.log||[]).filter(e=>e.t==='Credit');
+    if(cr.length===1&&cr[0].profit==null){ cr[0].profit=itemsProfit(c.items); ch=true; } });
+  if(ch) save(); }
+let creditProfitMonth=0;
 function paintProfit(){
   const el=$('c-profit'), eye=$('profit-eye'); if(!el||!eye) return;
   eye.classList.toggle('eye-off',!DB.profitShow);
-  if(DB.profitShow){ el.textContent=pkr(creditProfitTot); el.classList.remove('masked'); }
+  if(DB.profitShow){ el.textContent=pkr(creditProfitMonth); el.classList.remove('masked'); }
   else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); }
-  el.style.color=creditProfitTot<0?'var(--red)':'var(--green)';
+  el.style.color=creditProfitMonth<0?'var(--red)':'var(--green)';
 }
 window.toggleProfitEye=()=>{ DB.profitShow=!DB.profitShow; save(); paintProfit(); paintSalesProfit(); };
 function renderCredit(){
   const tot=DB.customers.reduce((s,c)=>s+custBal(c),0);
   $('c-total').textContent=pkr(tot); $('c-count').textContent=DB.customers.length+' customers';
-  const rc=$('c-recv'); if(rc) rc.textContent=pkr(DB.customers.reduce((a,c)=>a+(c.received||0),0));
-  creditProfitTot=DB.customers.reduce((a,c)=>a+(c.items||[]).reduce((t,l)=>t+(l.cost!=null?(l.qty||0)*((l.rate||0)-(l.cost||0)):0),0),0);
+  backfillCreditProfit();
+  const mk=curMonthKey(), mLbl=monthName(mk);
+  const mRecv=DB.customers.reduce((a,c)=>a+(c.log||[]).reduce((t,e)=>t+((e.t==='Received'&&String(e.d||'').slice(0,7)===mk)?(e.a||0):0),0),0);
+  const rc=$('c-recv'); if(rc) rc.textContent=pkr(mRecv);
+  const rm=$('c-recv-m'); if(rm) rm.textContent=mLbl;
+  creditProfitMonth=DB.customers.reduce((a,c)=>a+(c.log||[]).reduce((t,e)=>t+((e.t==='Credit'&&String(e.d||'').slice(0,7)===mk)?(e.profit||0):0),0),0);
+  const pm=$('c-prof-m'); if(pm) pm.textContent=mLbl;
   paintProfit();
   paintCreditSort();
   const nP=DB.customers.filter(c=>custBal(c)>0).length, nC=DB.customers.filter(c=>custBal(c)<=0).length;
@@ -1284,6 +1297,51 @@ function renderCredit(){
       <div class="bal" style="color:${Math.abs(b)<0.005?'var(--green)':'var(--red)'}">Balance: ${pkr(b)}</div>
       ${c.promiseDate?`<div class="pd">⏰ Promise: ${fmtDate(c.promiseDate)}</div>`:''}
     </div>`; }).join('')||'<p class="note" style="color:#fff">No credit customers yet</p>';
+}
+/* ---- Full credit history: tap the Total Credit (pending) box ----
+   Profit + Received for the chosen period; Pending is ALWAYS all-time (never resets). */
+let chPeriod={type:'month',key:curMonthKey()}, chQ='';
+function chMatch(e){ const d=String(e.d||'');
+  if(chPeriod.type==='all') return true;
+  if(chPeriod.type==='year') return d.slice(0,4)===chPeriod.key;
+  return d.slice(0,7)===chPeriod.key; }
+window.chSetPeriod=t=>{ const n=new Date();
+  if(t==='month') chPeriod={type:'month',key:curMonthKey()};
+  else if(t==='last'){ const d=new Date(n.getFullYear(),n.getMonth()-1,1); chPeriod={type:'last',key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}; }
+  else if(t==='year') chPeriod={type:'year',key:String(n.getFullYear())};
+  else if(t==='all') chPeriod={type:'all',key:''};
+  else chPeriod={type:'custom',key:curMonthKey()};
+  renderCreditHistory(); };
+window.chSetCustom=v=>{ if(v) chPeriod={type:'custom',key:v}; renderCreditHistory(); };
+window.openCreditHistory=()=>{ chPeriod={type:'month',key:curMonthKey()}; chQ=''; renderCreditHistory(); };
+function renderCreditHistory(keepFocus){
+  const rows=[];
+  DB.customers.forEach(c=>{ (c.log||[]).forEach(e=>{ if(!chMatch(e)) return;
+    rows.push({d:e.d,t:e.t,a:e.a,items:e.items,note:e.note,profit:e.profit||0,
+      name:c.name,cid:c.custId,phone:c.phone||''}); }); });
+  rows.sort((a,b)=>String(b.d||'').localeCompare(String(a.d||'')));
+  const q=chQ.toLowerCase().trim();
+  const fr=rows.filter(r=>!q||(r.name||'').toLowerCase().includes(q)||String(r.cid==null?'':r.cid).includes(q)||(r.phone||'').includes(q));
+  const pProf=fr.reduce((x,r)=>x+(r.t==='Credit'?(r.profit||0):0),0);
+  const pRecv=fr.reduce((x,r)=>x+(r.t==='Received'?(r.a||0):0),0);
+  const pend=DB.customers.reduce((x,c)=>x+custBal(c),0);
+  const plbl=chPeriod.type==='all'?'All time':chPeriod.type==='year'?('Year '+chPeriod.key):monthName(chPeriod.key);
+  const sb=(t,v)=>`<button class="seg-btn${chPeriod.type===v?' active':''}" onclick="chSetPeriod('${v}')">${t}</button>`;
+  const listHtml=fr.map(r=>{ const ic=r.t==='Received'?'\uD83D\uDCB5':'\uD83D\uDCB0';
+    return `<div class="kv"><span>${ic} <b>${r.t}</b> \u2014 ${esc(r.name||'')} <span class="sub">ID ${esc(String(r.cid==null?'':r.cid))}${r.phone?' \u00b7 '+esc(r.phone):''}</span>${r.items?`<br><span class="sub">\uD83D\uDCC4 ${esc(String(r.items))}</span>`:''}<br><span class="sub">\uD83D\uDD52 ${fmtDT(r.d)}</span></span><b style="color:${r.t==='Received'?'var(--green)':'inherit'}">${pkr(r.a)}</b></div>`; }).join('');
+  openSheet(`<h3>\uD83D\uDCCA Credit History</h3>
+    <div class="seg" style="margin-bottom:8px">${sb('This Month','month')}${sb('Last Month','last')}${sb('Year','year')}${sb('All','all')}${sb('Custom','custom')}</div>
+    ${chPeriod.type==='custom'?`<input type="month" id="ch-month" value="${chPeriod.key}" onchange="chSetCustom(this.value)" style="margin-bottom:8px">`:''}
+    <div class="lbl-c2" style="margin:4px 0 8px">${esc(plbl)}</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div class="cs-box" style="flex:1"><div class="lbl">Profit</div><div class="cs-num" style="color:${pProf<0?'var(--red)':'var(--green)'}">${pkr(pProf)}</div></div>
+      <div class="cs-box" style="flex:1"><div class="lbl">Received</div><div class="cs-num green-num">${pkr(pRecv)}</div></div>
+      <div class="cs-box" style="flex:1"><div class="lbl">Pending</div><div class="cs-num red-num">${pkr(pend)}</div></div>
+    </div>
+    <div class="search-wrap" style="margin-bottom:8px">\uD83D\uDD0D <input id="ch-q" placeholder="Search ID, name, number..." value="${esc(chQ)}" oninput="chQ=this.value;renderCreditHistory(true)"></div>
+    <div style="max-height:44vh;overflow:auto">${listHtml||'<p class="note">No entries in this period</p>'}</div>
+    <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
+  if(keepFocus){ const qi=$('ch-q'); if(qi){ try{ qi.focus(); qi.setSelectionRange(qi.value.length,qi.value.length); }catch(_){} } }
 }
 let credPickQ='';
 $('btn-add-credit').onclick=()=>{
@@ -1423,7 +1481,7 @@ window.saveCredit=()=>{
     qty:items.reduce((s,l)=>s+l.qty,0),
     credit:camt, received:0,
     promiseDate:$('cc-promise').value||'', promiseTime:$('cc-ptime').value||'',
-    log:[{t:'Credit',a:camt,d:dtstr(),items:items.map(l=>l.name).join(', ')}] });
+    log:[{t:'Credit',a:camt,d:dtstr(),items:items.map(l=>l.name).join(', '),profit:itemsProfit(items)}] });
   if(cid>=DB.seq.c) DB.seq.c=cid+1;
   save(); closeSheet(); renderCredit(); renderStock(); updateBellBadge(); credCart=[];
   creditDetail(newId); toast('✅ Credit saved');
@@ -1617,7 +1675,7 @@ window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(items.length){ c.items=(c.items||[]).concat(items);
     const nm=items.map(l=>l.name).join(', '); c.product=c.product?c.product+', '+nm:nm; }
   const mnote=($('m-note')&&$('m-note').value||'').trim();
-  c.log.push({t:'Credit',a,d:dtstr(),items:items.length?items.map(l=>l.name+(l.qty>1?' \u00d7 '+l.qty:'')).join(', '):'',note:mnote}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
+  c.log.push({t:'Credit',a,d:dtstr(),items:items.length?items.map(l=>l.name+(l.qty>1?' \u00d7 '+l.qty:'')).join(', '):'',note:mnote,profit:itemsProfit(items)}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
 let editItems=[];
 window.editCustomer=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -2153,6 +2211,7 @@ function dateHistPDF(c,dk,entries){
     doc.setTextColor(col[0],col[1],col[2]);doc.setFont('helvetica','bold');
     doc.text(rsFmt(val),x3+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);y+=rh;};
   srow('Total Credit',tcr,[0,0,0]); srow('Total Received',trv,GREEN);
+  const due1=tcr-trv; srow('Total Due',due1,Math.abs(due1)<0.005?GREEN:RED);
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(140,140,140);
   doc.text('Generated by PaperPilot',W/2,y+8,{align:'center'});doc.setTextColor(0,0,0);
   return doc.output('blob');
@@ -2234,7 +2293,7 @@ function selectedHistPDF(c,dates){
     const dBal=dCr-dRv; dayT[dk]={cr:dCr,rv:dRv};
     y=srow(y,'Total Credit',dCr,[0,0,0]);
     y=srow(y,'Total Received',dRv,GREEN);
-    y=srow(y,'Balance',dBal,balCol(dBal));
+    y=srow(y,'Total Due',dBal,balCol(dBal));
     gCr+=dCr; gRv+=dRv;
   });
   doc.addPage();
