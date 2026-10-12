@@ -1481,7 +1481,7 @@ window.saveCredit=()=>{
     qty:items.reduce((s,l)=>s+l.qty,0),
     credit:camt, received:0,
     promiseDate:$('cc-promise').value||'', promiseTime:$('cc-ptime').value||'',
-    log:[{t:'Credit',a:camt,d:dtstr(),items:items.map(l=>l.name).join(', '),profit:itemsProfit(items)}] });
+    log:[{t:'Credit',a:camt,d:dtstr(),items:items.map(l=>l.name).join(', '),profit:itemsProfit(items),pitems:items.map(l=>({productId:l.productId,qty:l.qty}))}] });
   if(cid>=DB.seq.c) DB.seq.c=cid+1;
   save(); closeSheet(); renderCredit(); renderStock(); updateBellBadge(); credCart=[];
   creditDetail(newId); toast('✅ Credit saved');
@@ -1598,19 +1598,34 @@ window.resendList=id=>{
     const det=[e.items,e.note].filter(Boolean).join(' \u00b7 ');
     const detH=det?`<br><span class="sub">${esc(det)}</span>`:'';
     const ret=isB?`<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend')" title="Return this edit">\u21A9\uFE0F</button>`
-      :(e.items===''&&e.a>0?`<button class="hist-del" onclick="event.stopPropagation();returnCredit(${id},${ix})" title="Return this credit">\u21A9\uFE0F</button>`:'');
+      :(e.a>0?`<button class="hist-del" onclick="event.stopPropagation();returnCredit(${id},${ix})" title="Return this credit">\u21A9\uFE0F</button>`:'');
     return `<div class="kv"><span>${ic} <b>${e.t}</b>${detH}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}${ret}<button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix},'resend')" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
   openSheet(`<h3>\u21BB Resend — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${edits.length} entries \u00b7 newest first</div>${rows||'<p class="note">No entries yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="addCreditMore(${id})">Back</button><button class="btn-go" onclick="addCreditMore(${id})">Done</button></div>`);
 };
+function parseCreditItems(str){
+  return String(str||'').split(',').map(x=>x.trim()).filter(Boolean).map(x=>{
+    const m=x.match(/^(.*) \u00d7 (\d+)$/);
+    return m?{name:m[1].trim(),qty:parseInt(m[2],10)||1}:{name:x,qty:1}; });
+}
 window.returnCredit=(id,ix)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix]; if(e.t!=='Credit') return;
   const a=e.a||0; if(!(a>0)){toast('Nothing to return');return;}
-  if(e.items!==''){toast('Stock credit: adjust stock manually');return;}
-  confirmDlg('Return credit?','\uD83D\uDCB0 Credit '+pkr(a)+' ('+fmtDT(e.d)+') will be reversed.<br><br>Credit: '+pkr(c.credit||0)+' \u2192 '+pkr((c.credit||0)-a)+'.','RETURN',()=>{
+  const pitems=(e.pitems&&e.pitems.length)?e.pitems.map(l=>({productId:l.productId,qty:l.qty})):parseCreditItems(e.items);
+  const restore=pitems.map(l=>({l,p:l.productId!=null?DB.products.find(x=>x.id===l.productId):DB.products.find(x=>String(x.name||'').toLowerCase()===String(l.name||'').toLowerCase())}));
+  const missing=restore.filter(r=>!r.p).map(r=>r.l.name||'');
+  const rlist=restore.filter(r=>r.p).map(r=>r.p.name+' × '+r.l.qty).join(', ');
+  confirmDlg('Return credit?','💰 Credit '+pkr(a)+' ('+fmtDT(e.d)+') will be reversed.'+(rlist?'<br>Stock back: '+esc(rlist):'')+(missing.length?'<br>⚠️ Not found in stock: '+esc(missing.join(', ')):'')+'<br><br>Credit: '+pkr(c.credit||0)+' → '+pkr((c.credit||0)-a)+'.','RETURN',()=>{
+    restore.forEach(r=>{ if(r.p) r.p.qty=(r.p.qty||0)+r.l.qty; });
+    pitems.forEach(l=>{ let need=l.qty;
+      (c.items||[]).forEach(cl=>{ if(need<=0) return;
+        const m=(l.productId!=null&&cl.productId===l.productId)||(l.name&&String(cl.name||'').toLowerCase()===String(l.name).toLowerCase());
+        if(m&&cl.qty>0){ const take=Math.min(cl.qty,need); cl.qty-=take; need-=take; } }); });
+    c.items=(c.items||[]).filter(l=>(l.qty||0)>0);
+    c.product=(c.items||[]).map(l=>l.name).join(', ');
     c.credit=Math.round(((c.credit||0)-a)*100)/100;
-    c.log.push({t:'Credit',a:-a,note:'Return of credit ('+fmtDT(e.d)+')',d:dtstr(),profit:0});
-    save(); resendList(id); renderCredit(); renderStock(); toast('\u21A9\uFE0F Credit returned');
+    c.log.push({t:'Credit',a:-a,note:'Return of credit ('+fmtDT(e.d)+')',d:dtstr(),profit:-(e.profit||0)});
+    save(); resendList(id); renderCredit(); renderStock(); toast('↩️ Credit returned');
   });
 };
 window.delHist=(id,ix,back)=>{
@@ -1736,7 +1751,7 @@ window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(items.length){ c.items=(c.items||[]).concat(items);
     const nm=items.map(l=>l.name).join(', '); c.product=c.product?c.product+', '+nm:nm; }
   const mnote=($('m-note')&&$('m-note').value||'').trim();
-  c.log.push({t:'Credit',a,d:dtstr(),items:items.length?items.map(l=>l.name+(l.qty>1?' \u00d7 '+l.qty:'')).join(', '):'',note:mnote,profit:itemsProfit(items)}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
+  c.log.push({t:'Credit',a,d:dtstr(),items:items.length?items.map(l=>l.name+(l.qty>1?' \u00d7 '+l.qty:'')).join(', '):'',note:mnote,profit:itemsProfit(items),pitems:items.map(l=>({productId:l.productId,qty:l.qty}))}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
 let editItems=[];
 window.editCustomer=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
