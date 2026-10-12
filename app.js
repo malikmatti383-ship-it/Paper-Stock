@@ -1435,11 +1435,21 @@ window.creditDetail=id=>{
 };
 window.creditHistory=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
-  const rows=(c.log&&c.log.length)?c.log.map((e,ix)=>({e,ix})).reverse().map(({e,ix})=>{
-    const ic=e.t==='Received'?'💵':(e.t==='Balance edit'?'✏️':'💰');
-    const det=[e.items,e.note].filter(Boolean).join(' · ');
-    return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:''}<br><span class="sub">🕒 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px"><b>${pkr(e.a)}</b><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix})" title="Delete entry">🗑️</button></span></div>`;}).join(''):'<p class="note">No history yet</p>';
-  openSheet(`<h3>📜 History — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${(c.log&&c.log.length)||0} entries · tap 🗑️ to delete an entry (balances stay unchanged)</div>${rows}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
+  const log=c.log||[], groups={};
+  log.forEach((e,ix)=>{ const dk=String(e.d||'').split(' ')[0]||'??'; (groups[dk]=groups[dk]||[]).push({e,ix}); });
+  const ghtml=Object.keys(groups).sort().reverse().map(dk=>{
+    const g=groups[dk], gk=dk.replace(/[^0-9]/g,'')||'x';
+    let cr=0, rv=0; const parts=[];
+    g.forEach(({e})=>{ if(e.t==='Credit')cr+=e.a||0; if(e.t==='Received')rv+=e.a||0;
+      if(e.items)String(e.items).split(', ').forEach(p=>{ if(p&&!parts.includes(p))parts.push(p); }); });
+    const rows=g.slice().reverse().map(({e,ix})=>{
+      const ic=e.t==='Received'?'\uD83D\uDCB5':(e.t==='Balance edit'?'\u270F\uFE0F':'\uD83D\uDCB0');
+      const det=[e.items,e.note].filter(Boolean).join(' \u00b7 ');
+      return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:''}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px"><b>${pkr(e.a)}</b><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix})" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
+    const gid='hg-'+id+'-'+gk;
+    return `<div class="hfile"><div class="hfile-top" onclick="var g=document.getElementById('${gid}');g.classList.toggle('hidden');this.querySelector('.xarw').textContent=g.classList.contains('hidden')?'\u25BC':'\u25B2'"><div><b>\uD83D\uDCC5 ${dk==='??'?'??':fmtDate(dk)}</b><div class="sub">${g.length} entries${parts.length?' \u00b7 \uD83D\uDCC4 '+esc(parts.slice(0,4).join(', '))+(parts.length>4?' +'+(parts.length-4)+' more':''):''}</div></div><div style="text-align:right"><div style="font-weight:800">\uD83D\uDCB0 ${pkr(cr)}</div><div style="font-weight:800;color:var(--green)">\uD83D\uDCB5 ${pkr(rv)}</div><span class="xarw">\u25BC</span></div></div><div id="${gid}" class="hidden">${rows}</div></div>`;
+  }).join('');
+  openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${log.length} entries \u00b7 tap a date file to open it \u00b7 \uD83D\uDDD1\uFE0F deletes an entry (balances stay unchanged)</div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
 };
 window.delHist=(id,ix)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
