@@ -1580,13 +1580,22 @@ window.delHist=(id,ix)=>{
     c.log.splice(ix,1); save(); creditHistory(id); renderCredit(); toast('🗑️ History entry deleted'); });
 };
 window.addWusool=id=>{
-  const c=DB.customers.find(x=>x.id===id);
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
   openSheet(`<h3>💵 Receive — ${esc(c.name)}</h3><div class="sub">Balance due: ${pkr(custBal(c))}</div>
-    <input id="w-amt" type="number" placeholder="Amount received">
-    <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveWusool(${id})">Save</button></div>`);
+    <input id="w-amt" type="number" placeholder="Amount received" oninput="wusoolCheck(${id})">
+    <div class="red-sub hidden" id="w-warn" style="margin:6px 0 0"></div>
+    <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" id="w-save" onclick="saveWusool(${id})">Save</button></div>`);
 };
-window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id);
+window.wusoolCheck=id=>{ const c=DB.customers.find(x=>x.id===id); if(!c) return false;
+  const bal=custBal(c), a=parseFloat(($('w-amt')||{}).value)||0;
+  const over=a>bal+0.005, w=$('w-warn'), sv=$('w-save');
+  if(w){ w.classList.toggle('hidden',!over);
+    if(over) w.textContent='\u26a0\ufe0f Only '+pkr(Math.max(0,bal))+' is due \u2014 cannot receive more!'; }
+  if(sv) sv.classList.toggle('off',over);
+  return !over; };
+window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const a=Math.max(0,parseFloat($('w-amt').value)||0); if(!a){toast('Enter amount');return;}
+  if(a>custBal(c)+0.005){ wusoolCheck(id); toast('\u26a0\ufe0f Cannot receive more than the due balance!'); return; }
   c.received+=a; c.log.push({t:'Received',a,d:dtstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
 /* ---- direct balance edit: sets Received so balance becomes the typed value ---- */
 window.editBalance=id=>{
