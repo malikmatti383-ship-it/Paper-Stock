@@ -1591,12 +1591,27 @@ window.returnHistEdit=(id,ix,back)=>{
 };
 window.resendList=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
-  const edits=(c.log||[]).map((e,ix)=>({e,ix})).filter(({e})=>e.t==='Balance edit').reverse();
+  const edits=(c.log||[]).map((e,ix)=>({e,ix})).filter(({e})=>e.t==='Balance edit'||e.t==='Credit').reverse();
   const rows=edits.map(({e,ix})=>{
+    const isB=e.t==='Balance edit', ic=isB?'\u270F\uFE0F':'\uD83D\uDCB0';
     const amt=`<b style="color:${(e.a||0)>=0?'var(--green)':'var(--red)'}">${(e.a||0)<0?'\u2212':'+'}${pkr(Math.abs(e.a||0))}</b>`;
-    const det=e.note?`<br><span class="sub">${esc(e.note)}</span>`:'';
-    return `<div class="kv"><span>\u270F\uFE0F <b>Balance edit</b>${det}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend')" title="Return this edit">\u21A9\uFE0F</button><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix},'resend')" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
-  openSheet(`<h3>\u21BB Resend — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${edits.length} balance edits \u00b7 newest first</div>${rows||'<p class="note">No balance edits yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="addCreditMore(${id})">Back</button><button class="btn-go" onclick="addCreditMore(${id})">Done</button></div>`);
+    const det=[e.items,e.note].filter(Boolean).join(' \u00b7 ');
+    const detH=det?`<br><span class="sub">${esc(det)}</span>`:'';
+    const ret=isB?`<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend')" title="Return this edit">\u21A9\uFE0F</button>`
+      :(e.items===''&&e.a>0?`<button class="hist-del" onclick="event.stopPropagation();returnCredit(${id},${ix})" title="Return this credit">\u21A9\uFE0F</button>`:'');
+    return `<div class="kv"><span>${ic} <b>${e.t}</b>${detH}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}${ret}<button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix},'resend')" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
+  openSheet(`<h3>\u21BB Resend — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${edits.length} entries \u00b7 newest first</div>${rows||'<p class="note">No entries yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="addCreditMore(${id})">Back</button><button class="btn-go" onclick="addCreditMore(${id})">Done</button></div>`);
+};
+window.returnCredit=(id,ix)=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
+  const e=c.log[ix]; if(e.t!=='Credit') return;
+  const a=e.a||0; if(!(a>0)){toast('Nothing to return');return;}
+  if(e.items!==''){toast('Stock credit: adjust stock manually');return;}
+  confirmDlg('Return credit?','\uD83D\uDCB0 Credit '+pkr(a)+' ('+fmtDT(e.d)+') will be reversed.<br><br>Credit: '+pkr(c.credit||0)+' \u2192 '+pkr((c.credit||0)-a)+'.','RETURN',()=>{
+    c.credit=Math.round(((c.credit||0)-a)*100)/100;
+    c.log.push({t:'Credit',a:-a,note:'Return of credit ('+fmtDT(e.d)+')',d:dtstr(),profit:0});
+    save(); resendList(id); renderCredit(); renderStock(); toast('\u21A9\uFE0F Credit returned');
+  });
 };
 window.delHist=(id,ix,back)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
@@ -1654,7 +1669,7 @@ window.saveBalance=id=>{
 let moreCart=[];
 window.addCreditMore=id=>{
   const c=DB.customers.find(x=>x.id===id); moreCart=[];
-  const nRe=(c.log||[]).filter(e=>e.t==='Balance edit').length;
+  const nRe=(c.log||[]).filter(e=>e.t==='Balance edit'||e.t==='Credit').length;
   openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">➕ Add credit — ${esc(c.name)}</h3><button class="mini-pdf" onclick="resendList(${id})">\u21BB Resend${nRe?' ('+nRe+')':''}</button></div>
     <div class="search-wrap">🔍 <input id="m-psearch" placeholder="Type product name..."></div>
     <div id="m-pick-list"></div>
