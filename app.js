@@ -1447,18 +1447,27 @@ window.toggleHistSel=(id,dk)=>{
   paintHistSel(id);
 };
 function paintHistSel(id){
-  const files=[...document.querySelectorAll('.hfile')];
-  files.forEach(f=>{ const on=histSelDates.includes(f.getAttribute('data-dk'));
+  const allf=[...document.querySelectorAll('.hfile')];
+  const files=allf.filter(f=>f.style.display!=='none');
+  allf.forEach(f=>{ const on=histSelDates.includes(f.getAttribute('data-dk'));
     f.classList.toggle('hsel-on',on);
     const cb=f.querySelector('.hsel-cb'); if(cb)cb.textContent=on?'\u2611':'\u2610'; });
   const gb=document.getElementById('hist-gen-btn');
   if(gb){ gb.textContent='\ud83d\udcc4 PDF ('+histSelDates.length+')'; gb.disabled=!histSelDates.length; }
   const sa=document.getElementById('hist-sa-btn');
-  if(sa)sa.textContent=(histSelDates.length&&histSelDates.length===files.length)?'Clear All':'Select All';
+  if(sa)sa.textContent=(histSelDates.length&&files.length&&files.every(f=>histSelDates.includes(f.getAttribute('data-dk'))))?'Clear All':'Select All';
 }
+window.histSearchGo=q=>{
+  const needle=String(q||'').toLowerCase().trim();
+  document.querySelectorAll('.hfile').forEach(f=>{
+    const hay=f.getAttribute('data-search')||'';
+    f.style.display=(!needle||hay.includes(needle))?'':'none';
+  });
+  if(histSelMode)paintHistSel();
+};
 window.histSelectAll=id=>{
-  const all=[...document.querySelectorAll('.hfile')].map(f=>f.getAttribute('data-dk'));
-  histSelDates=(histSelDates.length===all.length)?[]:all.slice();
+  const all=[...document.querySelectorAll('.hfile')].filter(f=>f.style.display!=='none').map(f=>f.getAttribute('data-dk'));
+  histSelDates=(all.length&&histSelDates.length===all.length&&all.every(dk=>histSelDates.includes(dk)))?[]:all.slice();
   paintHistSel(id);
 };
 window.histSelModeToggle=(id,on)=>{ histSelMode=!!on; if(!histSelMode)histSelDates=[]; creditHistory(id); };
@@ -1475,13 +1484,15 @@ window.creditHistory=(id,fresh)=>{
       if(e.items)String(e.items).split(', ').forEach(p=>{ if(p&&!parts.includes(p))parts.push(p); }); });
     const rows=g.slice().reverse().map(({e,ix})=>{
       const ic=e.t==='Received'?'\uD83D\uDCB5':(e.t==='Balance edit'?'\u270F\uFE0F':'\uD83D\uDCB0');
-      const det=[e.items,e.note].filter(Boolean).join(' \u00b7 ');
+      const itemsNum=e.items?String(e.items).split(', ').map((p,ii)=>(ii+1)+'. '+p).join(' \u00b7 '):'';
+      const det=[itemsNum,e.note].filter(Boolean).join(' \u00b7 ');
       return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:''}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px"><b>${pkr(e.a)}</b><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix})" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
     const gid='hg-'+id+'-'+gk;
+    const searchTxt=(dk+' '+(dk==='??'?'':fmtDate(dk))+' '+g.map(({e})=>{const pp=String(e.d||'').split(' ');return (pp[1]||'')+' '+fmtDT(e.d);}).join(' ')).toLowerCase();
     const sel=histSelDates.includes(dk);
-    return `<div class="hfile${sel?' hsel-on':''}" data-dk="${dk}"><div class="hfile-top" onclick="histFileTap(${id},'${dk}',event)">${histSelMode?`<span class="hsel-cb">${sel?'\u2611':'\u2610'}</span>`:''}<div><b>\uD83D\uDCC5 ${dk==='??'?'??':fmtDate(dk)}</b><div class="sub">${g.length} entries${parts.length?' \u00b7 \uD83D\uDCC4 '+esc(parts.slice(0,4).join(', '))+(parts.length>4?' +'+(parts.length-4)+' more':''):''}</div></div><div style="text-align:right"><div style="font-weight:800">\uD83D\uDCB0 ${pkr(cr)}</div><div style="font-weight:800;color:var(--green)">\uD83D\uDCB5 ${pkr(rv)}</div><span class="xarw">\u25BC</span><div style="margin-top:6px"><button class="mini-pdf" onclick="event.stopPropagation();shareDateHistPDF(${id},'${dk}')">\uD83D\uDCC4 PDF</button></div></div></div><div id="${gid}" class="hidden">${rows}</div></div>`;
+    return `<div class="hfile${sel?' hsel-on':''}" data-dk="${dk}" data-search="${esc(searchTxt)}"><div class="hfile-top" onclick="histFileTap(${id},'${dk}',event)">${histSelMode?`<span class="hsel-cb">${sel?'\u2611':'\u2610'}</span>`:''}<div><b>\uD83D\uDCC5 ${dk==='??'?'??':fmtDate(dk)}</b><div class="sub">${g.length} entries${parts.length?' \u00b7 \uD83D\uDCC4 '+esc(parts.slice(0,4).join(', '))+(parts.length>4?' +'+(parts.length-4)+' more':''):''}</div></div><div style="text-align:right"><div style="font-weight:800">\uD83D\uDCB0 ${pkr(cr)}</div><div style="font-weight:800;color:var(--green)">\uD83D\uDCB5 ${pkr(rv)}</div><span class="xarw">\u25BC</span><div style="margin-top:6px"><button class="mini-pdf" onclick="event.stopPropagation();shareDateHistPDF(${id},'${dk}')">\uD83D\uDCC4 PDF</button></div></div></div><div id="${gid}" class="hidden">${rows}</div></div>`;
   }).join('');
-  openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">${histSelMode?`<button class="btn-ghost" id="hist-sa-btn" onclick="histSelectAll(${id})">Select All</button><button class="btn-go" id="hist-gen-btn" onclick="genHistPDF(${id})" disabled>\ud83d\udcc4 PDF (0)</button><button class="btn-ghost" onclick="histSelModeToggle(${id},false)">\u2715</button>`:`<div class="sub">${log.length} entries \u00b7 tap a date file to open it</div><div style="display:flex;gap:6px"><button class="mini-pdf" onclick="histSelModeToggle(${id},true)">\ud83d\udcc4 PDF</button>${log.length?`<button class="hist-del" onclick="delAllHist(${id})">\ud83d\uddd1\ufe0f Delete All</button>`:''}</div>`}</div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
+  openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">${histSelMode?`<button class="btn-ghost" id="hist-sa-btn" onclick="histSelectAll(${id})">Select All</button><button class="btn-go" id="hist-gen-btn" onclick="genHistPDF(${id})" disabled>\ud83d\udcc4 PDF (0)</button><button class="btn-ghost" onclick="histSelModeToggle(${id},false)">\u2715</button>`:`<div class="sub">${log.length} entries \u00b7 tap a date file to open it</div><div style="display:flex;gap:6px"><button class="mini-pdf" onclick="histSelModeToggle(${id},true)">\ud83d\udcc4 PDF</button>${log.length?`<button class="hist-del" onclick="delAllHist(${id})">\ud83d\uddd1\ufe0f Delete All</button>`:''}</div>`}</div><div class="search-wrap" style="margin:2px 0 10px">🔍 <input id="hist-search" placeholder="Search date or time..." oninput="histSearchGo(this.value)"></div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
   if(histSelMode)paintHistSel(id);
 };
 window.delHist=(id,ix)=>{
@@ -2093,22 +2104,23 @@ function dateHistPDF(c,dk,entries){
   txt('Customer: '+String(c.name||'')+'   (ID '+String(c.custId||c.id)+')',W/2,by,10.5,false,'center',WH);by+=5;
   txt('Date: '+fmtDate(dk),W/2,by,11,true,'center',WH);
   let y=BH+10, rh=8;
-  const cols=[['Time',28],['Details',bw-28-38],['Amount',38]];
+  const cols=[['S.N',12],['Time',26],['Details',bw-12-26-38],['Amount',38]];
   let x=M;doc.setFillColor(TC[0],TC[1],TC[2]);cols.forEach(cc=>{doc.rect(x,y,cc[1],rh,'FD');x+=cc[1];});x=M;
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
   cols.forEach(cc=>{doc.text(cc[0],x+cc[1]/2,y+rh/2+1.6,{align:'center'});x+=cc[1];});doc.setTextColor(0,0,0);y+=rh;
   let tcr=0,trv=0;
-  entries.forEach(e=>{
+  entries.forEach((e,si)=>{
     const det=e.t+((e.items||e.note)?' - '+[e.items,e.note].filter(Boolean).join(' - '):'');
     if(e.t==='Credit')tcr+=e.a||0; if(e.t==='Received')trv+=e.a||0;
     const tm=String(e.d||'').split(' ')[1]||'';
-    const nl=doc.splitTextToSize(String(det),cols[1][1]-3).length;
+    const nl=doc.splitTextToSize(String(det),cols[2][1]-3).length;
     const hh=Math.max(rh,Math.min(nl,3)*6);
     if(y+hh>282){doc.addPage();y=14;}
     let x2=M;cols.forEach(cc=>{doc.rect(x2,y,cc[1],hh,'D');x2+=cc[1];});
     doc.setFont('helvetica','normal');doc.setFontSize(10);
-    doc.text(tm,M+2,y+rh/2+1.2);
-    const ls=doc.splitTextToSize(String(det),cols[1][1]-3).slice(0,3);doc.text(ls,M+28+2,y+rh/2+1.2);
+    doc.text(String(si+1),M+2,y+rh/2+1.2);
+    doc.text(tm,M+12+2,y+rh/2+1.2);
+    const ls=doc.splitTextToSize(String(det),cols[2][1]-3).slice(0,3);doc.text(ls,M+12+26+2,y+rh/2+1.2);
     const hcol=e.t==='Received'?GREEN:(e.t==='Credit'?[0,0,0]:[180,83,9]);
     doc.setFont('helvetica','bold');doc.setTextColor(hcol[0],hcol[1],hcol[2]);
     doc.text(rsFmt(e.a),M+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);
@@ -2158,7 +2170,7 @@ function selectedHistPDF(c,dates){
     if(l2){txt(l2,W/2,by,10.5,false,'center',WH);by+=5;}
     if(l3){txt(l3,W/2,by,11,true,'center',WH);}
     return BH+10; };
-  const cols=[['Time',28],['Details',bw-28-38],['Amount',38]];
+  const cols=[['S.N',12],['Time',26],['Details',bw-12-26-38],['Amount',38]];
   const tableHead=y=>{ const rh=8; let x=M; doc.setFillColor(TC[0],TC[1],TC[2]);
     cols.forEach(cc=>{doc.rect(x,y,cc[1],rh,'FD');x+=cc[1];}); x=M;
     doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
@@ -2180,17 +2192,18 @@ function selectedHistPDF(c,dates){
     y=tableHead(y);
     const entries=log.filter(e=>String(e.d||'').split(' ')[0]===dk);
     let dCr=0,dRv=0; const rh=8;
-    entries.forEach(e=>{
+    entries.forEach((e,si)=>{
       const det=e.t+((e.items||e.note)?' - '+[e.items,e.note].filter(Boolean).join(' - '):'');
       if(e.t==='Credit')dCr+=e.a||0; if(e.t==='Received')dRv+=e.a||0;
       const tm=String(e.d||'').split(' ')[1]||'';
-      const nl=doc.splitTextToSize(String(det),cols[1][1]-3).length;
+      const nl=doc.splitTextToSize(String(det),cols[2][1]-3).length;
       const hh=Math.max(rh,Math.min(nl,3)*6);
       if(y+hh>282){doc.addPage();y=14;}
       let x2=M;cols.forEach(cc=>{doc.rect(x2,y,cc[1],hh,'D');x2+=cc[1];});
       doc.setFont('helvetica','normal');doc.setFontSize(10);
-      doc.text(tm,M+2,y+rh/2+1.2);
-      const ls=doc.splitTextToSize(String(det),cols[1][1]-3).slice(0,3);doc.text(ls,M+28+2,y+rh/2+1.2);
+      doc.text(String(si+1),M+2,y+rh/2+1.2);
+      doc.text(tm,M+12+2,y+rh/2+1.2);
+      const ls=doc.splitTextToSize(String(det),cols[2][1]-3).slice(0,3);doc.text(ls,M+12+26+2,y+rh/2+1.2);
       const hcol=e.t==='Received'?GREEN:(e.t==='Credit'?[0,0,0]:[180,83,9]);
       doc.setFont('helvetica','bold');doc.setTextColor(hcol[0],hcol[1],hcol[2]);
       doc.text(rsFmt(e.a),M+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);
