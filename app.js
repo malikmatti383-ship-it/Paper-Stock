@@ -1454,6 +1454,9 @@ window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
   $('cc-psearch').value=''; credPickQ=''; renderCredPick(); renderCredCart();
   toast('✅ Added: '+p.name); };
+window.credCost=(ix,v)=>{ const l=credCart[ix]; if(!l) return;
+  const nv=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); l.cost=nv;
+  const p=DB.products.find(x=>x.id===l.productId); if(p){ p.cost=nv; save(); } };
 function credCartTotal(){ return credCart.reduce((s,l)=>s+l.qty*l.rate,0); }
 function renderCredCart(){
   const box=$('cc-cart'); if(!box) return;
@@ -1467,6 +1470,7 @@ function renderCredCart(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="credRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div></div>
+        <div><label class="fl">COST</label><input class="rate-in" type="number" min="0" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="credCost(${ix},this.value)"></div>
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('cred',ix)}</div></div>`; }).join('')+
@@ -1749,6 +1753,7 @@ function renderMoreCart(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="moreRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div></div>
+        <div><label class="fl">COST</label><input class="rate-in" type="number" min="0" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="moreCost(${ix},this.value)"></div>
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('more',ix)}</div></div>`; }).join('')+
@@ -1767,6 +1772,9 @@ window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return;
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
   qtyReject=null; l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
 window.moreRm=ix=>{ qtyReject=null; moreCart.splice(ix,1); renderMoreCart(); };
+window.moreCost=(ix,v)=>{ const l=moreCart[ix]; if(!l) return;
+  const nv=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); l.cost=nv;
+  const p=DB.products.find(x=>x.id===l.productId); if(p){ p.cost=nv; save(); } };
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!guardQtyEdit('more')) return;
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
