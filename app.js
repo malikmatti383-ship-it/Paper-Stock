@@ -1577,7 +1577,7 @@ window.creditHistory=(id,fresh)=>{
   openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">${histSelMode?`<button class="btn-ghost" id="hist-sa-btn" onclick="histSelectAll(${id})">Select All</button><button class="btn-go" id="hist-gen-btn" onclick="genHistPDF(${id})" disabled>\ud83d\udcc4 PDF (0)</button><button class="btn-ghost" onclick="histSelModeToggle(${id},false)">\u2715</button>`:`<div class="sub">${log.length} entries \u00b7 tap a date file to open it</div><div style="display:flex;gap:6px"><button class="mini-pdf" onclick="histSelModeToggle(${id},true)">\ud83d\udcc4 PDF</button>${log.length?`<button class="hist-del" onclick="delAllHist(${id})">\ud83d\uddd1\ufe0f Delete All</button>`:''}</div>`}</div><div class="search-wrap" style="margin:2px 0 10px">🔍 <input id="hist-search" placeholder="Search date or time..." oninput="histSearchGo(this.value)"></div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
   if(histSelMode)paintHistSel(id);
 };
-window.returnHistEdit=(id,ix)=>{
+window.returnHistEdit=(id,ix,back)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix]; if(e.t!=='Balance edit') return;
   const diff=e.a||0; if(Math.abs(diff)<0.005){toast('Nothing to return');return;}
@@ -1586,14 +1586,23 @@ window.returnHistEdit=(id,ix)=>{
   confirmDlg('Return balance edit?','\u270F\uFE0F Balance edit '+ds+' ('+fmtDT(e.d)+') will be reversed.<br><br>Balance: '+pkr(oldB)+' \u2192 '+pkr(nb)+'<br>Received stays '+pkr(c.received||0)+'.','RETURN',()=>{
     c.credit=Math.round(((c.credit||0)-diff)*100)/100;
     c.log.push({t:'Balance edit',a:-diff,note:'Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
-    save(); creditHistory(id); renderCredit(); toast('\u21A9\uFE0F Balance edit returned');
+    save(); (back==='resend'?resendList(id):creditHistory(id)); renderCredit(); toast('\u21A9\uFE0F Balance edit returned');
   });
 };
-window.delHist=(id,ix)=>{
+window.resendList=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c) return;
+  const edits=(c.log||[]).map((e,ix)=>({e,ix})).filter(({e})=>e.t==='Balance edit').reverse();
+  const rows=edits.map(({e,ix})=>{
+    const amt=`<b style="color:${(e.a||0)>=0?'var(--green)':'var(--red)'}">${(e.a||0)<0?'\u2212':'+'}${pkr(Math.abs(e.a||0))}</b>`;
+    const det=e.note?`<br><span class="sub">${esc(e.note)}</span>`:'';
+    return `<div class="kv"><span>\u270F\uFE0F <b>Balance edit</b>${det}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix},'resend')" title="Return this edit">\u21A9\uFE0F</button><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix},'resend')" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
+  openSheet(`<h3>\u21BB Resend — ${esc(c.name)}</h3><div class="sub" style="margin-bottom:8px">${edits.length} balance edits \u00b7 newest first</div>${rows||'<p class="note">No balance edits yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="addCreditMore(${id})">Back</button><button class="btn-go" onclick="addCreditMore(${id})">Done</button></div>`);
+};
+window.delHist=(id,ix,back)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
   const e=c.log[ix];
   confirmDlg('Delete history entry?','"'+e.t+' · '+pkr(e.a)+'" ('+fmtDT(e.d)+') will be removed from history. Balances stay unchanged.','DELETE',()=>{
-    c.log.splice(ix,1); save(); creditHistory(id); renderCredit(); toast('🗑️ History entry deleted'); });
+    c.log.splice(ix,1); save(); (back==='resend'?resendList(id):creditHistory(id)); renderCredit(); toast('🗑️ History entry deleted'); });
 };
 window.addWusool=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -1645,7 +1654,8 @@ window.saveBalance=id=>{
 let moreCart=[];
 window.addCreditMore=id=>{
   const c=DB.customers.find(x=>x.id===id); moreCart=[];
-  openSheet(`<h3>➕ Add credit — ${esc(c.name)}</h3>
+  const nRe=(c.log||[]).filter(e=>e.t==='Balance edit').length;
+  openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">➕ Add credit — ${esc(c.name)}</h3><button class="mini-pdf" onclick="resendList(${id})">\u21BB Resend${nRe?' ('+nRe+')':''}</button></div>
     <div class="search-wrap">🔍 <input id="m-psearch" placeholder="Type product name..."></div>
     <div id="m-pick-list"></div>
     <div id="m-more"></div>
