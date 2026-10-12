@@ -1259,7 +1259,7 @@ function renderCredit(){
     return `<div class="cust-card" onclick="creditDetail(${c.id})">
       <div class="nm">${esc(c.name)} <span class="sub">ID ${c.custId}</span>${cpl(c)}</div>
       <div class="meta">📞 ${esc(c.phone||'—')}${ps?' · 📄 '+ps:''}</div>
-      <div class="bal">Balance: ${pkr(b)}</div>
+      <div class="bal" style="color:${b>0?'var(--red)':'var(--green)'}">Balance: ${pkr(b)}</div>
       ${c.promiseDate?`<div class="pd">⏰ Promise: ${fmtDate(c.promiseDate)}</div>`:''}
     </div>`; }).join('')||'<p class="note" style="color:#fff">No credit customers yet</p>';
 }
@@ -1416,7 +1416,7 @@ window.creditDetail=id=>{
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
     <div class="kv"><span>💵 Received</span><b style="color:var(--green)">${pkr(c.received)}</b></div>
-    <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Balance due</span><b style="color:var(--red)">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
+    <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Balance due</span><b style="color:${b>0?'var(--red)':'var(--green)'}">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
     ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
     <div class="mrow">
       <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Receive</button>
