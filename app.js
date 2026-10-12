@@ -1693,8 +1693,10 @@ window.editBalance=id=>{
   for(let i=logs.length-1;i>=0;i--){ const e=logs[i];
     if(e.t==='Balance edit'&&e.note){ const m=String(e.note).match(/Balance[^0-9]*([\d,]+\.\d{2})/);
       if(m){ const v=parseFloat(m[1].replace(/,/g,'')); if(!isNaN(v)&&Math.abs(v-b)>0.005){ oldB=v; } break; } } }
+  const ebItems=(c.items||[]).map(l=>{ const t=l.total!=null?l.total:(l.qty||0)*(l.rate||0); return `<div class="kv"><span>📄 ${esc(l.name||'Item')} × ${l.qty||0} @ ${pkr(l.rate||0)}</span><b>${pkr(t)}</b></div>`; }).join('');
   openSheet(`<h3>✏️ Edit balance — ${esc(c.name)}</h3>
-    <div class="sub" style="margin-bottom:8px">Current balance: <b>${pkr(b)}</b> (Credit ${pkr(c.credit||0)} − Received ${pkr(c.received||0)})</div>
+    <div style="margin-bottom:8px">Current balance: <b style="font-size:20px">${pkr(b)}</b> <span class="sub">(Credit ${pkr(c.credit||0)} − Received ${pkr(c.received||0)})</span></div>
+    ${ebItems?`<div class="sub" style="margin-bottom:4px">Rate ke hisab se:</div><div style="margin-bottom:8px">${ebItems}</div>`:''}
     <div class="fld"><span class="fld-lbl">New balance</span><div class="fld-in"><input id="eb-amt" type="number" inputmode="decimal" value="${b}"><span class="pkr" data-cur>PKR</span></div></div>
     <div class="sub">Naya balance likho — farq Credit me adjust hoga (Received same rahega).</div>
     <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveBalance(${id})">Save</button></div>
