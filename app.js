@@ -1314,6 +1314,24 @@ window.chSetPeriod=t=>{ const n=new Date();
   renderCreditHistory(); };
 window.chSetCustom=v=>{ if(v) chPeriod={type:'custom',key:v}; renderCreditHistory(); };
 window.openCreditHistory=()=>{ chPeriod={type:'month',key:curMonthKey()}; chQ=''; renderCreditHistory(); };
+window.fixProfit=()=>{
+  let fixed=0, gain=0; const needCost=[];
+  DB.customers.forEach(c=>{ (c.log||[]).forEach(e=>{
+    if(e.t!=='Credit'||!(e.a>0)||(e.profit||0)!==0||e.rev) return;
+    const pitems=(e.pitems&&e.pitems.length)?e.pitems.map(l=>({productId:l.productId,qty:l.qty})):parseCreditItems(e.items);
+    if(!pitems.length) return;
+    let np=0, ok=false;
+    pitems.forEach(l=>{
+      const p=l.productId!=null?DB.products.find(x=>x.id===l.productId):DB.products.find(x=>String(x.name||'').toLowerCase()===String(l.name||'').toLowerCase());
+      if(p&&p.cost!=null){ np+=(l.qty||0)*((p.rate||0)-(p.cost||0)); ok=true; }
+      else if(p&&!needCost.includes(p.name)) needCost.push(p.name);
+    });
+    if(ok){ gain+=np; e.profit=Math.round(np*100)/100; fixed++; }
+  }); });
+  if(fixed){ save(); renderCredit(); try{renderCreditHistory();}catch(_){} toast('\uD83D\uDD27 '+fixed+' entries fixed: +'+pkr(gain)); }
+  else if(needCost.length) toast('\u26A0\uFE0F Pehle STOCK me cost dalo: '+needCost.join(', '));
+  else toast('Koi fixable entry nahi mili');
+};
 function renderCreditHistory(keepFocus){
   const rows=[];
   DB.customers.forEach(c=>{ (c.log||[]).forEach(e=>{ if(e.t==='Balance edit') return; if(!chMatch(e)) return;
@@ -1338,6 +1356,7 @@ function renderCreditHistory(keepFocus){
       <div class="cs-box" style="flex:1"><div class="lbl">Received</div><div class="cs-num green-num">${pkr(pRecv)}</div></div>
       <div class="cs-box" style="flex:1"><div class="lbl">Pending</div><div class="cs-num red-num">${pkr(pend)}</div></div>
     </div>
+    <div style="margin:-4px 0 10px"><button class="link-btn" onclick="fixProfit()">\uD83D\uDD27 Fix missing profit</button> <span class="sub">purani entries ka profit dobara lagao</span></div>
     <div class="search-wrap" style="margin-bottom:8px">\uD83D\uDD0D <input id="ch-q" placeholder="Search ID, name, number..." value="${esc(chQ)}" oninput="chQ=this.value;renderCreditHistory(true)"></div>
     <div style="max-height:44vh;overflow:auto">${listHtml||'<p class="note">No entries in this period</p>'}</div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
