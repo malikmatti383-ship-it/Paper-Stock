@@ -370,7 +370,7 @@ function grossProfit(){ return DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+
 let salesProfitNp=0;
 function paintSalesProfit(){
   const el=$('s-profit'), eye=$('profit-eye-s'); if(!el) return;
-  if(eye) eye.textContent=DB.profitShow?'\uD83D\uDC41\uFE0F':'\uD83D\uDE48';
+  if(eye) eye.classList.toggle('eye-off',!DB.profitShow);
   if(DB.profitShow){ el.textContent=salesProfitNp<0?pkrMinus(-salesProfitNp):pkr(salesProfitNp); el.classList.remove('masked'); }
   else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); }
   el.classList.toggle('red-num',salesProfitNp<0); // loss -> stays red until profit recovers
@@ -1249,8 +1249,9 @@ const custBal=c=>(c.credit||0)-(c.received||0);
 let creditProfitTot=0;
 function paintProfit(){
   const el=$('c-profit'), eye=$('profit-eye'); if(!el||!eye) return;
-  if(DB.profitShow){ el.textContent=pkr(creditProfitTot); el.classList.remove('masked'); eye.textContent='\uD83D\uDC41\uFE0F'; }
-  else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); eye.textContent='\uD83D\uDE48'; }
+  eye.classList.toggle('eye-off',!DB.profitShow);
+  if(DB.profitShow){ el.textContent=pkr(creditProfitTot); el.classList.remove('masked'); }
+  else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); }
   el.style.color=creditProfitTot<0?'var(--red)':'var(--green)';
 }
 window.toggleProfitEye=()=>{ DB.profitShow=!DB.profitShow; save(); paintProfit(); paintSalesProfit(); };
