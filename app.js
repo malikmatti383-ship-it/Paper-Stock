@@ -1468,7 +1468,7 @@ function renderCredCart(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="credRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div></div>
-        <div><label class="fl">COST</label><div class="sub" style="padding:9px 2px;white-space:nowrap">${p&&p.cost!=null?('\u2713 '+pkr(p.cost)):('<span style="color:var(--red)">\u26A0\uFE0F STOCK me dalo</span>')}</div></div>
+        
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('cred',ix)}</div></div>`; }).join('')+
@@ -1751,7 +1751,7 @@ function renderMoreCart(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="moreRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div></div>
-        <div><label class="fl">COST</label><div class="sub" style="padding:9px 2px;white-space:nowrap">${p&&p.cost!=null?('\u2713 '+pkr(p.cost)):('<span style="color:var(--red)">\u26A0\uFE0F STOCK me dalo</span>')}</div></div>
+        
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${p.qty} in stock!</div>`:''}${qtyWarnHtml('more',ix)}</div></div>`; }).join('')+
@@ -1813,7 +1813,7 @@ function renderEditItems(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
-        <div><label class="fl">COST</label><div class="sub" style="padding:9px 2px;white-space:nowrap">${(()=>{const pp=findProd(l.productId);return pp&&pp.cost!=null?('\u2713 '+pkr(pp.cost)):('<span style="color:var(--red)">\u26A0\uFE0F STOCK me dalo</span>');})()}</div></div>
+        
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${mx} in stock!</div>`:''}${qtyWarnHtml('edit',ix)}</div></div>`; }).join('')+
