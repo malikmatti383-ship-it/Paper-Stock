@@ -1467,7 +1467,8 @@ function renderCredCart(){
       <div class="cr-top"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span><button class="cart-x" onclick="credRm(${ix})">✕</button></div>
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="credRate(${ix},this.value,this)"></div>
-        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div></div>
+        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="credStep(${ix},-1)">
+        <div style="flex:0.65"><label class="fl">COST</label><input class="rate-in" type="number" min="0" style="font-size:13px;padding:6px 8px" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="credCost(${ix},this.value)"></div>−</button><b class="qty-num" onclick="qtyTap('cred',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="credStep(${ix},1)">+</button></div></div>
         
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
@@ -1495,7 +1496,8 @@ window.saveCredit=()=>{
   for(const l of credCart){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
   for(const l of credCart){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
-  const items=credCart.map(l=>{ const pp=findProd(l.productId); return {productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:pp?pp.cost:null,unit:l.unit,total:l.qty*l.rate}; });
+  const items=credCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  if(belowCostAsk(items,()=>window.saveCredit())) return;
   const newId=DB.seq.c++;
   DB.customers.push({ id:newId, custId:cid, name, phone:$('cc-phone').value.trim(),
     product:items.map(l=>l.name).join(', '), items, saleRate:camt, discount:0,
@@ -1750,7 +1752,8 @@ function renderMoreCart(){
       <div class="cr-top"><b>${esc(l.name)}</b> <span class="stk">· ${p&&p.qty!=null?p.qty:0} in stock</span><button class="cart-x" onclick="moreRm(${ix})">✕</button></div>
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="moreRate(${ix},this.value,this)"></div>
-        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div></div>
+        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="moreStep(${ix},-1)">
+        <div style="flex:0.65"><label class="fl">COST</label><input class="rate-in" type="number" min="0" style="font-size:13px;padding:6px 8px" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="moreCost(${ix},this.value)"></div>−</button><b class="qty-num" onclick="qtyTap('more',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="moreStep(${ix},1)">+</button></div></div>
         
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
@@ -1770,11 +1773,22 @@ window.moreStep=(ix,d)=>{ const l=moreCart[ix]; if(!l) return;
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' "'+l.name+'" in stock!'); return; } }
   qtyReject=null; l.qty=Math.max(1,l.qty+d); renderMoreCart(); };
 window.moreRm=ix=>{ qtyReject=null; moreCart.splice(ix,1); renderMoreCart(); };
+window.moreCost=(ix,v)=>{ const l=moreCart[ix]; if(!l) return; l.cost=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); };
+window.credCost=(ix,v)=>{ const l=credCart[ix]; if(!l) return; l.cost=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); };
+window.editCost=(ix,v)=>{ const l=editItems[ix]; if(!l) return; l.cost=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); };
 
+function belowCostAsk(items, retry){
+  const below=(items||[]).filter(l=>l.cost!=null&&(l.rate||0)<l.cost);
+  if(!below.length) return false;
+  if(window._bcOk){ window._bcOk=false; return false; }
+  confirmDlg('Below cost!', '\u26A0\uFE0F '+below.map(l=>'<b>'+esc(l.name)+'</b><br>Rate '+pkr(l.rate)+' < Cost '+pkr(l.cost)).join('<br><br>')+'<br><br>Are you sure you want to save at this rate?', 'YES, SAVE', ()=>{ window._bcOk=true; retry(); });
+  return true;
+}
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!guardQtyEdit('more')) return;
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
-  const items=moreCart.map(l=>{ const pp=findProd(l.productId); return {productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:pp?pp.cost:null,unit:l.unit,total:l.qty*l.rate}; });
+  const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  if(belowCostAsk(items,()=>window.saveCreditMore(id))) return;
   for(const l of items){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
   for(const l of items){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
@@ -1812,7 +1826,8 @@ function renderEditItems(){
       <div class="cr-top"><b>${esc(l.name)}</b> <span class="stk">· ${mx} in stock</span><button class="cart-x" onclick="editRm(${ix})">✕</button></div>
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value,this)"></div>
-        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
+        <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">
+        <div style="flex:0.65"><label class="fl">COST</label><input class="rate-in" type="number" min="0" style="font-size:13px;padding:6px 8px" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="editCost(${ix},this.value)"></div>−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
         
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
@@ -1856,11 +1871,15 @@ window.saveEditCustomer=id=>{
     return p.qty+(c.items||[]).filter(l=>String(l.productId)===String(pid)).reduce((s,l)=>s+l.qty,0); };
   for(const l of editItems){ const av=effAvail(l.productId);
     if(!(av>=l.qty)){ toast('⚠️ Only '+av+' "'+l.name+'" in stock!'); return; } }
+  if(belowCostAsk(editItems,()=>window.saveEditCustomer(id))) return;
+  const oldItems=c.items||[];
   for(const l of (c.items||[])){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty+=l.qty; }
   for(const l of editItems){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const camt=Math.max(0,parseFloat($('e-credit').value)||0);
   c.name=name; c.phone=$('e-phone').value.trim();
-  c.items=editItems.map(l=>{ const pp=findProd(l.productId); return {productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:pp?pp.cost:null,unit:l.unit,total:l.qty*l.rate}; });
+  c.items=editItems.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  const dProfit=Math.round((itemsProfit(c.items)-itemsProfit(oldItems))*100)/100;
+  if(Math.abs(dProfit)>=0.005) c.log.push({t:'Credit',a:0,note:'Edit profit adj.',d:dtstr(),profit:dProfit});
   if(c.items.length) c.product=c.items.map(l=>l.name).join(', ');
   c.qty=c.items.reduce((s,l)=>s+l.qty,0);
   c.credit=camt; c.saleRate=0;
