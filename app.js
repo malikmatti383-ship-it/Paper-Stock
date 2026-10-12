@@ -1489,11 +1489,13 @@ window.saveCredit=()=>{
 window.creditDetail=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const b=custBal(c);
+  const ebAdj=(c.log||[]).reduce((t,e)=>(e.t==='Balance edit'&&e.note&&String(e.note).includes('\u2192'))?t+(e.a||0):t,0);
   openSheet(`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3><button class="hist-box" onclick="creditHistory(${c.id},1)">📜 History${(c.log&&c.log.length)?' ('+c.log.length+')':''}</button></div>
     <div class="kv"><span>📞 Number</span><b>${esc(c.phone||'—')}</b></div>
     ${(c.items&&c.items.length)?c.items.map(l=>{const pl=l.cost!=null?(l.qty*((l.rate||0)-l.cost)>0?'<span class="mpl mp-pos">▲</span>':(l.qty*((l.rate||0)-l.cost)<0?'<span class="mpl mp-neg">▼</span>':'')):'';return `<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}${pl}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`;}).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
     ${(c.saleRate&&!(c.items&&c.items.length))?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
+    ${Math.abs(ebAdj)>0.005?`<div class="kv"><span>✏️ Edit balance</span><b style="color:${ebAdj>0?'var(--green)':'var(--red)'}">${ebAdj>0?'+':'\u2212'}${pkr(Math.abs(ebAdj))}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
     <div class="kv"><span>💵 Received</span><b style="color:var(--green)">${pkr(c.received)}</b></div>
     <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Balance due</span><b style="color:${Math.abs(b)<0.005?'var(--green)':'var(--red)'}">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
@@ -1564,7 +1566,9 @@ window.creditHistory=(id,fresh)=>{
       const ic=e.t==='Received'?'\uD83D\uDCB5':(e.t==='Balance edit'?'\u270F\uFE0F':'\uD83D\uDCB0');
       const itemsNum=e.items?String(e.items).split(', ').map((p,ii)=>(ii+1)+'. '+p).join(' \u00b7 '):'';
       const det=[itemsNum,e.note].filter(Boolean).join(' \u00b7 ');
-      return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:''}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px"><b>${pkr(e.a)}</b><button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix})" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
+      const amt=e.t==='Balance edit'?`<b style="color:${(e.a||0)>=0?'var(--green)':'var(--red)'}">${(e.a||0)<0?'\u2212':'+'}${pkr(Math.abs(e.a||0))}</b>`:`<b>${pkr(e.a)}</b>`;
+      const ret=e.t==='Balance edit'?`<button class="hist-del" onclick="event.stopPropagation();returnHistEdit(${id},${ix})" title="Return this edit">\u21A9\uFE0F</button>`:'';
+      return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:''}<br><span class="sub">\uD83D\uDD52 ${fmtDT(e.d)}</span></span><span style="display:flex;align-items:center;gap:10px">${amt}${ret}<button class="hist-del" onclick="event.stopPropagation();delHist(${id},${ix})" title="Delete entry">\uD83D\uDDD1\uFE0F</button></span></div>`;}).join('');
     const gid='hg-'+id+'-'+gk;
     const searchTxt=(dk+' '+(dk==='??'?'':fmtDate(dk))+' '+g.map(({e})=>{const pp=String(e.d||'').split(' ');return (pp[1]||'')+' '+fmtDT(e.d);}).join(' ')).toLowerCase();
     const sel=histSelDates.includes(dk);
@@ -1572,6 +1576,18 @@ window.creditHistory=(id,fresh)=>{
   }).join('');
   openSheet(`<h3>\uD83D\uDCCB History \u2014 ${esc(c.name)}</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">${histSelMode?`<button class="btn-ghost" id="hist-sa-btn" onclick="histSelectAll(${id})">Select All</button><button class="btn-go" id="hist-gen-btn" onclick="genHistPDF(${id})" disabled>\ud83d\udcc4 PDF (0)</button><button class="btn-ghost" onclick="histSelModeToggle(${id},false)">\u2715</button>`:`<div class="sub">${log.length} entries \u00b7 tap a date file to open it</div><div style="display:flex;gap:6px"><button class="mini-pdf" onclick="histSelModeToggle(${id},true)">\ud83d\udcc4 PDF</button>${log.length?`<button class="hist-del" onclick="delAllHist(${id})">\ud83d\uddd1\ufe0f Delete All</button>`:''}</div>`}</div><div class="search-wrap" style="margin:2px 0 10px">🔍 <input id="hist-search" placeholder="Search date or time..." oninput="histSearchGo(this.value)"></div>${ghtml||'<p class="note">No history yet</p>'}<div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="creditDetail(${id})">Done</button></div>`);
   if(histSelMode)paintHistSel(id);
+};
+window.returnHistEdit=(id,ix)=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
+  const e=c.log[ix]; if(e.t!=='Balance edit') return;
+  const diff=e.a||0; if(Math.abs(diff)<0.005){toast('Nothing to return');return;}
+  const oldB=Math.round(custBal(c)*100)/100, nb=Math.round((oldB-diff)*100)/100;
+  const ds=(diff>0?'\u2212':'+')+pkr(Math.abs(diff));
+  confirmDlg('Return balance edit?','\u270F\uFE0F Balance edit '+ds+' ('+fmtDT(e.d)+') will be reversed.<br><br>Balance: '+pkr(oldB)+' \u2192 '+pkr(nb)+'<br>Received stays '+pkr(c.received||0)+'.','RETURN',()=>{
+    c.credit=Math.round(((c.credit||0)-diff)*100)/100;
+    c.log.push({t:'Balance edit',a:-diff,note:'Balance '+pkr(oldB)+' \u2192 '+pkr(nb),d:dtstr()});
+    save(); creditHistory(id); renderCredit(); toast('\u21A9\uFE0F Balance edit returned');
+  });
 };
 window.delHist=(id,ix)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c||!c.log||!c.log[ix]) return;
