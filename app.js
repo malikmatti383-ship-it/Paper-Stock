@@ -1817,6 +1817,7 @@ function renderEditItems(){
       <div class="two-col cr-boxes">
         <div><label class="fl">RATE</label><input class="rate-in" type="number" min="0" value="${l.rate}" oninput="editRate(${ix},this.value,this)"></div>
         <div><label class="fl">QTY</label><div class="cart-step"><button class="mini-btn" onclick="editStep(${ix},-1)">−</button><b class="qty-num" onclick="qtyTap('edit',${ix},this)" title="Tap to type quantity">${l.qty}</b><button class="mini-btn" onclick="editStep(${ix},1)">+</button></div></div>
+        <div><label class="fl">COST</label><input class="rate-in" type="number" min="0" placeholder="\u2014" value="${l.cost!=null?l.cost:''}" oninput="editCost(${ix},this.value)"></div>
       </div>
       <div class="sub" style="margin-top:4px">Total = <span class="line-total">${pkr(l.qty*l.rate)}</span></div>
       ${over?`<div class="red-sub">Only ${mx} in stock!</div>`:''}${qtyWarnHtml('edit',ix)}</div></div>`; }).join('')+
@@ -1834,6 +1835,9 @@ window.editRate=(ix,v,el)=>{ const l=editItems[ix]; if(!l) return; l.rate=Math.m
   const t=$('e-items'); if(t){ const elb=t.querySelector('.cart-total b'); if(elb) elb.textContent=pkr(editItemsTotal()); }
   const ca=$('e-credit'); if(ca) ca.value=editItemsTotal().toFixed(0); };
 window.editRm=ix=>{ editItems.splice(ix,1); renderEditItems(); };
+window.editCost=(ix,v)=>{ const l=editItems[ix]; if(!l) return;
+  const nv=(v===''||v==null)?null:Math.max(0,parseFloat(v)||0); l.cost=nv;
+  const p=DB.products.find(x=>x.id===l.productId); if(p){ p.cost=nv; save(); } };
 function renderEditPick(q){
   const box=$('e-pick-list'); if(!box) return;
   if(!q){ box.innerHTML=''; return; }
