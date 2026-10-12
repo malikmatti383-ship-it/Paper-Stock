@@ -1601,12 +1601,18 @@ window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id); if(!c) return;
 window.editBalance=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const b=custBal(c);
+  let oldB=null; const logs=c.log||[];
+  for(let i=logs.length-1;i>=0;i--){ const e=logs[i];
+    if(e.t==='Balance edit'&&e.note){ const m=String(e.note).match(/Balance[^0-9]*([\d,]+\.\d{2})/);
+      if(m){ const v=parseFloat(m[1].replace(/,/g,'')); if(!isNaN(v)&&Math.abs(v-b)>0.005){ oldB=v; } break; } } }
   openSheet(`<h3>✏️ Edit balance — ${esc(c.name)}</h3>
     <div class="sub" style="margin-bottom:8px">Current balance: <b>${pkr(b)}</b> (Credit ${pkr(c.credit||0)} − Received ${pkr(c.received||0)})</div>
     <div class="fld"><span class="fld-lbl">New balance</span><div class="fld-in"><input id="eb-amt" type="number" inputmode="decimal" value="${b}"><span class="pkr" data-cur>PKR</span></div></div>
     <div class="sub">Naya balance likho — farq Credit me adjust hoga (Received same rahega).</div>
-    <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveBalance(${id})">Save</button></div>`);
+    <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveBalance(${id})">Save</button></div>
+    ${oldB!=null?`<button class="btn-ghost" style="width:100%;margin-top:8px" onclick="revertBalance(${id},${oldB})">↩ Return to old balance (${pkr(oldB)})</button>`:''}`);
 };
+window.revertBalance=(id,oldB)=>{ const eb=$('eb-amt'); if(eb) eb.value=oldB; saveBalance(id); };
 window.saveBalance=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const v=parseFloat($('eb-amt').value); if(isNaN(v)){toast('Enter amount');return;}
