@@ -175,7 +175,7 @@ window.openSettings=()=>{
   const on=DB.profile.lossAsk!==false;
   openSheet(`<h3>⚙️ Settings</h3>
   <div class="lbl" style="margin:8px 0 2px">WARNINGS</div>
-  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Asks before selling an item below its cost price</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Warns when rate is below cost \u2014 sale & credit</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NOTIFICATIONS</div>
   <div class="menu-row" onclick="toggleBellAlert()"><span class="ic">🔔</span><div><div>Overdue bell alert</div><div class="sub">Bell rings when a promise date passes</div></div><button id="bell-tswitch" class="tswitch${DB.profile.bellAlert!==false?' on':''}" onclick="event.stopPropagation();toggleBellAlert()"><span class="tlbl">${DB.profile.bellAlert!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
@@ -1783,8 +1783,13 @@ window.editCost=(ix,v)=>{ const l=editItems[ix]; if(!l) return; l.cost=(v===''||
 function belowCostAsk(items, retry){
   const below=(items||[]).filter(l=>l.cost!=null&&(l.rate||0)<l.cost);
   if(!below.length) return false;
+  if(DB.profile.lossAsk===false) return false;
   if(window._bcOk){ window._bcOk=false; return false; }
-  confirmDlg('Below cost!', '\u26A0\uFE0F '+below.map(l=>'<b>'+esc(l.name)+'</b><br>Rate '+pkr(l.rate)+' < Cost '+pkr(l.cost)).join('<br><br>')+'<br><br>Are you sure you want to save at this rate?', 'YES, SAVE', ()=>{ window._bcOk=true; retry(); });
+  openDlg(`<div class="dlg"><h2>Below cost!</h2><p>\u26A0\uFE0F `+below.map(l=>'<b>'+esc(l.name)+'</b><br>Rate '+pkr(l.rate)+' < Cost '+pkr(l.cost)).join('<br><br>')+`<br><br>Are you sure you want to save at this rate?</p>
+  <label class="dont-ask"><input type="checkbox" id="bc-noask"> Don't ask again</label>
+  <div class="dlg-btns"><button class="dlg-cancel" onclick="closeSheet()">CANCEL</button>
+  <button class="dlg-ok" id="dlg-ok">YES, SAVE</button></div></div>`);
+  $('dlg-ok').onclick=()=>{ if($('bc-noask')&&$('bc-noask').checked){ DB.profile.lossAsk=false; save(); } closeSheet(); window._bcOk=true; retry(); };
   return true;
 }
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
