@@ -384,6 +384,8 @@ function renderSales(){
 }
 function paintNextIds(){ const t='ID'+DB.seq.s; const a=$('sale-next-id'),b=$('ws-next-id'); if(a)a.textContent=t; if(b)b.textContent=t; }
 function fmtDate(ds){ const d=new Date(ds+'T12:00'); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+const dtstr=d=>{ d=d||new Date(); return dstr(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+function fmtDT(x){ if(!x) return ''; const p=String(x).split(' '); let r=p[0]; try{ r=fmtDate(p[0]); }catch(e){} if(p[1]){ const t=p[1].split(':'); let h=parseInt(t[0],10)||0; const ap=h>=12?'PM':'AM'; h=h%12||12; r+=' \u00b7 '+h+':'+(t[1]||'00')+' '+ap; } return r; }
 function setSeg(id){ ['seg-sale','seg-ws','seg-exp'].forEach(x=>$(x).classList.toggle('active',x===id));
   $('sale-form').classList.toggle('hidden',id!=='seg-sale');
   $('ws-form').classList.toggle('hidden',id!=='seg-ws');
@@ -1401,7 +1403,7 @@ window.saveCredit=()=>{
     qty:items.reduce((s,l)=>s+l.qty,0),
     credit:camt, received:0,
     promiseDate:$('cc-promise').value||'', promiseTime:$('cc-ptime').value||'',
-    log:[{t:'Credit',a:camt,d:dstr()}] });
+    log:[{t:'Credit',a:camt,d:dtstr(),items:items.map(l=>l.name).join(', ')}] });
   if(cid>=DB.seq.c) DB.seq.c=cid+1;
   save(); closeSheet(); renderCredit(); renderStock(); updateBellBadge(); credCart=[];
   creditDetail(newId); toast('✅ Credit saved');
@@ -1411,13 +1413,14 @@ window.creditDetail=id=>{
   const b=custBal(c);
   openSheet(`<h3>${esc(c.name)} <span class="sub">ID ${c.custId}</span></h3>
     <div class="kv"><span>📞 Number</span><b>${esc(c.phone||'—')}</b></div>
-    ${(c.items&&c.items.length)?c.items.map(l=>`<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
+    ${(c.items&&c.items.length)?c.items.map(l=>{const pl=l.cost!=null?(l.qty*((l.rate||0)-l.cost)>0?'<span class="mpl mp-pos">▲</span>':(l.qty*((l.rate||0)-l.cost)<0?'<span class="mpl mp-neg">▼</span>':'')):'';return `<div class="kv"><span>📄 ${esc(l.name)} × ${l.qty}${pl}</span><b>${pkr(l.total!=null?l.total:l.qty*(l.rate||0))}</b></div>`;}).join(''):(c.product?`<div class="kv"><span>📄 Item</span><b>${esc(c.product)}</b></div>`:'')}
     ${(c.saleRate&&!(c.items&&c.items.length))?`<div class="kv"><span>Sale rate</span><b>${pkr(c.saleRate)}</b></div>`:''}
     ${c.discount?`<div class="kv"><span>Discount rate</span><b>${pkr(c.discount)}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
     <div class="kv"><span>💵 Received</span><b style="color:var(--green)">${pkr(c.received)}</b></div>
     <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Balance due</span><b style="color:${Math.abs(b)<0.005?'var(--green)':'var(--red)'}">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
     ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
+    ${(c.log&&c.log.length)?`<div class="fl" style="margin:10px 0 2px">📜 History</div>`+c.log.slice().reverse().map(e=>{const ic=e.t==='Received'?'💵':(e.t==='Balance edit'?'✏️':'💰');const det=[e.items,e.note].filter(Boolean).join(' · ');return `<div class="kv"><span>${ic} <b>${e.t}</b>${det?`<br><span class="sub">${esc(det)}</span>`:``}<br><span class="sub">🕒 ${fmtDT(e.d)}</span></span><b>${pkr(e.a)}</b></div>`;}).join(''):''}
     <div class="mrow">
       <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Receive</button>
       <button class="btn-ghost" onclick="addCreditMore(${c.id})">➕ Add credit</button>
@@ -1439,7 +1442,7 @@ window.addWusool=id=>{
 };
 window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id);
   const a=Math.max(0,parseFloat($('w-amt').value)||0); if(!a){toast('Enter amount');return;}
-  c.received+=a; c.log.push({t:'Received',a,d:dstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
+  c.received+=a; c.log.push({t:'Received',a,d:dtstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
 /* ---- direct balance edit: sets Received so balance becomes the typed value ---- */
 window.editBalance=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -1455,7 +1458,7 @@ window.saveBalance=id=>{
   const v=parseFloat($('eb-amt').value); if(isNaN(v)){toast('Enter amount');return;}
   const nb=Math.round(v*100)/100;
   c.received=Math.round(((c.credit||0)-nb)*100)/100;
-  c.log=c.log||[]; c.log.push({t:'Balance edit',a:nb,d:dstr()});
+  c.log=c.log||[]; c.log.push({t:'Balance edit',a:nb,d:dtstr()});
   save(); creditDetail(id); renderCredit(); toast('✅ Balance updated');
 };
 let moreCart=[];
@@ -1467,7 +1470,8 @@ window.addCreditMore=id=>{
     <div id="m-more"></div>
     <div id="m-cart"></div>
     <input id="m-amt" type="number" placeholder="Credit amount">
-    <div class="sub">Tap a product to add it below — search clears for the next item</div>
+    <input id="m-note" placeholder="Note (optional) — e.g. manual balance">
+    <div class="sub">Tap a product to add it below — search clears for the next item.<br>No product? Just type the amount above and Save — manual balance will be added.</div>
     <div class="mrow"><button class="btn-ghost" onclick="creditDetail(${id})">Back</button><button class="btn-go" onclick="saveCreditMore(${id})">Save</button></div>`);
   $('m-psearch').oninput=e=>renderMorePick(e.target.value.toLowerCase().trim());
 };
@@ -1525,7 +1529,8 @@ window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   c.credit+=a;
   if(items.length){ c.items=(c.items||[]).concat(items);
     const nm=items.map(l=>l.name).join(', '); c.product=c.product?c.product+', '+nm:nm; }
-  c.log.push({t:'Credit',a,d:dstr()}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
+  const mnote=($('m-note')&&$('m-note').value||'').trim();
+  c.log.push({t:'Credit',a,d:dtstr(),items:items.length?items.map(l=>l.name+(l.qty>1?' \u00d7 '+l.qty:'')).join(', '):'',note:mnote}); save(); renderStock(); creditDetail(id); renderCredit(); toast('✅ Credit added'); };
 let editItems=[];
 window.editCustomer=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -1908,9 +1913,8 @@ function billPDF(s){
 function creditPDF(c){
   const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
   const W=210,M=14,bw=W-2*M;
-  const prof=DB.profile, bc=billTheme();
-  const hx=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
-  const A=hx(bc[0]),B=hx(bc[1]),TC=hx(bc[2]);
+  const prof=DB.profile;
+  const A=[127,29,29],B=[220,38,38],TC=[153,27,27];
   const items=(c.items&&c.items.length)?c.items:[];
   const nIt=Math.max(items.length,1);
   let f=Math.min(1,270/(205+9*nIt)); f=Math.max(f,0.55);
@@ -1970,6 +1974,30 @@ function creditPDF(c){
   doc.rect(M,y,bw,rh);doc.setFont('helvetica','bold');doc.setFontSize(11*f);
   doc.setTextColor(RED[0],RED[1],RED[2]);
   doc.text('In Word: '+numToWords(due),M+2,y+rh/2+1.6);doc.setTextColor(0,0,0);y+=rh+4*f;
+  const hlog=(c.log&&c.log.length)?c.log.slice().reverse():[];
+  if(hlog.length){
+    if(y>235){doc.addPage();y=14;}
+    y+=4*f;doc.setFont('helvetica','bold');doc.setFontSize(12*f);
+    doc.setTextColor(RED[0],RED[1],RED[2]);doc.text('TRANSACTION HISTORY',M,y);doc.setTextColor(0,0,0);y+=7*f;
+    const hc=[['Date / Time',52],['Details',bw-52-38],['Amount',38]];
+    let hx0=M;doc.setFillColor(TC[0],TC[1],TC[2]);hc.forEach(cc=>{doc.rect(hx0,y,cc[1],rh,'FD');hx0+=cc[1];});hx0=M;
+    doc.setFont('helvetica','bold');doc.setFontSize(11*f);doc.setTextColor(255,255,255);
+    hc.forEach(cc=>{doc.text(cc[0],hx0+cc[1]/2,y+rh/2+1.6,{align:'center'});hx0+=cc[1];});doc.setTextColor(0,0,0);y+=rh;
+    hlog.forEach(e=>{
+      const det=e.t+((e.items||e.note)?' - '+[e.items,e.note].filter(Boolean).join(' - '):'');
+      const nl=doc.splitTextToSize(String(det),hc[1][1]-3).length;
+      const hh=Math.max(rh,Math.min(nl,3)*(5*f+1));
+      if(y+hh>282){doc.addPage();y=14;}
+      let x2=M;hc.forEach(cc=>{doc.rect(x2,y,cc[1],hh,'D');x2+=cc[1];});
+      doc.setFont('helvetica','normal');doc.setFontSize(10*f);
+      doc.text(fmtDT(e.d),M+2,y+rh/2+1.2);
+      const ls=doc.splitTextToSize(String(det),hc[1][1]-3).slice(0,3);doc.text(ls,M+52+2,y+rh/2+1.2);
+      const hcol=e.t==='Received'?GREEN:(e.t==='Credit'?[0,0,0]:[180,83,9]);
+      doc.setFont('helvetica','bold');doc.setTextColor(hcol[0],hcol[1],hcol[2]);
+      doc.text(rsFmt(e.a),M+bw-2,y+rh/2+1.6,{align:'right'});doc.setTextColor(0,0,0);
+      y+=hh;});
+    y+=4*f;
+  }
   const th2=26*f+8;
   doc.rect(M,y,bw,th2);doc.setFont('helvetica','bold');doc.setFontSize(11*f);doc.text('Terms & Conditions:',M+3,y+7*f);
   doc.setFont('helvetica','normal');doc.setFontSize(9.5*f);
