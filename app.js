@@ -379,10 +379,12 @@ function paintSalesProfit(){
   el.classList.toggle('green-num',salesProfitNp>=0); // recovered -> green again
 }
 function renderSales(){
-  const tot=DB.sales.reduce((s,x)=>s+x.total,0);
-  const exp=DB.expenses.reduce((s,x)=>s+x.amount,0);
+  const td=dstr();
+  const tSales=DB.sales.filter(x=>x.date===td), tExp=DB.expenses.filter(x=>x.date===td);
+  const tot=tSales.reduce((s,x)=>s+x.total,0);
+  const exp=tExp.reduce((s,x)=>s+x.amount,0);
   $('s-total').textContent=pkr(tot); $('s-exp').textContent=exp>0?pkrMinus(exp):pkr(0); paintCur();
-  salesProfitNp=grossProfit()-exp; // expenses cut from ALL-TIME profit (today + past days), not just today
+  salesProfitNp=tSales.reduce((s,x)=>s+saleProfit(x),0)-exp; // TODAY only: resets at midnight
   paintSalesProfit();
   $('sale-date-txt').textContent=fmtDate(saleDate);
   if(!$('exp-date').value) $('exp-date').value=dstr();
@@ -1278,8 +1280,9 @@ function renderReport(){
   const gross=sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*((i.price||0)-(i.cost||0)),0),0);
   const pexp=DB.expenses.filter(e=>{ const d=new Date(e.ts); return d.getFullYear()===repY&&d.getMonth()===repM; }).reduce((a,e)=>a+e.amount,0);
   const profit=gross-pexp;
-  $('r-sales').textContent=st.toLocaleString('en-PK',{minimumFractionDigits:2});
-  $('r-profit').textContent=profit.toLocaleString('en-PK',{minimumFractionDigits:2});
+  $('r-sales').textContent=pkr(st);
+  $('r-exp').textContent=pexp>0?pkrMinus(pexp):pkr(0);
+  rProfitNp=Math.round(profit*100)/100; paintReportProfit();
   $('r-margin').textContent=st>0?Math.round(profit/st*100)+'% margin':'';
   $('r-vs').textContent=pt>0?Math.round((st-pt)/pt*100)+'% vs '+MNAME[(repM+11)%12].slice(0,3):'';
   $('r-avg').textContent='Avg / day: PKR '+Math.round(st/30).toLocaleString()+' · '+new Set(sales.map(s=>s.date)).size+' working days';
@@ -1357,7 +1360,13 @@ function paintProfit(){
   else { el.textContent='\u2022\u2022\u2022\u2022\u2022\u2022'; el.classList.add('masked'); }
   el.style.color=creditProfitMonth<0?'var(--red)':'var(--green)';
 }
-window.toggleProfitEye=()=>{ DB.profitShow=!DB.profitShow; save(); paintProfit(); paintSalesProfit(); };
+window.toggleProfitEye=()=>{ DB.profitShow=!DB.profitShow; save(); paintProfit(); paintSalesProfit(); paintReportProfit(); };
+let rProfitNp=0;
+function paintReportProfit(){ const el=$('r-profit'), eye=$('profit-eye-r'); if(!el) return;
+  if(eye) eye.classList.toggle('eye-off',!DB.profitShow);
+  if(DB.profitShow){ el.textContent=rProfitNp<0?pkrMinus(-rProfitNp):pkr(rProfitNp); el.classList.remove('masked'); }
+  else{ el.textContent='••••••'; el.classList.add('masked'); }
+  el.classList.toggle('red-num',rProfitNp<0); el.classList.toggle('green-num',rProfitNp>=0); }
 function renderCredit(){
   const tot=DB.customers.reduce((s,c)=>s+custBal(c),0);
   $('c-total').textContent=pkr(tot); $('c-count').textContent=DB.customers.length+' customers';

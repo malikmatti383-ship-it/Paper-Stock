@@ -82,7 +82,7 @@
   <section id="view-sales" class="view active">
     <div class="pad">
       <div class="white-card cred-sum">
-        <div class="cs-main" onclick="openCurrency()" style="cursor:pointer" title="Change currency"><div class="lbl">Total sale till now</div><div class="cs-big" id="s-total">PKR 0.00</div><div class="cur-hint">💱 Tap to change currency</div></div>
+        <div class="cs-main" onclick="openCurrency()" style="cursor:pointer" title="Change currency"><div class="lbl">Today's sale</div><div class="cs-big" id="s-total">PKR 0.00</div><div class="cur-hint">💱 Tap to change currency</div></div>
         <div class="cs-side"><div class="cs-box"><div class="lbl">EXPENSES</div><div class="cs-num red-num" id="s-exp">PKR 0.00</div></div>
         <div class="cs-box"><div class="lbl">NET PROFIT <button class="eye-btn eye-off" id="profit-eye-s" onclick="event.stopPropagation();toggleProfitEye()" title="Show/hide profit"><svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div><div class="cs-num green-num" id="s-profit">PKR 0.00</div></div></div>
       </div>
@@ -182,9 +182,10 @@
         <button class="period-btn" id="btn-period">📅 <span><small>PERIOD</small><b id="period-txt">Oct 2026</b></span> ▾</button>
         <button class="export-btn" id="btn-export-csv">⬇ Export</button>
       </div>
-      <div class="two-cards">
-        <div class="white-card"><div class="lbl">SALES</div><div class="big-num">PKR <span id="r-sales">0.00</span></div><div class="red-sub" id="r-vs"></div></div>
-        <div class="white-card"><div class="lbl">PROFIT ⓘ</div><div class="big-num green-num">PKR <span id="r-profit">0.00</span></div><div class="sub" id="r-margin"></div></div>
+      <div class="white-card cred-sum">
+        <div class="cs-main"><div class="lbl">Total sale</div><div class="cs-big" id="r-sales">PKR 0.00</div><div class="red-sub" id="r-vs"></div><div class="sub" id="r-margin"></div></div>
+        <div class="cs-side"><div class="cs-box"><div class="lbl">EXPENSES</div><div class="cs-num red-num" id="r-exp">PKR 0.00</div></div>
+        <div class="cs-box"><div class="lbl">NET PROFIT <button class="eye-btn eye-off" id="profit-eye-r" onclick="event.stopPropagation();toggleProfitEye()" title="Show/hide profit"><svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div><div class="cs-num green-num" id="r-profit">PKR 0.00</div></div></div>
       </div>
       <div class="avg-line" id="r-avg"></div>
       <div class="white-card">

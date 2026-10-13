@@ -71,8 +71,8 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .cs-main{flex:1.3;min-width:0;background:rgba(120,135,155,.10);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;justify-content:center}
 .cs-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .cs-box{background:rgba(120,135,155,.10);border-radius:14px;padding:8px 12px;flex:1;display:flex;flex-direction:column;justify-content:center}
-.cs-big{font-size:20px;font-weight:800;margin-top:2px;white-space:nowrap}
-.cs-num{font-size:14px;font-weight:800;margin-top:2px;white-space:nowrap}
+.cs-big{font-size:20px;font-weight:800;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cs-num{font-size:14px;font-weight:800;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .csub{font-size:10px;color:var(--sub);margin-top:1px}
 .eye-btn{background:none;border:none;cursor:pointer;padding:0 2px;vertical-align:middle;line-height:1;color:var(--sub);display:inline-flex;align-items:center}
 .eye-btn svg{width:15px;height:15px;display:block}
