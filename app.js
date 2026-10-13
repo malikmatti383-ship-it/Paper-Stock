@@ -350,6 +350,40 @@ $('add-photo-pick').onclick=()=>$('add-photo').click();
 const handleAddPhoto=e=>readImg(e.target.files[0],d=>{ addImg=d; if(d) $('add-photo-pick').innerHTML=`<img src="${d}">`; e.target.value=''; });
 $('add-photo').onchange=handleAddPhoto;
 $('add-photo-cam').onchange=handleAddPhoto;
+/* ---- ADD tab: Add / Edit mode ---- */
+let editPickId=null;
+function setAddMode(m){ $('seg-addmode').classList.toggle('active',m==='add'); $('seg-editmode').classList.toggle('active',m==='edit');
+  $('addmode-form').classList.toggle('hidden',m!=='add'); $('editmode-form').classList.toggle('hidden',m!=='edit'); }
+$('seg-addmode').onclick=()=>setAddMode('add');
+$('seg-editmode').onclick=()=>setAddMode('edit');
+function renderEditDD(q){ const dd=$('edit-dd'); if(!dd) return;
+  const list=(q?DB.products.filter(p=>pmatch(p,q)):DB.products.slice()).slice(0,50);
+  dd.innerHTML=list.map(p=>'<div class="dd-item" onclick="pickEditDD('+p.id+')">'+pimg(p,'dd-img')
+    +'<div style="flex:1;min-width:0">'+(p.brand?'<span class="dd-brand">'+esc(p.brand)+'</span>':'')
+    +'<div class="nm">'+esc(p.name)+'</div><div class="sub">'+stockLbl(p)+(p.unit?' · '+esc(p.unit):'')+'</div></div>'
+    +'<b class="r">'+pkr(p.sell)+'</b></div>').join('')||'<p class="note">No product found</p>';
+  dd.classList.remove('hidden'); }
+$('edit-psearch').onfocus=()=>{ editPickId=null; renderEditDD($('edit-psearch').value.toLowerCase().trim()); };
+$('edit-psearch').oninput=e=>{ editPickId=null; renderEditDD(e.target.value.toLowerCase().trim()); };
+window.pickEditDD=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
+  editPickId=id; $('edit-dd').classList.add('hidden'); $('edit-psearch').value=p.name;
+  $('edit-banner-name').textContent=p.name; $('edit-banner-id').textContent='ID '+(p.itemId||p.id);
+  $('edit-banner').classList.remove('hidden'); $('edit-fields').classList.remove('hidden');
+  $('edit-pimg').innerHTML=p.image?'<img src="'+p.image+'">':'';
+  $('edit-itemid').value=p.itemId||p.id; $('edit-name').value=p.name||'';
+  $('edit-qty').value=p.qty||0; $('edit-unit').value=p.unit||'Rim';
+  $('edit-cost').value=p.cost||0; $('edit-sell').value=p.sell||0; $('edit-tax').value=p.tax||0;
+  $('edit-cost-note').textContent='Cost + tax / unit: '+pkr(p.cost||0); };
+window.cancelStockEdit=()=>{ editPickId=null; $('edit-psearch').value='';
+  $('edit-banner').classList.add('hidden'); $('edit-fields').classList.add('hidden'); $('edit-dd').classList.add('hidden'); };
+$('btn-edit-update').onclick=()=>{ const p=DB.products.find(x=>x.id===editPickId);
+  if(!p){ toast('Select a product first'); return; }
+  const nm=$('edit-name').value.trim(); if(!nm){ toast('Enter item name'); return; }
+  p.name=nm; p.qty=Math.max(0,parseInt($('edit-qty').value)||0); p.unit=$('edit-unit').value;
+  p.cost=Math.max(0,parseFloat($('edit-cost').value)||0); p.sell=Math.max(0,parseFloat($('edit-sell').value)||0);
+  p.tax=Math.max(0,parseFloat($('edit-tax').value)||0);
+  save(); renderStock(); toast('\u2705 "'+nm+'" updated!');
+  $('edit-cost-note').textContent='Cost + tax / unit: '+pkr(p.cost); };
 $('btn-add-save').onclick=()=>{
   const name=$('add-name').value.trim();
   if(!name){ toast('Enter item name'); return; }
@@ -429,7 +463,7 @@ $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sal
 let saleCart=[];
 $('sale-psearch').onfocus=()=>{ salePickId=null; renderSaleDD($('sale-psearch').value.toLowerCase().trim()); };
 $('sale-psearch').oninput=e=>{ salePickId=null; renderSaleDD(e.target.value.toLowerCase().trim()); };
-document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')){ $('sale-dd').classList.add('hidden'); const w=$('ws-dd'); if(w) w.classList.add('hidden'); } });
+document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')){ $('sale-dd').classList.add('hidden'); const w=$('ws-dd'); if(w) w.classList.add('hidden'); const ed=$('edit-dd'); if(ed) ed.classList.add('hidden'); } });
 function paintSaleQtyWarn(){ const box=$('sale-qty-warn'); if(!box) return;
   const p=DB.products.find(x=>x.id===salePickId);
   const q=parseInt($('sale-qty').value)||0;

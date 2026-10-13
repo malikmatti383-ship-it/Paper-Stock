@@ -39,6 +39,8 @@
   <section id="view-add" class="view">
     <div class="pad">
       <div class="form-card">
+        <div class="seg" style="margin-bottom:14px"><button class="seg-btn active" id="seg-addmode">Add</button><button class="seg-btn" id="seg-editmode">Edit</button></div>
+        <div id="addmode-form">
         <div class="photo-row">
           <div class="photo-pick" id="add-photo-pick"><span>📷</span></div>
           <div class="photo-opts">
@@ -74,6 +76,34 @@
         <div class="pkr-wrap"><input id="add-tax" type="number" min="0" value="0"><span>%</span></div>
         <p class="note">Ignore taxes if already included in cost price.</p>
         <button id="btn-add-save" class="btn-save">SAVE</button>
+        </div><!-- /addmode-form -->
+        <div id="editmode-form" class="hidden">
+          <label class="fl">SEARCH BY NAME OR ID</label>
+          <div class="dd-wrap">
+            <div class="search-wrap">🔍 <input id="edit-psearch" placeholder="Search by name or ID" autocomplete="off"></div>
+            <div id="edit-dd" class="dd-list hidden"></div>
+          </div>
+          <div id="edit-banner" class="hidden"><div class="edit-banner">Editing <b id="edit-banner-name"></b> · <span id="edit-banner-id"></span><button class="edit-x" onclick="cancelStockEdit()">✕</button></div></div>
+          <div id="edit-fields" class="hidden">
+            <div class="edit-prow"><div id="edit-pimg"></div></div>
+            <label class="fl">ITEM ID</label>
+            <div class="id-row"><input id="edit-itemid" readonly style="background:#f1f5f9"></div>
+            <label class="fl">ITEM NAME</label>
+            <input id="edit-name" placeholder="e.g. A4 Rim 80gsm">
+            <div class="two-col">
+              <div><label class="fl">QUANTITY</label><input id="edit-qty" type="number" min="0"></div>
+              <div><label class="fl">UNIT</label><select id="edit-unit"><option>Rim</option><option>Ream</option><option>Kg</option><option>Bundle</option><option>Piece</option><option>Packet</option></select></div>
+            </div>
+            <div class="two-col">
+              <div><label class="fl">COST PRICE</label><div class="pkr-wrap"><input id="edit-cost" type="number" min="0"><span data-cur>PKR</span></div></div>
+              <div><label class="fl">SELLING PRICE</label><div class="pkr-wrap"><input id="edit-sell" type="number" min="0"><span data-cur>PKR</span></div></div>
+            </div>
+            <label class="fl">TAX PERCENT</label>
+            <div class="pkr-wrap"><input id="edit-tax" type="number" min="0"><span>%</span></div>
+            <p class="note" id="edit-cost-note"></p>
+            <button id="btn-edit-update" class="btn-save">UPDATE ITEM</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
