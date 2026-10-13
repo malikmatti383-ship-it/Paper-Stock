@@ -578,3 +578,9 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 @keyframes bellRing{0%,100%{transform:rotate(0)}12%{transform:rotate(20deg)}24%{transform:rotate(-17deg)}36%{transform:rotate(14deg)}48%{transform:rotate(-11deg)}60%{transform:rotate(8deg)}72%{transform:rotate(-5deg)}84%{transform:rotate(2.5deg)}}
 .bell-ringing svg{animation:bellRing 1.8s ease-in-out infinite;transform-origin:50% 6px}
 .mini-edit{flex:none;width:34px;height:34px;border-radius:50%;background:var(--pp-soft);color:var(--pp-teal-d);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+
+.total-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px}
+.total-row .fld{margin-bottom:0;min-width:0}
+.paid-tg{flex:1;border:none;border-radius:14px;font-weight:800;font-size:15px;color:#fff;padding:14px 4px;cursor:pointer;min-width:0}
+.paid-tg.paid{background:#16a34a}
+.paid-tg.unpaid{background:#dc2626}

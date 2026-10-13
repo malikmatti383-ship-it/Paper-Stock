@@ -107,7 +107,7 @@
           <div class="fld"><span class="fld-lbl">Discount Amount</span><div class="fld-in"><input id="sale-disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
           <div class="fld"><span class="fld-lbl">Discount %</span><div class="fld-in"><input id="sale-disc-pct" type="number" min="0" max="100" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr">%</span></div></div>
           </div>
-          <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
+          <div class="total-row"><div class="fld" style="flex:0 0 75%"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div><button id="sale-paid-tg" class="paid-tg paid" onclick="toggleSalePaid()">Paid</button></div>
           <div id="sale-disc-pill"></div>
           <div id="sale-cost-warn"></div>
           <div style="display:flex;gap:8px;align-items:center"><button class="link-btn" id="sale-add-cust">+ Add Customer Name/Number</button>
@@ -138,7 +138,7 @@
           <div class="fld"><span class="fld-lbl">Discount Amount</span><div class="fld-in"><input id="ws-disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
           <div class="fld"><span class="fld-lbl">Discount %</span><div class="fld-in"><input id="ws-disc-pct" type="number" min="0" max="100" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr">%</span></div></div>
           </div>
-          <div class="fld"><span class="fld-lbl">Total (at stock rates)</span><div class="fld-in"><input id="ws-total" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
+          <div class="total-row"><div class="fld" style="flex:0 0 75%"><span class="fld-lbl">Total (at stock rates)</span><div class="fld-in"><input id="ws-total" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div><button id="ws-paid-tg" class="paid-tg paid" onclick="toggleWsPaid()">Paid</button></div>
           <div id="ws-disc-pill"></div>
           <div id="ws-cost-warn"></div>
           <button id="btn-ws-sold" class="btn-save blue">SOLD</button>

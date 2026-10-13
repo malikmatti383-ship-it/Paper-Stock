@@ -508,6 +508,13 @@ function discClearUI(which){ discSetPct(which,0); const [ai,pi]=discIds(which);
 function discPctLbl(s){ const d=s.discount||0, c=s.correctTotal||s.total||0;
   if(!(d>0.005)||!(c>0)) return ''; return (d/c*100).toFixed(1).replace(/\.0$/,'')+'%'; }
 setupDiscInputs('sale'); setupDiscInputs('ws');
+let salePaid=true, wsPaid=true;
+function paintPaidTg(){ const sb=$('sale-paid-tg'), wb=$('ws-paid-tg');
+  if(sb){ sb.textContent=salePaid?'Paid':'Unpaid'; sb.className='paid-tg '+(salePaid?'paid':'unpaid'); }
+  if(wb){ wb.textContent=wsPaid?'Paid':'Unpaid'; wb.className='paid-tg '+(wsPaid?'paid':'unpaid'); } }
+window.toggleSalePaid=()=>{ salePaid=!salePaid; paintPaidTg(); };
+window.toggleWsPaid=()=>{ wsPaid=!wsPaid; paintPaidTg(); };
+paintPaidTg();
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;
   const p=DB.products.find(x=>x.id===salePickId);
   const bill=parseFloat($('sale-total-in').value)||0;
@@ -638,9 +645,10 @@ $('btn-sold').onclick=()=>{
     name:lines.length===1?lines[0].name:(lines.length+' items'), brand:firstBrand,
     qty:lines.reduce((s,l)=>s+l.qty,0), total:bill, correctTotal, discount:billDiscount,
     customer:$('sale-cust').value.trim(), phone:$('sale-cust-phone').value.trim(), date:saleDate, ts:(saleDate===dstr()?Date.now():new Date(saleDate+'T12:00').getTime()), items};
+  sale.unpaid=!salePaid;
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
-  save(); saleCart=[]; discClearUI('sale'); renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
+  save(); saleCart=[]; salePaid=true; paintPaidTg(); discClearUI('sale'); renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
   };
   const sLoss=items.filter(it=>it.price<(it.cost||0));
@@ -740,9 +748,10 @@ $('btn-ws-sold').onclick=()=>{ try{
     name:lines.length===1?lines[0].name:(lines.length+' items'),
     qty:lines.reduce((s,l)=>s+l.qty,0), total,
     customer:shop, phone, date:wsDate, ts:(wsDate===dstr()?Date.now():new Date(wsDate+'T12:00').getTime()), items};
+  sale.unpaid=!wsPaid;
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()});
-  save(); wsCart=[]; discClearUI('ws'); renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
+  save(); wsCart=[]; wsPaid=true; paintPaidTg(); discClearUI('ws'); renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
   renderSales(); renderStock(); updatePrintBadge(); toast('\u2705 Wholesale sold! '+pkr(total));
   };
   const wsLoss=lines.filter(l=>l.unit<(l.cost||0));
