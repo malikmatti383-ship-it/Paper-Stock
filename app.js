@@ -162,10 +162,10 @@ function confirmDlg(title,msg,okLabel,cb){
   <button class="dlg-ok" id="dlg-ok">${okLabel}</button></div></div>`);
   $('dlg-ok').onclick=()=>{ closeSheet(); cb(); };
 }
-function lossConfirm(kind,lossLines,cb){
+function lossConfirm(kind,lossLines,cb,extra){
   if(DB.profile.lossAsk===false){ cb(); return; }
   const rows=lossLines.map(l=>'\u2022 '+esc(l.name)+' \u2014 rate '+pkr(l.unit)+' (cost '+pkr(l.cost)+')').join('<br>');
-  openDlg(`<div class="dlg"><h2>Sell at a loss?</h2><p>${rows}<br><br>Are you sure you want to ${kind} at this rate?</p>
+  openDlg(`<div class="dlg"><h2>Sell at a loss?</h2><p>${rows}<br><br>${extra||('Are you sure you want to '+kind+' at this rate?')}</p>
   <label class="dont-ask"><input type="checkbox" id="loss-noask"> Don't ask again</label>
   <div class="dlg-btns"><button class="dlg-cancel" onclick="closeSheet()">CANCEL</button>
   <button class="dlg-ok" id="dlg-ok">YES, SELL</button></div></div>`);
@@ -175,7 +175,7 @@ window.openSettings=()=>{
   const on=DB.profile.lossAsk!==false;
   openSheet(`<h3>⚙️ Settings</h3>
   <div class="lbl" style="margin:8px 0 2px">WARNINGS</div>
-  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Warns when rate is below cost \u2014 sale & credit</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Warns when below cost — sale, wholesale, edit & credit</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NOTIFICATIONS</div>
   <div class="menu-row" onclick="toggleBellAlert()"><span class="ic">🔔</span><div><div>Overdue bell alert</div><div class="sub">Bell rings when a promise date passes</div></div><button id="bell-tswitch" class="tswitch${DB.profile.bellAlert!==false?' on':''}" onclick="event.stopPropagation();toggleBellAlert()"><span class="tlbl">${DB.profile.bellAlert!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
@@ -472,6 +472,17 @@ function discApplyTotal(which){ const [ai,pi,ti]=discIds(which);
   const sub=discSub(which), amt=discAmt(which), totEl=$(ti);
   if(totEl) totEl.value=Math.max(0,sub-amt).toFixed(0);
   if(which==='sale') paintSaleDisc(); else if(which==='ws') paintWsDisc(); else { paintEsDisc(); paintEsProfit(); } }
+function discSyncFromTotal(which){ const [ai,pi,ti]=discIds(which);
+  const totEl=$(ti), amtEl=$(ai), pctEl=$(pi); if(!totEl||!amtEl||!pctEl) return;
+  const sub=discSub(which), bill=parseFloat(totEl.value)||0;
+  const d=Math.max(0,Math.round((sub-bill)*100)/100);
+  const p=sub>0?Math.min(100,d/sub*100):0;
+  discSetPct(which,p);
+  if(document.activeElement!==amtEl) amtEl.value=d||'';
+  if(document.activeElement!==pctEl) pctEl.value=p?+p.toFixed(2):'';
+  if(which==='sale'){ paintSaleDisc(); paintSaleCostWarn(); }
+  else if(which==='ws'){ paintWsDisc(); paintWsCostWarn(); }
+  else { paintEsDisc(); paintEsProfit(); } }
 function discSyncFields(which,fromAmt){ const [ai,pi]=discIds(which);
   const amtEl=$(ai), pctEl=$(pi); if(!amtEl||!pctEl) return;
   const sub=discSub(which);
@@ -554,7 +565,7 @@ const saleQtyStep=d=>{ const el=$('sale-qty');
   let v=(parseInt(el.value)||1)+d; v=Math.max(1,v);
   if(p&&v>p.qty){ v=p.qty; toast('Only '+p.qty+' available'); }
   el.value=v; el.oninput(); };
-$('sale-total-in').oninput=()=>{ paintSaleDisc(); paintSaleCostWarn(); };
+$('sale-total-in').oninput=()=>{ discSyncFromTotal('sale'); };
 $('sale-qty-minus').onclick=()=>saleQtyStep(-1);
 $('sale-qty-plus').onclick=()=>saleQtyStep(1);
 function cartGrand(){ return saleCart.reduce((s,i)=>s+i.total,0); }
@@ -665,7 +676,7 @@ window.pickWsDD=id=>{
 const wsPreview=()=>{ const r=parseFloat($('ws-rate').value)||0;
   $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); paintWsDisc(); paintWsCostWarn(); paintWsQtyWarn(); };
 $('ws-qty').oninput=wsPreview; $('ws-rate').oninput=wsPreview;
-$('ws-total').oninput=()=>{ paintWsDisc(); paintWsCostWarn(); paintWsQtyWarn(); };
+$('ws-total').oninput=()=>{ discSyncFromTotal('ws'); paintWsQtyWarn(); };
 const wsQtyStep=d=>{ const el=$('ws-qty');
   const p=DB.products.find(x=>x.id===wsPickId);
   let v=(parseInt(el.value)||1)+d; v=Math.max(1,v);
@@ -1055,7 +1066,7 @@ window.editSale=id=>{
     if(_pe) _pe.value=esDiscPct?+esDiscPct.toFixed(2):'';
     $('es-total').value=Math.max(0,_esSub-_d).toFixed(0); }
   paintEsDisc(); paintEsProfit();
-  $('es-total').oninput=()=>{ paintEsDisc(); paintEsProfit(); };
+  $('es-total').oninput=()=>{ discSyncFromTotal('es'); };
   renderEsItems();
   $('es-psearch').oninput=e=>renderEsPick(e.target.value.toLowerCase().trim());
 };
@@ -1080,9 +1091,9 @@ function paintEsDisc(){ const box=$('es-disc-pill'); if(!box) return;
   box.innerHTML=d>0?`<span class="disc-pill">✓ ${pkr(d)} discount applied</span>`:''; }
 function paintEsProfit(){ const box=$('es-profit-row'); if(!box) return;
   const bill=parseFloat(($('es-total')||{}).value)||0;
-  const tc=esItems.reduce((a,l)=>a+(l.qty||0)*(l.cost||0),0);
+  const tc=esItems.reduce((a,l)=>{ const p=DB.products.find(x=>x.id===l.productId); return a+(l.qty||0)*(p?p.cost:(l.cost||0)); },0);
   const pf=Math.round((bill-tc)*100)/100;
-  box.innerHTML=`Profit: <b style="color:${pf<0?'var(--red)':'var(--green)'}">${pkr(pf)}</b> <span class="sub">(Cost: ${pkr(tc)})</span>`; }
+  box.innerHTML=`Profit: <b style="color:${pf<0?'var(--red)':'var(--green)'}">${pkr(pf)}</b> <span class="sub">(Stock cost: ${pkr(tc)})</span>`; }
 window.esStep=(ix,d)=>{ const l=esItems[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderEsItems(); reapplyDisc('edit'); };
 window.esRate=(ix,v)=>{ const l=esItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); paintEsTotals(); reapplyDisc('edit'); };
 window.esRm=ix=>{ esItems.splice(ix,1); renderEsItems(); reapplyDisc('edit'); };
@@ -1110,15 +1121,25 @@ window.saveEditSale=id=>{
   for(const l of oldIts){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty+=(l.qty||0); }
   for(const l of esItems){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   let total=parseFloat($('es-total').value); if(!(total>0)) total=esTotal();
-  s.items=esItems.map(l=>{ const p=DB.products.find(x=>x.id===l.productId);
-    return {productId:l.productId,name:l.name,qty:l.qty,price:l.rate,cost:p?p.cost:(l.cost||0)}; });
-  s.qty=s.items.reduce((a,i)=>a+i.qty,0);
-  s.total=Math.round(total*100)/100;
-  const esSub=Math.round(esTotal()*100)/100;
-  s.correctTotal=esSub;
-  s.discount=Math.max(0,Math.round((esSub-s.total)*100)/100);
+  const esCostOf=l=>{ const p=DB.products.find(x=>x.id===l.productId); return p?p.cost:(l.cost||0); };
+  const esTC=Math.round(esItems.reduce((a,l)=>a+(l.qty||0)*esCostOf(l),0)*100)/100;
+  const goEs=()=>{
+    s.items=esItems.map(l=>{ const p=DB.products.find(x=>x.id===l.productId);
+      return {productId:l.productId,name:l.name,qty:l.qty,price:l.rate,cost:p?p.cost:(l.cost||0)}; });
+    s.qty=s.items.reduce((a,i)=>a+i.qty,0);
+    s.total=Math.round(total*100)/100;
+    const esSub=Math.round(esTotal()*100)/100;
+    s.correctTotal=esSub;
+    s.discount=Math.max(0,Math.round((esSub-s.total)*100)/100);
   s.name=s.items.length===1?s.items[0].name:(s.items.length+' items');
-  save(); renderStock(); renderSales(); closeSheet(); toast('\u2705 Sale updated');
+    save(); renderStock(); renderSales(); closeSheet(); toast('\u2705 Sale updated');
+  };
+  const esRateLoss=esItems.filter(l=>l.rate<esCostOf(l));
+  const esBillLoss=total<esTC;
+  if(esRateLoss.length||esBillLoss){
+    const cmsg='Cost total (stock): '+pkr(esTC)+'<br>Your total: '+pkr(total)+'<br><br>Save this edit at a loss?';
+    lossConfirm('edit sale',esRateLoss.length?esRateLoss.map(l=>({name:l.name,unit:l.rate,cost:esCostOf(l)})):esItems.map(l=>({name:l.name,unit:l.rate,cost:esCostOf(l)})),goEs,cmsg);
+  } else goEs();
 };
 
 /* ================= STOCK ================= */
