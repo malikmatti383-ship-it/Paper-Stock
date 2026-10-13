@@ -366,7 +366,9 @@ $('btn-add-save').onclick=()=>{
 
 /* ================= SALES ================= */
 let saleMode='sale', salePickId=null, saleDate=dstr(), saleDay=dstr();
-function grossProfit(){ return DB.sales.reduce((s,x)=>s+x.items.reduce((a,i)=>a+i.qty*((i.price||0)-(i.cost||0)),0),0); }
+function saleProfit(s){ const its=saleItems(s); const tc=its.reduce((a,i)=>a+(i.qty||0)*(i.cost||0),0); return Math.round(((s.total||0)-tc)*100)/100; }
+function saleLineProfit(s,it,its){ const sumAmt=(its||[]).reduce((a,x)=>a+(x.qty||0)*(x.price||0),0)||0; const amt=(it.qty||0)*(it.price||0); const share=sumAmt>0?(s.total||0)*(amt/sumAmt):amt; return Math.round((share-(it.qty||0)*(it.cost||0))*100)/100; }
+function grossProfit(){ return DB.sales.reduce((s,x)=>s+saleProfit(x),0); }
 let salesProfitNp=0;
 function paintSalesProfit(){
   const el=$('s-profit'), eye=$('profit-eye-s'); if(!el) return;
@@ -946,10 +948,11 @@ function renderDaySales(){
   const saleRows=list.map(s=>{
     const its=saleItems(s), open=expSaleId===s.id;
     const sub=its.length>1?its.length+' items':'× '+s.qty;
-    const lineP=it=>{ const lt=(it.total!=null?it.total:(it.qty||0)*(it.price||0)); return lt-(it.qty||0)*(it.cost||0); };
+    const lineP=it=>saleLineProfit(s,it,its);
     const hasCost=its.some(it=>it.cost!=null);
     const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
     const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
+    const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
     const miniPL=hasCost?((its.some(it=>lineP(it)>0)?'<span class="mpl mp-pos" title="Profit">▲</span>':'')+(its.some(it=>lineP(it)<0)?'<span class="mpl mp-neg" title="Loss">▼</span>':'')):'';
     const det=open?`<div class="sale-det">`+its.map((it,ix)=>{
       const lp=hasCost?lineP(it):0;
@@ -958,7 +961,7 @@ function renderDaySales(){
       <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
       ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
       <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
-      (hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
+      (sDisc>0.005?`<div class="sdet-row"><div><b>Correct Total</b></div><div class="sdet-r"><b>${pkr(sCorr)}</b></div></div><div class="sdet-row"><div><b>Discount</b></div><div class="sdet-r"><b style="color:var(--green)">− ${pkr(sDisc)}</b></div></div>`:'')+(hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
       `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
       <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
@@ -1216,7 +1219,7 @@ function renderReport(){
     bars+=`<div class="bar" style="height:${h}px"><span>${d}</span></div>`; }
   $('bar-chart').innerHTML=bars;
   // history by day
-  const days={}; sales.forEach(s=>{ days[s.date]=days[s.date]||{total:0,profit:0}; days[s.date].total+=s.total; days[s.date].profit+=s.items.reduce((x,i)=>x+i.qty*((i.price||0)-(i.cost||0)),0); });
+  const days={}; sales.forEach(s=>{ days[s.date]=days[s.date]||{total:0,profit:0}; days[s.date].total+=s.total; days[s.date].profit+=saleProfit(s); });
   const arr=Object.keys(days).sort().reverse();
   const show=repShowAll?arr:arr.slice(0,8);
   $('rep-history').innerHTML=show.map(ds=>{ const d=new Date(ds+'T12:00');
