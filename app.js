@@ -530,7 +530,7 @@ function stageLine(){
   let lineTotal=bill-cartGrand();
   const unit=Math.max(0,parseFloat($('sale-rate').value)||p.sell);
   if(!(lineTotal>0)) lineTotal=q*unit;
-  return {productId:p.id,name:p.name,qty:q,unit,total:lineTotal,cost:p.cost};
+  return {productId:p.id,name:p.name,qty:q,unit,total:lineTotal,cost:p.cost,sellRate:p.sell};
 }
 function clearStaging(){ salePickId=null; $('sale-psearch').value=''; $('sale-cost').value=''; $('sale-rate').value=''; $('sale-qty').value=1;
   $('sale-total-in').value=cartGrand().toFixed(0); }
@@ -560,6 +560,8 @@ $('btn-sold').onclick=()=>{
   let bill=parseFloat($('sale-total-in').value);
   if(!(bill>0)) bill=rateSum;
   const base=rateSum>0?rateSum:1;
+  const correctTotal=Math.round(lines.reduce((ss,l)=>ss+l.qty*(l.sellRate!=null?l.sellRate:l.unit),0)*100)/100;
+  const billDiscount=Math.max(0,Math.round((correctTotal-bill)*100)/100);
   let acc=0;
   const items=lines.map((l,ix)=>{
     const pr=DB.products.find(x=>x.id===l.productId);
@@ -573,7 +575,7 @@ $('btn-sold').onclick=()=>{
   const firstBrand=lines.length===1?((DB.products.find(x=>x.id===lines[0].productId)||{}).brand||''):'';
   const sale={id:DB.seq.s++, productId:lines.length===1?lines[0].productId:null,
     name:lines.length===1?lines[0].name:(lines.length+' items'), brand:firstBrand,
-    qty:lines.reduce((s,l)=>s+l.qty,0), total:bill,
+    qty:lines.reduce((s,l)=>s+l.qty,0), total:bill, correctTotal, discount:billDiscount,
     customer:$('sale-cust').value.trim(), phone:$('sale-cust-phone').value.trim(), date:saleDate, ts:(saleDate===dstr()?Date.now():new Date(saleDate+'T12:00').getTime()), items};
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
@@ -645,7 +647,7 @@ function stageWsLine(){
   const q=Math.max(1,parseInt($('ws-qty').value)||1);
   if(q>p.qty){ toast('Only '+p.qty+' in stock!'); return 'err'; }
   const unit=Math.max(0,parseFloat($('ws-rate').value)||p.sell);
-  return {productId:p.id,name:p.name,qty:q,unit,total:q*unit,cost:p.cost};
+  return {productId:p.id,name:p.name,qty:q,unit,total:q*unit,cost:p.cost,sellRate:p.sell};
 }
 function clearWsStaging(){ wsPickId=null; $('ws-psearch').value=''; $('ws-qty').value=1; $('ws-rate').value=''; $('ws-cost').value='';
   $('ws-total').value=wsGrand().toFixed(0); }
@@ -672,7 +674,9 @@ $('btn-ws-sold').onclick=()=>{
   const items=lines.map(l=>{ const pr=DB.products.find(x=>x.id===l.productId); pr.qty-=l.qty;
     return {productId:l.productId,name:l.name,qty:l.qty,price:l.unit,cost:pr.cost}; });
   let total=parseFloat($('ws-total').value); if(!(total>0)) total=items.reduce((s,i)=>s+i.qty*i.price,0);
-  const sale={id:DB.seq.s++, kind:'wholesale',
+  const wsCorrect=Math.round(lines.reduce((ss,l)=>ss+l.qty*(l.sellRate!=null?l.sellRate:l.unit),0)*100)/100;
+  const wsDisc=Math.max(0,Math.round((wsCorrect-total)*100)/100);
+  const sale={id:DB.seq.s++, kind:'wholesale', correctTotal:wsCorrect, discount:wsDisc,
     productId:lines.length===1?lines[0].productId:null,
     name:lines.length===1?lines[0].name:(lines.length+' items'),
     qty:lines.reduce((s,l)=>s+l.qty,0), total,
@@ -1246,6 +1250,8 @@ window.openCreditSort=()=>{
 window.setCreditSort=v=>{ creditSort=v; paintCreditSort(); closeSheet(); renderCredit(); };
 $('credit-search').oninput=e=>{ creditQ=e.target.value.toLowerCase(); renderCredit(); };
 const custBal=c=>(c.credit||0)-(c.received||0);
+function lineDisc(l){ const r=(l.rate!=null?l.rate:l.unit)||0; const sr=(l.sellRate!=null?l.sellRate:r); return Math.max(0,sr-r)*(l.qty||0); }
+function custDisc(c){ return Math.round((c.items||[]).reduce((ss,l)=>ss+lineDisc(l),0)*100)/100; }
 function itemsProfit(its){ return (its||[]).reduce((t,l)=>t+(l.cost!=null?(l.qty||0)*((l.rate||0)-(l.cost||0)):0),0); }
 function curMonthKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function monthName(key){ try{ const p=String(key).split('-'); return new Date(+p[0],+p[1]-1,1).toLocaleDateString('en-GB',{month:'short',year:'numeric'}); }catch(e){ return key; } }
@@ -1453,7 +1459,7 @@ window.pickCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   if(!(p.qty>0)){ toast('\u26A0\uFE0F \u201c'+p.name+'\u201d not available in stock!'); return; }
   const ex=credCart.find(x=>x.productId===id);
   if(ex){ if(ex.qty+1>p.qty){ toast('Only '+p.qty+' "'+p.name+'" in stock!'); return; } ex.qty++; }
-  else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  else credCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit,sellRate:p.sell});
   $('cc-psearch').value=''; credPickQ=''; renderCredPick(); renderCredCart();
   toast('✅ Added: '+p.name); };
 
@@ -1496,7 +1502,7 @@ window.saveCredit=()=>{
   if(!credCart.length&&!camt){ toast('Add a product or enter credit amount'); return; }
   for(const l of credCart){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
-  const items=credCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  const items=credCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,sellRate:l.sellRate,total:l.qty*l.rate}));
   if(belowCostAsk(items,()=>window.saveCredit())) return;
   for(const l of items){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const newId=DB.seq.c++;
@@ -1522,7 +1528,8 @@ window.creditDetail=id=>{
     ${Math.abs(ebAdj)>0.005?`<div class="kv"><span>✏️ Edit balance</span><b style="color:${ebAdj>0?'var(--green)':'var(--red)'}">${ebAdj>0?'+':'\u2212'}${pkr(Math.abs(ebAdj))}</b></div>`:''}
     <div class="kv"><span>💰 Credit given</span><b>${pkr(c.credit)}</b></div>
     <div class="kv"><span>💵 Received</span><b style="color:var(--green)">${pkr(c.received)}</b></div>
-    <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Balance due</span><b style="color:${Math.abs(b)<0.005?'var(--green)':'var(--red)'}">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
+    ${(()=>{ const dsc=custDisc(c); return dsc>0.005?`<div class="kv"><span>📊 Correct Balance</span><b>${pkr(b+dsc)}</b></div><div class="kv"><span>🏷️ Discount</span><b style="color:var(--green)">−${pkr(dsc)}</b></div>`:''; })()}
+    <div class="kv" onclick="editBalance(${c.id})" style="cursor:pointer"><span>📌 Total Balance</span><b style="color:${Math.abs(b)<0.005?'var(--green)':'var(--red)'}">${pkr(b)} <span style="font-size:13px">✏️</span></b></div>
     ${c.promiseDate?`<div class="kv"><span>⏰ Promise</span><b>${fmtDate(c.promiseDate)}${c.promiseTime?' · '+c.promiseTime:''}</b></div>`:''}
     <div class="mrow">
       <button class="btn-ghost" onclick="addWusool(${c.id})">💵 Receive</button>
@@ -1743,7 +1750,7 @@ window.pickMoreCred=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   if(!(p.qty>0)){ toast('\u26A0\uFE0F \u201c'+p.name+'\u201d not available in stock!'); return; }
   const ex=moreCart.find(x=>x.productId===id);
   if(ex){ if(ex.qty+1>p.qty){ toast('Only '+p.qty+' "'+p.name+'" in stock!'); return; } ex.qty++; }
-  else moreCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  else moreCart.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit,sellRate:p.sell});
   $('m-psearch').value=''; renderMorePick(''); renderMoreCart();
   toast('✅ Added: '+p.name); };
 function moreCartTotal(){ return moreCart.reduce((s,l)=>s+l.qty*l.rate,0); }
@@ -1795,7 +1802,7 @@ function belowCostAsk(items, retry){
 window.saveCreditMore=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!guardQtyEdit('more')) return;
   const a=Math.max(0,parseFloat($('m-amt').value)||0); if(!a){toast('Enter amount');return;}
-  const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  const items=moreCart.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,sellRate:l.sellRate,total:l.qty*l.rate}));
   for(const l of items){ const p=findProd(l.productId);
     if(!p||!(p.qty>=l.qty)){ toast('⚠️ Only '+(p&&p.qty!=null?p.qty:0)+' "'+l.name+'" in stock!'); return; } }
   if(belowCostAsk(items,()=>window.saveCreditMore(id))) return;
@@ -1809,7 +1816,7 @@ let editItems=[];
 window.editCustomer=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
   editCust=id;
-  editItems=(c.items||[]).map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit}));
+  editItems=(c.items||[]).map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,sellRate:l.sellRate}));
   openSheet(`<h3>✏️ Edit — ${esc(c.name)}</h3>
     <input id="e-name" placeholder="Customer name" value="${esc(c.name)}">
     <input id="e-phone" placeholder="Phone (03xx-xxxxxxx)" inputmode="tel" value="${esc(c.phone||'')}">
@@ -1869,7 +1876,7 @@ window.pickEditItem=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
     if(!((p.qty||0)+back>0)){ toast('\u26A0\uFE0F \u201c'+p.name+'\u201d not available in stock!'); return; } }
   const ex=editItems.find(x=>x.productId===id);
   if(ex){ const mx=maxFor('edit',ex); if(ex.qty+1>mx){ toast('Only '+mx+' "'+p.name+'" in stock!'); return; } ex.qty++; }
-  else editItems.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit});
+  else editItems.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost,unit:p.unit,sellRate:p.sell});
   $('e-psearch').value=''; renderEditPick(''); renderEditItems();
   toast('✅ Added: '+p.name); };
 window.saveEditCustomer=id=>{
@@ -1887,7 +1894,7 @@ window.saveEditCustomer=id=>{
   for(const l of editItems){ const p=DB.products.find(x=>x.id===l.productId); if(p) p.qty-=l.qty; }
   const camt=Math.max(0,parseFloat($('e-credit').value)||0);
   c.name=name; c.phone=$('e-phone').value.trim();
-  c.items=editItems.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,total:l.qty*l.rate}));
+  c.items=editItems.map(l=>({productId:l.productId,name:l.name,qty:l.qty,rate:l.rate,cost:l.cost,unit:l.unit,sellRate:l.sellRate,total:l.qty*l.rate}));
   const dProfit=Math.round((itemsProfit(c.items)-itemsProfit(oldItems))*100)/100;
   if(Math.abs(dProfit)>=0.005) c.log.push({t:'Credit',a:0,note:'Edit profit adj.',d:dtstr(),profit:dProfit});
   if(c.items.length) c.product=c.items.map(l=>l.name).join(', ');
@@ -2050,7 +2057,8 @@ function updatePrintBadge(){
   const b=$('print-badge'); b.classList.toggle('hidden',!n); b.textContent=n;
 }
 function billPrintHtml(s){
-  const bc=billTheme(); const prof=DB.profile;
+  const pdDisc=(s.discount||0), pdCorr=(s.correctTotal!=null?s.correctTotal:s.total);
+  const pdDiscRows=pdDisc>0.005?`<tr><td colspan="3"></td><td class="r">Correct Total</td><td class="r">${rsFmt(pdCorr)}</td></tr><tr><td colspan="3"></td><td class="r">Discount</td><td class="r">${rsFmt(-pdDisc)}</td></tr>`:'';  const bc=billTheme(); const prof=DB.profile;
   const d=new Date(s.ts||Date.now());
   const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   const rows=s.items.map((it,i)=>`<tr><td>${i+1}.</td><td>${esc(it.name||'')}</td><td class="r">${it.qty}</td><td class="r">${rsFmt(it.price)}</td><td class="r">${rsFmt(it.qty*it.price)}</td></tr>`).join('');
@@ -2068,6 +2076,7 @@ function billPrintHtml(s){
   <table class="bp-table"><tr style="background:${bc[2]}"><th>S.N</th><th>Name of Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr>
   ${rows}
   <tr class="tot"><td></td><td></td><td class="r">${tq}</td><td></td><td class="r">${rsFmt(s.total)}</td></tr>
+  ${pdDiscRows}
   <tr><td colspan="3"></td><td class="r">Received</td><td class="r">${rsFmt(s.total)}</td></tr>
   <tr><td colspan="5" class="words">In Word: ${numToWords(s.total)}</td></tr></table>
   <div class="bp-terms"><b>Terms & Conditions:</b><br>&bull; Goods once sold will not be taken back.<br>&bull; Our responsibility ceases when goods leave our shop.</div>
@@ -2177,6 +2186,8 @@ function billPDF(s){
     const amt=it.qty*it.price;tq+=it.qty;
     drow(y,[sn+'. ',it.name||'',it.qty,rsFmt(it.price),rsFmt(amt)],hh);sn++;y+=hh;});
   drow(y,['','',tq,'',rsFmt(s.total)],rh,true,true);y+=rh;
+  const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
+  if(sDisc>0.005){ drow(y,['','','','Correct Total',rsFmt(sCorr)],rh);y+=rh; drow(y,['','','','Discount',rsFmt(-sDisc)],rh);y+=rh; }
   let x=M;doc.rect(x,y,bw-38,rh);doc.rect(x+bw-38,y,38,rh);
   doc.setFont('helvetica','normal');doc.setFontSize(11*f);
   doc.text('Received',x+bw-38-2,y+rh/2+1.6,{align:'right'});
@@ -2243,6 +2254,7 @@ function creditPDF(c){
     const amt=(it.total!=null?it.total:it.qty*(it.rate||0));tq+=it.qty;
     drow(y,[sn+'. ',it.name||'',it.qty,rsFmt(it.rate||0),rsFmt(amt)],hh);sn++;y+=hh;});
   const total=c.credit||0, recv=c.received||0, due=Math.max(0,total-recv);
+  const cdisc=custDisc(c), ccorr=Math.round((total+cdisc)*100)/100;
   const srow=(label,val,col)=>{
     let x=M;doc.rect(x,y,bw-38,rh);doc.rect(x+bw-38,y,38,rh);
     doc.setFont('helvetica','normal');doc.setFontSize(11*f);
@@ -2250,6 +2262,7 @@ function creditPDF(c){
     const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);
     doc.setFont('helvetica','bold');doc.text(rsFmt(val),x+bw-2,y+rh/2+1.6,{align:'right'});
     doc.setTextColor(0,0,0);y+=rh;};
+  if(cdisc>0.005){ srow('Correct Balance',ccorr,null); srow('Discount',-cdisc,GREEN); }
   srow('Total Qty: '+tq+'   Total',total,null);
   srow('Received',recv,GREEN);
   srow('Total Due',due,RED);
