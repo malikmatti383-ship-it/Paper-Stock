@@ -602,3 +602,5 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .sum-sub{background:#f8fafc;border-radius:0 0 20px 20px;padding:10px 20px 14px;margin-top:-8px}
 .sum-sub .sub-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;color:#475569}
 .sum-sub .sub-row b{color:#111827}
+
+.sum-line .eye-btn{flex:none;margin-left:2px}
