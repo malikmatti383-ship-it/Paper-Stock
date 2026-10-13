@@ -384,6 +384,9 @@ function renderSales(){
   const tot=tSales.reduce((s,x)=>s+x.total,0);
   const exp=tExp.reduce((s,x)=>s+x.amount,0);
   $('s-total').textContent=pkr(tot); $('s-exp').textContent=exp>0?pkrMinus(exp):pkr(0); paintCur();
+  const bdS=$('bd-sale'), bdW=$('bd-ws');
+  if(bdS) bdS.textContent=pkr(tSales.filter(x=>x.kind!=='wholesale').reduce((s,x)=>s+(x.total||0),0));
+  if(bdW) bdW.textContent=pkr(tSales.filter(x=>x.kind==='wholesale').reduce((s,x)=>s+(x.total||0),0));
   salesProfitNp=tSales.reduce((s,x)=>s+saleProfit(x),0)-exp; // TODAY only: resets at midnight
   paintSalesProfit();
   $('sale-date-txt').textContent=fmtDate(saleDate);
@@ -514,16 +517,10 @@ function paintPaidTg(){ const sb=$('sale-paid-tg'), wb=$('ws-paid-tg');
   if(sb){ sb.textContent=salePaid?'Paid':'Unpaid'; sb.className='paid-tg '+(salePaid?'paid':'unpaid'); }
   if(wb){ wb.textContent=wsPaid?'Paid':'Unpaid'; wb.className='paid-tg '+(wsPaid?'paid':'unpaid'); } }
 window.toggleSalePaid=()=>{ salePaid=!salePaid; paintPaidTg();
-window.openSaleBreakdown=()=>{
-  const td=dstr(), tS=DB.sales.filter(x=>x.date===td);
-  const sTot=tS.filter(x=>x.kind!=='wholesale').reduce((s,x)=>s+(x.total||0),0);
-  const wTot=tS.filter(x=>x.kind==='wholesale').reduce((s,x)=>s+(x.total||0),0);
-  openSheet('<h3>Today\u2019s Sale Breakdown</h3>'
-    +'<div class="kv"><span>\uD83D\uDED2 Sale</span><b>'+pkr(sTot)+'</b></div>'
-    +'<div class="kv"><span>\uD83C\uDFEA Wholesale</span><b>'+pkr(wTot)+'</b></div>'
-    +'<div class="kv" style="border-top:1px solid #e5e7eb;padding-top:10px;margin-top:4px"><span><b>Total</b></span><b>'+pkr(sTot+wTot)+'</b></div>'
-    +'<div style="margin-top:12px"><button class="btn-ghost" onclick="closeSheet();openCurrency()">\uD83D\uDCB1 Change currency</button></div>');
-}; };
+window.toggleSaleBreakdown=e=>{ if(e) e.stopPropagation();
+  const sub=$('sale-breakdown'), btn=$('sale-exp-btn'); if(!sub) return;
+  sub.classList.toggle('hidden');
+  if(btn) btn.textContent=sub.classList.contains('hidden')?'\uD83D\uDD3D':'\uD83D\uDD3C'; }; };
 window.toggleWsPaid=()=>{ wsPaid=!wsPaid; paintPaidTg(); };
 paintPaidTg();
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;

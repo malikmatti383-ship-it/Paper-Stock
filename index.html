@@ -82,9 +82,17 @@
   <section id="view-sales" class="view active">
     <div class="pad">
       <div class="sum-lines">
-        <div class="sum-line" onclick="openSaleBreakdown()" style="cursor:pointer" title="Tap for breakdown">
-          <div class="sl-lbl"><div class="t">TODAY'S SALE</div><div class="s">Sale + Wholesale · tap for breakdown</div></div>
+        <div class="sum-wrap">
+        <div class="sum-line">
+          <div class="sl-lbl"><div class="t">TODAY'S SALE</div><div class="s">Sale + Wholesale</div></div>
           <div class="sl-amt" id="s-total">PKR 0.00</div>
+          <button class="sum-exp" id="sale-exp-btn" onclick="toggleSaleBreakdown(event)" title="Breakdown">🔽</button>
+        </div>
+        <div class="sum-sub hidden" id="sale-breakdown">
+          <div class="sub-row"><span>Sale total</span><b id="bd-sale">PKR 0.00</b></div>
+          <div class="sub-row"><span>Wholesale total</span><b id="bd-ws">PKR 0.00</b></div>
+          <div class="sub-row"><button class="link-btn" onclick="openCurrency()" style="font-size:13px">💱 Change currency</button><span></span></div>
+        </div>
         </div>
         <div class="sum-line">
           <div class="sl-lbl"><div class="t">EXPENSES</div></div>
