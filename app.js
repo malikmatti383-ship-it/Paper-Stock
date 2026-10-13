@@ -705,7 +705,7 @@ $('btn-ws-add').onclick=()=>{
   if(!it){ toast('Search and select a product first'); return; }
   wsCart.push(it); clearWsStaging(); renderWsCart(); reapplyDisc('ws'); toast('\u2705 Added: '+it.name);
 };
-$('btn-ws-sold').onclick=()=>{
+$('btn-ws-sold').onclick=()=>{ try{
   if(!guardQtyEdit('ws')) return;
   const shop=$('ws-shop').value.trim(), phone=$('ws-phone').value.trim();
   if(!shop){ toast('Enter shop name'); $('ws-shop').focus(); return; }
@@ -739,7 +739,7 @@ $('btn-ws-sold').onclick=()=>{
   const wsBillLoss=total<wsTotalCost;
   if(wsLoss.length||wsBillLoss) lossConfirm('wholesale',(wsLoss.length?wsLoss:lines).map(l=>({name:l.name,unit:l.unit,cost:l.cost})),go);
   else go();
-};
+}catch(err){ toast('⚠️ Error: '+(err&&err.message||err)); console.error(err); } };
 
 /* ---- Return: single item or whole bundle (NADIR style) ---- */
 // Return item — bottom sheet like reference: stepper, refund, mark as unpaid
