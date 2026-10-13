@@ -765,7 +765,8 @@ window.sheetMarkPaid=saleId=>{ const s=DB.sales.find(x=>x.id===saleId); if(!s||!
 /* ---- Return from bundle: checkbox select sheet (reference style) ---- */
 window.returnSale=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
-  const its=saleItems(s); if(!its.length) return;
+  if(s.items&&!s.items.length){ toast('\u2705 Already returned'); return; }
+  const its=saleItems(s); if(!its.length||!its.some(it=>(it.qty||0)>0)){ toast('\u2705 Already returned'); return; }
   const sel=new Set(its.map((_,i)=>i));
   const rq=its.map(it=>it.qty||0);   // return-qty per item
   const paint=()=>{
@@ -825,26 +826,33 @@ window.returnSale=id=>{
 };
 function doReturnBundle(saleId,list){
   const s=DB.sales.find(x=>x.id===saleId); if(!s){ closeSheet(); return; }
+  // Already fully returned (empty items from an earlier return) -> remove, never touch stock again
+  if(s.items&&!s.items.length){
+    DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId);
+    save(); closeSheet(); renderSales(); renderStock(); updatePrintBadge();
+    toast('\u2705 Already returned \u2014 cleaned up'); return;
+  }
   const its=saleItems(s);
   let refund=0;
   [...list].sort((a,b)=>b.ix-a.ix).forEach(o=>{
-    const it=its[o.ix]; if(!it) return;
+    const it=its[o.ix]; if(!it||!(it.qty>0)) return;
     const n=Math.min(Math.max(1,o.n||1),it.qty||1);
     refund=Math.round((refund+n*(it.price||0))*100)/100;
     const pr=DB.products.find(x=>x.id===it.productId); if(pr) pr.qty+=n;
     if(s.items&&s.items.length){ it.qty-=n; if(it.qty<=0) s.items.splice(o.ix,1); }
     else { s.qty=Math.max(0,(s.qty||0)-n); }
   });
-  if(s.items&&s.items.length){
-    const left=saleItems(s);
-    s.qty=left.reduce((tt,it)=>tt+it.qty,0);
-    s.total=Math.round((s.total-refund)*100)/100;
-    s.name=left.length===1?left[0].name:(left.length+' items');
-    if(!left.length){ DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId); }
-  } else {
-    s.total=Math.round((s.total-refund)*100)/100;
-    if((s.qty||0)<=0){ DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId); }
-  }
+  s.total=Math.round(Math.max(0,(s.total||0)-refund)*100)/100;
+  let gone=false;
+  if(s.items){
+    const left=s.items.filter(it=>(it.qty||0)>0);
+    s.items=left;
+    s.qty=left.reduce((tt,it)=>tt+(it.qty||0),0);
+    if(left.length===1) s.name=left[0].name;
+    else if(left.length>1) s.name=left.length+' items';
+    else gone=true;
+  } else if((s.qty||0)<=0){ gone=true; }
+  if(gone){ DB.sales=DB.sales.filter(x=>x.id!==saleId); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==saleId); }
   save(); closeSheet(); renderSales(); renderStock(); if(typeof renderReport==='function') renderReport(); updatePrintBadge();
   toast('\u21A9\uFE0F Returned '+list.length+' item(s) \u2014 back to stock');
 }
