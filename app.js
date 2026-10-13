@@ -2203,13 +2203,18 @@ function billPDF(s){
     const hh=Math.max(rh,Math.min(nl,4)*(5*f+1));
     const amt=it.qty*it.price;tq+=it.qty;
     drow(y,[sn+'. ',it.name||'',it.qty,rsFmt(it.price),rsFmt(amt)],hh);sn++;y+=hh;});
-  drow(y,['','',tq,'',rsFmt(s.total)],rh,true,true);y+=rh;
   const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
   if(sDisc>0.005){ drow(y,['','','','Correct Total',rsFmt(sCorr)],rh);y+=rh; drow(y,['','','','Discount',rsFmt(-sDisc)],rh);y+=rh; }
   let x=M;doc.rect(x,y,bw-38,rh);doc.rect(x+bw-38,y,38,rh);
   doc.setFont('helvetica','bold');doc.setFontSize(12*f);
-  doc.text('Received',x+bw-38-2,y+rh/2+1.6,{align:'right'});
+  doc.text('Total',x+bw-38-2,y+rh/2+1.6,{align:'right'});
   doc.setFont('helvetica','bold');doc.setFontSize(15*f);doc.text(rsFmt(s.total),x+bw-2,y+rh/2+1.6,{align:'right'});y+=rh;
+  const rc=s.unpaid?[220,38,38]:[22,163,74];
+  doc.rect(x,y,bw-38,rh);doc.rect(x+bw-38,y,38,rh);
+  doc.setFont('helvetica','bold');doc.setFontSize(12*f);doc.setTextColor(rc[0],rc[1],rc[2]);
+  doc.text(s.unpaid?'Not Received':'Received',x+bw-38-2,y+rh/2+1.6,{align:'right'});
+  doc.setFont('helvetica','bold');doc.setFontSize(13*f);doc.text(rsFmt(s.total),x+bw-2,y+rh/2+1.6,{align:'right'});
+  doc.setTextColor(0,0,0);y+=rh;
   doc.rect(M,y,bw,rh);doc.setFont('helvetica','bold');doc.setFontSize(11*f);
   doc.text('In Word: '+numToWords(s.total),M+2,y+rh/2+1.6);y+=rh+4*f;
   const th2=26*f+8;
