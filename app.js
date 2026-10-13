@@ -765,7 +765,10 @@ window.sheetMarkPaid=saleId=>{ const s=DB.sales.find(x=>x.id===saleId); if(!s||!
 /* ---- Return from bundle: checkbox select sheet (reference style) ---- */
 window.returnSale=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
-  if(s.items&&!s.items.length){ toast('\u2705 Already returned'); return; }
+  if(s.items&&!s.items.length){
+    DB.sales=DB.sales.filter(x=>x.id!==id); DB.printQueue=DB.printQueue.filter(q=>q.saleId!==id);
+    save(); renderSales(); renderStock(); updatePrintBadge();
+    toast('\u2705 Already returned \u2014 removed from history'); return; }
   const its=saleItems(s); if(!its.length||!its.some(it=>(it.qty||0)>0)){ toast('\u2705 Already returned'); return; }
   const sel=new Set(its.map((_,i)=>i));
   const rq=its.map(it=>it.qty||0);   // return-qty per item
