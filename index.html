@@ -103,7 +103,10 @@
           </div>
           <div class="fld"><span class="fld-lbl">Quantity sold</span><div class="qty-step"><button class="mini-btn" id="sale-qty-minus" type="button">−</button><input id="sale-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="sale-qty-plus" type="button">+</button></div></div><div id="sale-qty-warn"></div>
           <button class="btn-addmore" id="btn-add-item">+ Add more items</button>
-          <button class="btn-disc" id="btn-sale-disc">🏷️ Discount</button>
+          <div class="two-col">
+          <div class="fld"><span class="fld-lbl">Discount Amount</span><div class="fld-in"><input id="sale-disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
+          <div class="fld"><span class="fld-lbl">Discount %</span><div class="fld-in"><input id="sale-disc-pct" type="number" min="0" max="100" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr">%</span></div></div>
+          </div>
           <div class="fld"><span class="fld-lbl">Sold at (Total Price)</span><div class="fld-in"><input id="sale-total-in" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <div id="sale-disc-pill"></div>
           <div id="sale-cost-warn"></div>
@@ -131,7 +134,10 @@
           </div>
           <div class="fld"><span class="fld-lbl">Quantity</span><div class="qty-step"><button class="mini-btn" id="ws-qty-minus" type="button">−</button><input id="ws-qty" type="number" min="1" value="1" autocomplete="off"><button class="mini-btn" id="ws-qty-plus" type="button">+</button></div></div><div id="ws-qty-warn"></div>
           <button class="btn-addmore" id="btn-ws-add">+ Add more items</button>
-          <button class="btn-disc" id="btn-ws-disc">🏷️ Discount</button>
+          <div class="two-col">
+          <div class="fld"><span class="fld-lbl">Discount Amount</span><div class="fld-in"><input id="ws-disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
+          <div class="fld"><span class="fld-lbl">Discount %</span><div class="fld-in"><input id="ws-disc-pct" type="number" min="0" max="100" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr">%</span></div></div>
+          </div>
           <div class="fld"><span class="fld-lbl">Total (at stock rates)</span><div class="fld-in"><input id="ws-total" type="number" min="0" autocomplete="off" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
           <div id="ws-disc-pill"></div>
           <div id="ws-cost-warn"></div>

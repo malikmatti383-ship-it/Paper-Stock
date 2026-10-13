@@ -443,58 +443,58 @@ function stockLbl(p){
 function paintSaleDisc(){ const box=$('sale-disc-pill'); if(!box) return;
   const sub=saleSub();
   const bill=parseFloat($('sale-total-in').value)||0;
-  box.innerHTML=(bill>0&&sub>bill)?`<span class="disc-pill">✓ ${pkr(sub-bill)} discount applied</span>`:'';
-}
-function paintWsDisc(){ const box=$('ws-disc-pill'); if(!box) return;
+  const d=(bill>0&&sub>bill)?sub-bill:0;
+  const dp=d>0?(d/sub*100).toFixed(1).replace(/\.0$/,'')+'%':'';
+  box.innerHTML=d>0?`<span class="disc-pill">✓ ${pkr(d)}${dp?' - '+dp:''} discount applied</span>`:''; }function paintWsDisc(){ const box=$('ws-disc-pill'); if(!box) return;
   const tt=parseFloat($('ws-total').value)||0, sub=wsSub();
-  box.innerHTML=(tt>0&&sub>tt)?`<span class="disc-pill">✓ ${pkr(sub-tt)} discount applied</span>`:'';
-}
-/* ---- Explicit Discount (v149): amount or % via Discount button, below Add more items.
+  const d=(tt>0&&sub>tt)?sub-tt:0;
+  const dp=d>0?(d/sub*100).toFixed(1).replace(/\.0$/,'')+'%':'';
+  box.innerHTML=d>0?`<span class="disc-pill">✓ ${pkr(d)}${dp?' - '+dp:''} discount applied</span>`:''; }/* ---- Explicit Discount (v149): amount or % via Discount button, below Add more items.
    Rule: rate edit => NO discount (rate is final). Discount button or typed lower total => discount. ---- */
-let saleDisc={amt:0,pct:0}, wsDisc={amt:0,pct:0};
+/* ---- Inline Discount (v151): Amount + % boxes, bidirectional auto-calc.
+   Rule: rate edit => NO discount. Discount boxes or typed lower total => discount. ---- */
+let saleDiscPct=0, wsDiscPct=0, esDiscPct=0;
 function saleSub(){ const p=DB.products.find(x=>x.id===salePickId);
   const staged=p?(parseFloat($('sale-rate').value)||p.sell)*(parseInt($('sale-qty').value)||1):0;
   return saleCart.reduce((s,l)=>s+l.qty*l.unit,0)+staged; }
 function wsSub(){ const p=DB.products.find(x=>x.id===wsPickId);
   const staged=p?(parseFloat($('ws-rate').value)||p.sell)*(parseInt($('ws-qty').value)||1):0;
   return wsCart.reduce((s,l)=>s+l.qty*l.unit,0)+staged; }
-function reapplyDisc(which){ const D=which==='sale'?saleDisc:which==='ws'?wsDisc:esDisc; if(!(D.amt>0)&&!(D.pct>0)) return;
-  const sub=which==='sale'?saleSub():which==='ws'?wsSub():esDiscSub();
-  if(D.pct>0) D.amt=Math.min(Math.round(sub*D.pct/100),sub);
-  D.amt=Math.min(D.amt,sub);
-  if(which==='sale'){ $('sale-total-in').value=(sub-D.amt).toFixed(0); paintSaleDisc(); }
-  else if(which==='ws'){ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); }
-  else{ const et=$('es-total'); if(et){ et.value=(sub-D.amt).toFixed(0); paintEsDisc(); paintEsProfit(); } } }
-let esDisc={amt:0,pct:0};
-function esDiscSub(){ return esTotal(); }
-function openDiscDlg(which){
-  const sub=which==='sale'?saleSub():which==='ws'?wsSub():esDiscSub();
-  if(!(sub>0)){ toast('Add items first'); return; }
-  const D=which==='sale'?saleDisc:which==='ws'?wsDisc:esDisc;
-  openSheet(`<h3>\U0001F3F7\uFE0F Discount</h3>
-    <div class="sub" style="margin-bottom:8px">Subtotal: <b>${pkr(sub)}</b> (at your rates)</div>
-    <div class="fld"><span class="fld-lbl">Amount (PKR)</span><input id="disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" value="${D.amt||''}"></div>
-    <div class="fld"><span class="fld-lbl">Percentage (%)</span><input id="disc-pct" type="number" min="0" max="100" inputmode="decimal" placeholder="0" value="${D.pct||''}"></div>
-    <div class="sub" id="disc-hint" style="min-height:20px"></div>
-    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn-save" id="disc-clear" style="background:#999;flex:1">CLEAR</button><button class="btn-save blue" id="disc-ok" style="flex:2">APPLY</button></div>`);
-  const amtEl=$('disc-amt'), pctEl=$('disc-pct'), hint=$('disc-hint');
-  const calc=()=>{ let a=parseFloat(amtEl.value)||0; const p=parseFloat(pctEl.value)||0;
-    if(!(a>0)&&p>0) a=Math.round(sub*p/100); return Math.min(a,sub); };
-  const paint=()=>{ const d=calc();
-    hint.innerHTML=d>0?`Discount: <b>${pkr(d)}</b> \u2192 New total: <b>${pkr(sub-d)}</b>`:''; };
-  amtEl.oninput=()=>{ if(parseFloat(amtEl.value)>0) pctEl.value=''; paint(); };
-  pctEl.oninput=()=>{ if(parseFloat(pctEl.value)>0) amtEl.value=''; paint(); };
-  paint();
-  const applyD=()=>{ if(which==='sale'){ $('sale-total-in').value=(sub-D.amt).toFixed(0); paintSaleDisc(); }
-    else if(which==='ws'){ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); }
-    else{ $('es-total').value=(sub-D.amt).toFixed(0); paintEsDisc(); } };
-  $('disc-ok').onclick=()=>{ const a=parseFloat(amtEl.value)||0, p=parseFloat(pctEl.value)||0;
-    D.amt=calc(); D.pct=(p>0&&!(a>0))?p:0;
-    applyD(); closeSheet(); toast('\u2705 Discount applied: '+pkr(D.amt)); };
-  $('disc-clear').onclick=()=>{ D.amt=0; D.pct=0; applyD(); closeSheet(); };
-}
-{ const _bsd=$('btn-sale-disc'); if(_bsd) _bsd.onclick=()=>openDiscDlg('sale');
-  const _bwd=$('btn-ws-disc'); if(_bwd) _bwd.onclick=()=>openDiscDlg('ws'); }
+function discIds(which){ return which==='sale'?['sale-disc-amt','sale-disc-pct','sale-total-in']
+  :which==='ws'?['ws-disc-amt','ws-disc-pct','ws-total']:['es-disc-amt','es-disc-pct','es-total']; }
+function discGetPct(which){ return which==='sale'?saleDiscPct:which==='ws'?wsDiscPct:esDiscPct; }
+function discSetPct(which,v){ if(which==='sale')saleDiscPct=v; else if(which==='ws')wsDiscPct=v; else esDiscPct=v; }
+function discSub(which){ return which==='sale'?saleSub():which==='ws'?wsSub():esTotal(); }
+function discAmt(which){ return Math.round(discSub(which)*discGetPct(which)/100); }
+function discApplyTotal(which){ const [ai,pi,ti]=discIds(which);
+  const sub=discSub(which), amt=discAmt(which), totEl=$(ti);
+  if(totEl) totEl.value=Math.max(0,sub-amt).toFixed(0);
+  if(which==='sale') paintSaleDisc(); else if(which==='ws') paintWsDisc(); else { paintEsDisc(); paintEsProfit(); } }
+function discSyncFields(which,fromAmt){ const [ai,pi]=discIds(which);
+  const amtEl=$(ai), pctEl=$(pi); if(!amtEl||!pctEl) return;
+  const sub=discSub(which);
+  if(fromAmt){ const a=Math.max(0,parseFloat(amtEl.value)||0);
+    const p=sub>0?Math.min(100,a/sub*100):0; discSetPct(which,p);
+    if(document.activeElement!==pctEl) pctEl.value=p?+p.toFixed(2):'';
+  }else{ const p=Math.min(100,Math.max(0,parseFloat(pctEl.value)||0)); discSetPct(which,p);
+    if(document.activeElement!==amtEl) amtEl.value=Math.round(sub*p/100)||'';
+  }
+  discApplyTotal(which); }
+function setupDiscInputs(which){ const [ai,pi]=discIds(which);
+  const amtEl=$(ai), pctEl=$(pi); if(!amtEl||!pctEl) return;
+  amtEl.oninput=()=>discSyncFields(which,true);
+  pctEl.oninput=()=>discSyncFields(which,false); }
+function reapplyDisc(which){ if(!(discGetPct(which)>0)) return;
+  const [ai,pi]=discIds(which); const amtEl=$(ai), pctEl=$(pi);
+  const sub=discSub(which), pct=discGetPct(which);
+  if(amtEl) amtEl.value=Math.round(sub*pct/100)||'';
+  if(pctEl&&document.activeElement!==pctEl) pctEl.value=pct||'';
+  discApplyTotal(which); }
+function discClearUI(which){ discSetPct(which,0); const [ai,pi]=discIds(which);
+  const a=$(ai),p=$(pi); if(a)a.value=''; if(p)p.value=''; }
+function discPctLbl(s){ const d=s.discount||0, c=s.correctTotal||s.total||0;
+  if(!(d>0.005)||!(c>0)) return ''; return (d/c*100).toFixed(1).replace(/\.0$/,'')+'%'; }
+setupDiscInputs('sale'); setupDiscInputs('ws');
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;
   const p=DB.products.find(x=>x.id===salePickId);
   const bill=parseFloat($('sale-total-in').value)||0;
@@ -627,7 +627,7 @@ $('btn-sold').onclick=()=>{
     customer:$('sale-cust').value.trim(), phone:$('sale-cust-phone').value.trim(), date:saleDate, ts:(saleDate===dstr()?Date.now():new Date(saleDate+'T12:00').getTime()), items};
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
-  save(); saleCart=[]; saleDisc={amt:0,pct:0}; renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
+  save(); saleCart=[]; discClearUI('sale'); renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
   };
   const sLoss=items.filter(it=>it.price<(it.cost||0));
@@ -729,7 +729,7 @@ $('btn-ws-sold').onclick=()=>{
     customer:shop, phone, date:wsDate, ts:(wsDate===dstr()?Date.now():new Date(wsDate+'T12:00').getTime()), items};
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()});
-  save(); wsCart=[]; wsDisc={amt:0,pct:0}; renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
+  save(); wsCart=[]; discClearUI('ws'); renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
   renderSales(); renderStock(); updatePrintBadge(); toast('\u2705 Wholesale sold! '+pkr(total));
   };
   const wsLoss=lines.filter(l=>l.unit<(l.cost||0));
@@ -1005,9 +1005,9 @@ function renderDaySales(){
       <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
       ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
       <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
-      (sDisc>0.005?`<div class="sdet-row"><div><b>Total</b></div><div class="sdet-r"><b>${pkr(sCorr)}</b></div></div><div class="sdet-row"><div><b>Discount</b></div><div class="sdet-r"><b style="color:var(--green)">− ${pkr(sDisc)}</b></div></div>`:'')+(hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
+      (sDisc>0.005?`<div class="sdet-row"><div><b>Total</b></div><div class="sdet-r"><b>${pkr(sCorr)}</b></div></div><div class="sdet-row"><div><b>Discount</b></div><div class="sdet-r"><b style="color:var(--green)">− ${pkr(sDisc)}${(()=>{const dp=discPctLbl(s);return dp?' - '+dp:'';})()}</b></div></div>`:'')+(hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
       `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
-      ${(s.discount||0)>0.005?`<div class="disc-badge">🏷️ Discount: ${pkr(s.discount)}</div>`:''}
+   ${(s.discount||0)>0.005?(()=>{const dp=discPctLbl(s);return `<div class="disc-badge">🏷️ Discount: ${pkr(s.discount)}${dp?' - '+dp:''}</div>`;})():''}
       <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
@@ -1038,13 +1038,21 @@ window.editSale=id=>{
     <div id="es-pick-list"></div>
     <div class="fld"><span class="fld-lbl">Total</span><div class="fld-in"><input id="es-total" type="number" min="0" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
     <div id="es-disc-pill"></div>
-    <button class="btn-disc" id="btn-es-disc">🏷️ Discount</button>
+    <div class="two-col">
+    <div class="fld"><span class="fld-lbl">Discount Amount</span><div class="fld-in"><input id="es-disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr" data-cur>PKR</span></div></div>
+    <div class="fld"><span class="fld-lbl">Discount %</span><div class="fld-in"><input id="es-disc-pct" type="number" min="0" max="100" inputmode="decimal" placeholder="0" autocomplete="off"><span class="pkr">%</span></div></div>
+    </div>
     <div id="es-profit-row" class="sub" style="margin:4px 0"></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Back</button><button class="btn-go" onclick="saveEditSale(${id})">Save</button></div>`);
-  esDisc={amt:Math.min(s.discount||0,esTotal()),pct:0};
-  $('es-total').value=Math.max(0,esTotal()-esDisc.amt).toFixed(0);
+  { const _esSub=esTotal();
+    const _d=Math.min(s.discount||0,_esSub);
+    esDiscPct=_esSub>0?(_d/_esSub*100):0;
+    setupDiscInputs('es');
+    const _ae=$('es-disc-amt'), _pe=$('es-disc-pct');
+    if(_ae) _ae.value=_d||'';
+    if(_pe) _pe.value=esDiscPct?+esDiscPct.toFixed(2):'';
+    $('es-total').value=Math.max(0,_esSub-_d).toFixed(0); }
   paintEsDisc(); paintEsProfit();
-  $('btn-es-disc').onclick=()=>openDiscDlg('edit');
   $('es-total').oninput=()=>{ paintEsDisc(); paintEsProfit(); };
   renderEsItems();
   $('es-psearch').oninput=e=>renderEsPick(e.target.value.toLowerCase().trim());
@@ -2139,7 +2147,8 @@ function updatePrintBadge(){
 }
 function billPrintHtml(s){
   const pdDisc=(s.discount||0), pdCorr=(s.correctTotal!=null?s.correctTotal:s.total);
-  const pdDiscRows=pdDisc>0.005?`<tr><td colspan="3"></td><td class="r">Total</td><td class="r">${rsFmt(pdCorr)}</td></tr><tr><td colspan="3"></td><td class="r">Discount</td><td class="r">${rsFmt(-pdDisc)}</td></tr>`:'';  const bc=billTheme(); const prof=DB.profile;
+  const pdPct=(pdDisc>0.005&&pdCorr>0)?(pdDisc/pdCorr*100).toFixed(1).replace(/\.0$/,'')+'%':'';
+  const pdDiscRows=pdDisc>0.005?`<tr><td colspan="3"></td><td class="r">Total</td><td class="r">${rsFmt(pdCorr)}</td></tr><tr><td colspan="3"></td><td class="r">Discount${pdPct?' - '+pdPct:''}</td><td class="r">${rsFmt(-pdDisc)}</td></tr>`:'';  const bc=billTheme(); const prof=DB.profile;
   const d=new Date(s.ts||Date.now());
   const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   const rows=s.items.map((it,i)=>`<tr><td>${i+1}.</td><td>${esc(it.name||'')}</td><td class="r">${it.qty}</td><td class="r">${rsFmt(it.price)}</td><td class="r">${rsFmt(it.qty*it.price)}</td></tr>`).join('');
@@ -2269,7 +2278,8 @@ function billPDF(s){
     const amt=it.qty*it.price;tq+=it.qty;
     drow(y,[sn+'. ',it.name||'',it.qty,rsFmt(it.price),rsFmt(amt)],hh);sn++;y+=hh;});
   const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
-  if(sDisc>0.005){ drow(y,['','','','Total',rsFmt(sCorr)],rh);y+=rh; drow(y,['','','','Discount',rsFmt(-sDisc)],rh);y+=rh; }
+  if(sDisc>0.005){ const sPct=sCorr>0?(sDisc/sCorr*100).toFixed(1).replace(/\.0$/,'')+'%':'';
+    drow(y,['','','','Total',rsFmt(sCorr)],rh);y+=rh; drow(y,['','','','Discount'+(sPct?' - '+sPct:''),rsFmt(-sDisc)],rh);y+=rh; }
   let x=M;doc.rect(x,y,bw-38,rh);doc.rect(x+bw-38,y,38,rh);
   doc.setFont('helvetica','bold');doc.setFontSize(12*f);
   doc.text('Total',x+bw-38-2,y+rh/2+1.6,{align:'right'});
