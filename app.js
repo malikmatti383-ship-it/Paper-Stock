@@ -458,16 +458,19 @@ function saleSub(){ const p=DB.products.find(x=>x.id===salePickId);
 function wsSub(){ const p=DB.products.find(x=>x.id===wsPickId);
   const staged=p?(parseFloat($('ws-rate').value)||p.sell)*(parseInt($('ws-qty').value)||1):0;
   return wsCart.reduce((s,l)=>s+l.qty*l.unit,0)+staged; }
-function reapplyDisc(which){ const D=which==='sale'?saleDisc:wsDisc; if(!(D.amt>0)&&!(D.pct>0)) return;
-  const sub=which==='sale'?saleSub():wsSub();
+function reapplyDisc(which){ const D=which==='sale'?saleDisc:which==='ws'?wsDisc:esDisc; if(!(D.amt>0)&&!(D.pct>0)) return;
+  const sub=which==='sale'?saleSub():which==='ws'?wsSub():esDiscSub();
   if(D.pct>0) D.amt=Math.min(Math.round(sub*D.pct/100),sub);
   D.amt=Math.min(D.amt,sub);
   if(which==='sale'){ $('sale-total-in').value=(sub-D.amt).toFixed(0); paintSaleDisc(); }
-  else{ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); } }
+  else if(which==='ws'){ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); }
+  else{ const et=$('es-total'); if(et){ et.value=(sub-D.amt).toFixed(0); paintEsDisc(); paintEsProfit(); } } }
+let esDisc={amt:0,pct:0};
+function esDiscSub(){ return esTotal(); }
 function openDiscDlg(which){
-  const sub=which==='sale'?saleSub():wsSub();
+  const sub=which==='sale'?saleSub():which==='ws'?wsSub():esDiscSub();
   if(!(sub>0)){ toast('Add items first'); return; }
-  const D=which==='sale'?saleDisc:wsDisc;
+  const D=which==='sale'?saleDisc:which==='ws'?wsDisc:esDisc;
   openSheet(`<h3>\U0001F3F7\uFE0F Discount</h3>
     <div class="sub" style="margin-bottom:8px">Subtotal: <b>${pkr(sub)}</b> (at your rates)</div>
     <div class="fld"><span class="fld-lbl">Amount (PKR)</span><input id="disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" value="${D.amt||''}"></div>
@@ -482,15 +485,13 @@ function openDiscDlg(which){
   amtEl.oninput=()=>{ if(parseFloat(amtEl.value)>0) pctEl.value=''; paint(); };
   pctEl.oninput=()=>{ if(parseFloat(pctEl.value)>0) amtEl.value=''; paint(); };
   paint();
+  const applyD=()=>{ if(which==='sale'){ $('sale-total-in').value=(sub-D.amt).toFixed(0); paintSaleDisc(); }
+    else if(which==='ws'){ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); }
+    else{ $('es-total').value=(sub-D.amt).toFixed(0); paintEsDisc(); } };
   $('disc-ok').onclick=()=>{ const a=parseFloat(amtEl.value)||0, p=parseFloat(pctEl.value)||0;
     D.amt=calc(); D.pct=(p>0&&!(a>0))?p:0;
-    if(which==='sale'){ $('sale-total-in').value=(sub-D.amt).toFixed(0); paintSaleDisc(); }
-    else{ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); }
-    closeSheet(); toast('\u2705 Discount applied: '+pkr(D.amt)); };
-  $('disc-clear').onclick=()=>{ D.amt=0; D.pct=0;
-    if(which==='sale'){ $('sale-total-in').value=sub.toFixed(0); paintSaleDisc(); }
-    else{ $('ws-total').value=sub.toFixed(0); paintWsDisc(); }
-    closeSheet(); };
+    applyD(); closeSheet(); toast('\u2705 Discount applied: '+pkr(D.amt)); };
+  $('disc-clear').onclick=()=>{ D.amt=0; D.pct=0; applyD(); closeSheet(); };
 }
 { const _bsd=$('btn-sale-disc'); if(_bsd) _bsd.onclick=()=>openDiscDlg('sale');
   const _bwd=$('btn-ws-disc'); if(_bwd) _bwd.onclick=()=>openDiscDlg('ws'); }
@@ -1036,7 +1037,15 @@ window.editSale=id=>{
     <div class="search-wrap">🔍 <input id="es-psearch" placeholder="Add product..."></div>
     <div id="es-pick-list"></div>
     <div class="fld"><span class="fld-lbl">Total</span><div class="fld-in"><input id="es-total" type="number" min="0" inputmode="decimal"><span class="pkr" data-cur>PKR</span></div></div>
+    <div id="es-disc-pill"></div>
+    <button class="btn-disc" id="btn-es-disc">🏷️ Discount</button>
+    <div id="es-profit-row" class="sub" style="margin:4px 0"></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Back</button><button class="btn-go" onclick="saveEditSale(${id})">Save</button></div>`);
+  esDisc={amt:Math.min(s.discount||0,esTotal()),pct:0};
+  $('es-total').value=Math.max(0,esTotal()-esDisc.amt).toFixed(0);
+  paintEsDisc(); paintEsProfit();
+  $('btn-es-disc').onclick=()=>openDiscDlg('edit');
+  $('es-total').oninput=()=>{ paintEsDisc(); paintEsProfit(); };
   renderEsItems();
   $('es-psearch').oninput=e=>renderEsPick(e.target.value.toLowerCase().trim());
 };
@@ -1054,10 +1063,19 @@ function renderEsItems(){
 }
 function paintEsTotals(){ const t=$('es-items'); if(!t) return;
   const el=t.querySelector('.cart-total b'); if(el) el.textContent=pkr(esTotal());
-  const tt=$('es-total'); if(tt) tt.value=esTotal().toFixed(0); }
-window.esStep=(ix,d)=>{ const l=esItems[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderEsItems(); };
-window.esRate=(ix,v)=>{ const l=esItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); paintEsTotals(); };
-window.esRm=ix=>{ esItems.splice(ix,1); renderEsItems(); };
+  const tt=$('es-total'); if(tt) tt.value=esTotal().toFixed(0); paintEsDisc(); paintEsProfit(); }
+function paintEsDisc(){ const box=$('es-disc-pill'); if(!box) return;
+  const sub=esTotal(), bill=parseFloat(($('es-total')||{}).value)||0;
+  const d=(bill>0&&sub>bill)?sub-bill:0;
+  box.innerHTML=d>0?`<span class="disc-pill">✓ ${pkr(d)} discount applied</span>`:''; }
+function paintEsProfit(){ const box=$('es-profit-row'); if(!box) return;
+  const bill=parseFloat(($('es-total')||{}).value)||0;
+  const tc=esItems.reduce((a,l)=>a+(l.qty||0)*(l.cost||0),0);
+  const pf=Math.round((bill-tc)*100)/100;
+  box.innerHTML=`Profit: <b style="color:${pf<0?'var(--red)':'var(--green)'}">${pkr(pf)}</b> <span class="sub">(Cost: ${pkr(tc)})</span>`; }
+window.esStep=(ix,d)=>{ const l=esItems[ix]; if(!l) return; l.qty=Math.max(1,l.qty+d); renderEsItems(); reapplyDisc('edit'); };
+window.esRate=(ix,v)=>{ const l=esItems[ix]; if(!l) return; l.rate=Math.max(0,parseFloat(v)||0); paintEsTotals(); reapplyDisc('edit'); };
+window.esRm=ix=>{ esItems.splice(ix,1); renderEsItems(); reapplyDisc('edit'); };
 function renderEsPick(q){
   const box=$('es-pick-list'); if(!box) return;
   if(!q){ box.innerHTML=''; return; }
@@ -1070,7 +1088,7 @@ function renderEsPick(q){
 window.pickEsItem=id=>{ const p=DB.products.find(x=>x.id===id); if(!p) return;
   const ex=esItems.find(x=>x.productId===id);
   if(ex) ex.qty++; else esItems.push({productId:id,name:p.name,qty:1,rate:p.sell,cost:p.cost});
-  $('es-psearch').value=''; renderEsPick(''); renderEsItems();
+  $('es-psearch').value=''; renderEsPick(''); renderEsItems(); reapplyDisc('edit');
   toast('\u2705 Added: '+p.name); };
 window.saveEditSale=id=>{
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
@@ -1086,6 +1104,9 @@ window.saveEditSale=id=>{
     return {productId:l.productId,name:l.name,qty:l.qty,price:l.rate,cost:p?p.cost:(l.cost||0)}; });
   s.qty=s.items.reduce((a,i)=>a+i.qty,0);
   s.total=Math.round(total*100)/100;
+  const esSub=Math.round(esTotal()*100)/100;
+  s.correctTotal=esSub;
+  s.discount=Math.max(0,Math.round((esSub-s.total)*100)/100);
   s.name=s.items.length===1?s.items[0].name:(s.items.length+' items');
   save(); renderStock(); renderSales(); closeSheet(); toast('\u2705 Sale updated');
 };
