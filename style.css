@@ -272,12 +272,12 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 
 /* ---- NADIR-style sale form v5 ---- */
 .dd-wrap{position:relative}
-.dd-list{position:absolute;top:100%;left:0;right:0;background:#fff;border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);max-height:320px;overflow:auto;z-index:60;border:1px solid #e5e7eb;margin-top:4px}
-.dd-item{display:flex;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer}
+.dd-list{position:absolute;bottom:100%;left:0;right:0;background:#fff;border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);max-height:300px;overflow-y:auto;overflow-x:hidden;z-index:60;border:1px solid #e5e7eb;margin-bottom:6px;-webkit-overflow-scrolling:touch}
+.dd-item{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid #f1f5f9;cursor:pointer}
 .dd-item:last-child{border-bottom:none}
 .dd-item:active{background:#f0f9ff}
-.dd-img{width:64px;height:64px;object-fit:cover;border-radius:10px;background:#eef2f7;flex-shrink:0}
-.dd-item .nm{font-weight:800;font-size:15px}
+.dd-img{width:44px;height:44px;object-fit:cover;border-radius:10px;background:#eef2f7;flex-shrink:0}
+.dd-item .nm{font-weight:800;font-size:13px}
 .dd-item .sp{font-size:13px;color:#374151;margin-top:2px}
 .dd-item .sp .r{float:right;font-weight:800;color:#111}
 .fld{position:relative;margin:10px 0}
@@ -409,7 +409,7 @@ body[data-theme="classic"]{--cbtn-g1:#1268b1;--cbtn-g2:#14b2d6;--cbtn-check:#14b
 .day-search{margin:6px 0}
 .toptabs.kb-hidden{display:none!important}
 .dd-brand{display:inline-block;background:#eef1f6;color:#64748b;font-size:10px;font-weight:800;border-radius:6px;padding:2px 8px;margin-bottom:3px;letter-spacing:.4px}
-.dd-item .r{font-size:16px;font-weight:800;white-space:nowrap;color:#111;flex:none}
+.dd-item .r{font-size:14px;font-weight:800;white-space:nowrap;color:#111;flex:none}
 .dd-na{color:#dc2626;font-weight:800}
 .dd-low{color:#d97706;font-weight:700}
 .disc-pill{display:inline-block;background:#dcfce7;color:#15803d;font-weight:800;font-size:13px;border-radius:999px;padding:6px 14px;margin:2px 0 8px}
