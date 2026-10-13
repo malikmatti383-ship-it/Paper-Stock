@@ -513,7 +513,17 @@ let salePaid=true, wsPaid=true;
 function paintPaidTg(){ const sb=$('sale-paid-tg'), wb=$('ws-paid-tg');
   if(sb){ sb.textContent=salePaid?'Paid':'Unpaid'; sb.className='paid-tg '+(salePaid?'paid':'unpaid'); }
   if(wb){ wb.textContent=wsPaid?'Paid':'Unpaid'; wb.className='paid-tg '+(wsPaid?'paid':'unpaid'); } }
-window.toggleSalePaid=()=>{ salePaid=!salePaid; paintPaidTg(); };
+window.toggleSalePaid=()=>{ salePaid=!salePaid; paintPaidTg();
+window.openSaleBreakdown=()=>{
+  const td=dstr(), tS=DB.sales.filter(x=>x.date===td);
+  const sTot=tS.filter(x=>x.kind!=='wholesale').reduce((s,x)=>s+(x.total||0),0);
+  const wTot=tS.filter(x=>x.kind==='wholesale').reduce((s,x)=>s+(x.total||0),0);
+  openSheet('<h3>Today\u2019s Sale Breakdown</h3>'
+    +'<div class="kv"><span>\uD83D\uDED2 Sale</span><b>'+pkr(sTot)+'</b></div>'
+    +'<div class="kv"><span>\uD83C\uDFEA Wholesale</span><b>'+pkr(wTot)+'</b></div>'
+    +'<div class="kv" style="border-top:1px solid #e5e7eb;padding-top:10px;margin-top:4px"><span><b>Total</b></span><b>'+pkr(sTot+wTot)+'</b></div>'
+    +'<div style="margin-top:12px"><button class="btn-ghost" onclick="closeSheet();openCurrency()">\uD83D\uDCB1 Change currency</button></div>');
+}; };
 window.toggleWsPaid=()=>{ wsPaid=!wsPaid; paintPaidTg(); };
 paintPaidTg();
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;

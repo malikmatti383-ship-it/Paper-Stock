@@ -584,3 +584,10 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .paid-tg{flex:1;border:none;border-radius:14px;font-weight:800;font-size:15px;color:#fff;padding:14px 4px;cursor:pointer;min-width:0}
 .paid-tg.paid{background:#16a34a}
 .paid-tg.unpaid{background:#dc2626}
+
+.sum-lines{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.sum-line{background:#fff;border-radius:20px;padding:16px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.sl-lbl{flex:1;min-width:0}
+.sl-lbl .t{font-size:12px;color:#9ca3af;letter-spacing:1px;font-weight:800}
+.sl-lbl .s{font-size:11px;color:#d1d5db;margin-top:2px}
+.sl-amt{font-size:22px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62%;text-align:right;color:#111827}
