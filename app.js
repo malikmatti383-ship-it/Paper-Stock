@@ -451,17 +451,26 @@ function paintWsDisc(){ const box=$('ws-disc-pill'); if(!box) return;
 }
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;
   const p=DB.products.find(x=>x.id===salePickId);
-  if(!p){ box.innerHTML=''; return; }
-  const q=Math.max(1,parseInt($('sale-qty').value)||1);
-  const bill=parseFloat($('sale-total-in').value)||0, lineTotal=bill-cartGrand();
-  const unit=lineTotal>0?lineTotal/q:p.sell;
-  box.innerHTML=(unit<p.cost)?`<span class="loss-pill">\u26A0\uFE0F Below cost! Cost ${pkr(p.cost)} / unit</span>`:'';
+  const bill=parseFloat($('sale-total-in').value)||0;
+  let tc=saleCart.reduce((ss,l)=>{ const pr=DB.products.find(x=>x.id===l.productId); return ss+l.qty*((pr&&pr.cost)||0); },0);
+  let warn='';
+  if(p){ const q=Math.max(1,parseInt($('sale-qty').value)||1);
+    const r=parseFloat($('sale-rate').value)||0;
+    if(r>0&&r<p.cost) warn=`<span class="loss-pill">\u26A0\uFE0F Below cost! Cost ${pkr(p.cost)} / unit</span>`;
+    tc+=q*(p.cost||0); }
+  if(!warn&&bill>0&&tc>0&&bill<tc) warn=`<span class="loss-pill">\u26A0\uFE0F Bill below cost! Cost total ${pkr(tc)}</span>`;
+  box.innerHTML=warn;
 }
 function paintWsCostWarn(){ const box=$('ws-cost-warn'); if(!box) return;
   const p=DB.products.find(x=>x.id===wsPickId);
-  if(!p){ box.innerHTML=''; return; }
-  const r=parseFloat($('ws-rate').value)||0;
-  box.innerHTML=(r>0&&r<p.cost)?`<span class="loss-pill">\u26A0\uFE0F Below cost! Cost ${pkr(p.cost)} / unit</span>`:'';
+  const tt=parseFloat($('ws-total').value)||0;
+  let tc=wsCart.reduce((ss,l)=>{ const pr=DB.products.find(x=>x.id===l.productId); return ss+l.qty*((pr&&pr.cost)||0); },0);
+  let warn='';
+  if(p){ const r=parseFloat($('ws-rate').value)||0;
+    if(r>0&&r<p.cost) warn=`<span class="loss-pill">\u26A0\uFE0F Below cost! Cost ${pkr(p.cost)} / unit</span>`;
+    tc+=(parseInt($('ws-qty').value)||1)*(p.cost||0); }
+  if(!warn&&tt>0&&tc>0&&tt<tc) warn=`<span class="loss-pill">\u26A0\uFE0F Bill below cost! Cost total ${pkr(tc)}</span>`;
+  box.innerHTML=warn;
 }
 function renderSaleDD(q){
   const dd=$('sale-dd');
@@ -497,10 +506,7 @@ const saleQtyStep=d=>{ const el=$('sale-qty');
   let v=(parseInt(el.value)||1)+d; v=Math.max(1,v);
   if(p&&v>p.qty){ v=p.qty; toast('Only '+p.qty+' available'); }
   el.value=v; el.oninput(); };
-$('sale-total-in').oninput=()=>{ const q=Math.max(1,parseInt($('sale-qty').value)||1);
-  const bill=parseFloat($('sale-total-in').value)||0, r=(bill-cartGrand())/q;
-  if(r>=0) $('sale-rate').value=+r.toFixed(2);
-  paintSaleDisc(); paintSaleCostWarn(); };
+$('sale-total-in').oninput=()=>{ paintSaleDisc(); paintSaleCostWarn(); };
 $('sale-qty-minus').onclick=()=>saleQtyStep(-1);
 $('sale-qty-plus').onclick=()=>saleQtyStep(1);
 function cartGrand(){ return saleCart.reduce((s,i)=>s+i.total,0); }
@@ -559,16 +565,12 @@ $('btn-sold').onclick=()=>{
   const rateSum=lines.reduce((s,l)=>s+l.qty*l.unit,0);
   let bill=parseFloat($('sale-total-in').value);
   if(!(bill>0)) bill=rateSum;
-  const base=rateSum>0?rateSum:1;
   const correctTotal=Math.round(lines.reduce((ss,l)=>ss+l.qty*(l.sellRate!=null?l.sellRate:l.unit),0)*100)/100;
   const billDiscount=Math.max(0,Math.round((correctTotal-bill)*100)/100);
-  let acc=0;
-  const items=lines.map((l,ix)=>{
+  const totalCost=Math.round(lines.reduce((ss,l)=>{ const pr=DB.products.find(x=>x.id===l.productId); return ss+l.qty*((pr&&pr.cost)||0); },0)*100)/100;
+  const items=lines.map((l)=>{
     const pr=DB.products.find(x=>x.id===l.productId);
-    let share;
-    if(ix<lines.length-1){ share=Math.round(bill*(l.qty*l.unit/base)*100)/100; acc+=share; }
-    else share=Math.round((bill-acc)*100)/100; // last line absorbs rounding
-    return {productId:l.productId,name:l.name,qty:l.qty,price:share/l.qty,cost:pr.cost};
+    return {productId:l.productId,name:l.name,qty:l.qty,price:l.unit,cost:pr.cost};
   });
   const go=()=>{
     items.forEach(it=>{ const pr=DB.products.find(x=>x.id===it.productId); if(pr) pr.qty-=it.qty; });
@@ -583,7 +585,8 @@ $('btn-sold').onclick=()=>{
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
   };
   const sLoss=items.filter(it=>it.price<(it.cost||0));
-  if(sLoss.length) lossConfirm('sell',sLoss.map(l=>({name:l.name,unit:l.price,cost:l.cost})),go);
+  const billLoss=bill<totalCost;
+  if(sLoss.length||billLoss) lossConfirm('sell',(sLoss.length?sLoss:items).map(l=>({name:l.name,unit:l.price,cost:l.cost})),go);
   else go();
 };
 /* ================= WHOLESALE (shopkeeper sales at stock rates) ================= */
@@ -614,10 +617,7 @@ window.pickWsDD=id=>{
 const wsPreview=()=>{ const r=parseFloat($('ws-rate').value)||0;
   $('ws-total').value=(wsGrand()+r*(parseInt($('ws-qty').value)||1)).toFixed(0); paintWsDisc(); paintWsCostWarn(); paintWsQtyWarn(); };
 $('ws-qty').oninput=wsPreview; $('ws-rate').oninput=wsPreview;
-$('ws-total').oninput=()=>{ const t2=parseFloat($('ws-total').value)||0;
-  const q2=Math.max(1,parseInt($('ws-qty').value)||1);
-  $('ws-rate').value=+Math.max(0,(t2-wsGrand())/q2).toFixed(2);
-  paintWsDisc(); paintWsCostWarn(); paintWsQtyWarn(); };
+$('ws-total').oninput=()=>{ paintWsDisc(); paintWsCostWarn(); paintWsQtyWarn(); };
 const wsQtyStep=d=>{ const el=$('ws-qty');
   const p=DB.products.find(x=>x.id===wsPickId);
   let v=(parseInt(el.value)||1)+d; v=Math.max(1,v);
@@ -687,7 +687,9 @@ $('btn-ws-sold').onclick=()=>{
   renderSales(); renderStock(); updatePrintBadge(); toast('\u2705 Wholesale sold! '+pkr(total));
   };
   const wsLoss=lines.filter(l=>l.unit<(l.cost||0));
-  if(wsLoss.length) lossConfirm('wholesale',wsLoss.map(l=>({name:l.name,unit:l.unit,cost:l.cost})),go);
+  const wsTotalCost=lines.reduce((ss,l)=>{ const pr=DB.products.find(x=>x.id===l.productId); return ss+l.qty*((pr&&pr.cost)||0); },0);
+  const wsBillLoss=total<wsTotalCost;
+  if(wsLoss.length||wsBillLoss) lossConfirm('wholesale',(wsLoss.length?wsLoss:lines).map(l=>({name:l.name,unit:l.unit,cost:l.cost})),go);
   else go();
 };
 
@@ -2077,7 +2079,7 @@ function billPrintHtml(s){
   ${rows}
   <tr class="tot"><td></td><td></td><td class="r">${tq}</td><td></td><td class="r">${rsFmt(s.total)}</td></tr>
   ${pdDiscRows}
-  <tr><td colspan="3"></td><td class="r">Received</td><td class="r">${rsFmt(s.total)}</td></tr>
+  <tr><td colspan="3"></td><td class="r" style="font-weight:800">Received</td><td class="r" style="font-size:19px;font-weight:800">${rsFmt(s.total)}</td></tr>
   <tr><td colspan="5" class="words">In Word: ${numToWords(s.total)}</td></tr></table>
   <div class="bp-terms"><b>Terms & Conditions:</b><br>&bull; Goods once sold will not be taken back.<br>&bull; Our responsibility ceases when goods leave our shop.</div>
   <div class="bp-foot">Generated by PaperPilot</div></div>`;
@@ -2189,9 +2191,9 @@ function billPDF(s){
   const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
   if(sDisc>0.005){ drow(y,['','','','Correct Total',rsFmt(sCorr)],rh);y+=rh; drow(y,['','','','Discount',rsFmt(-sDisc)],rh);y+=rh; }
   let x=M;doc.rect(x,y,bw-38,rh);doc.rect(x+bw-38,y,38,rh);
-  doc.setFont('helvetica','normal');doc.setFontSize(11*f);
+  doc.setFont('helvetica','bold');doc.setFontSize(12*f);
   doc.text('Received',x+bw-38-2,y+rh/2+1.6,{align:'right'});
-  doc.setFont('helvetica','bold');doc.text(rsFmt(s.total),x+bw-2,y+rh/2+1.6,{align:'right'});y+=rh;
+  doc.setFont('helvetica','bold');doc.setFontSize(15*f);doc.text(rsFmt(s.total),x+bw-2,y+rh/2+1.6,{align:'right'});y+=rh;
   doc.rect(M,y,bw,rh);doc.setFont('helvetica','bold');doc.setFontSize(11*f);
   doc.text('In Word: '+numToWords(s.total),M+2,y+rh/2+1.6);y+=rh+4*f;
   const th2=26*f+8;
