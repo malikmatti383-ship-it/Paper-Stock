@@ -516,11 +516,11 @@ let salePaid=true, wsPaid=true;
 function paintPaidTg(){ const sb=$('sale-paid-tg'), wb=$('ws-paid-tg');
   if(sb){ sb.textContent=salePaid?'Paid':'Unpaid'; sb.className='paid-tg '+(salePaid?'paid':'unpaid'); }
   if(wb){ wb.textContent=wsPaid?'Paid':'Unpaid'; wb.className='paid-tg '+(wsPaid?'paid':'unpaid'); } }
-window.toggleSalePaid=()=>{ salePaid=!salePaid; paintPaidTg();
+window.toggleSalePaid=()=>{ salePaid=!salePaid; paintPaidTg(); };
 window.toggleSaleBreakdown=e=>{ if(e) e.stopPropagation();
   const sub=$('sale-breakdown'), btn=$('sale-exp-btn'); if(!sub) return;
   sub.classList.toggle('hidden');
-  if(btn) btn.textContent=sub.classList.contains('hidden')?'\uD83D\uDD3D':'\uD83D\uDD3C'; }; };
+  if(btn) btn.textContent=sub.classList.contains('hidden')?'\uD83D\uDD3D':'\uD83D\uDD3C'; };
 window.toggleWsPaid=()=>{ wsPaid=!wsPaid; paintPaidTg(); };
 paintPaidTg();
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;
