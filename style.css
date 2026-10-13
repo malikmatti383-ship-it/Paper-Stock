@@ -289,6 +289,9 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .fld-in input{padding-right:64px}
 .btn-addmore{width:100%;padding:11px;border:1.5px solid var(--teal);border-radius:14px;background:#eaf6fc;color:var(--teal);font-size:15px;font-weight:700;cursor:pointer;margin:4px 0 2px}
 .btn-addmore:active{background:#d5edf9}
+.btn-disc{width:100%;padding:11px;border:1.5px dashed var(--green);border-radius:14px;background:#eefbf0;color:var(--green);font-size:15px;font-weight:700;cursor:pointer;margin:4px 0 2px}
+.btn-disc:active{background:#d9f5e0}
+.disc-badge{display:block;text-align:center;background:#eefbf0;border:1.5px dashed var(--green);color:var(--green);font-weight:800;border-radius:12px;padding:8px;margin:6px 0;font-size:15px}
 .cart-box{border:1.5px solid #e5e7eb;border-radius:14px;margin:10px 0;overflow:hidden;background:#fbfcfe}
 .cart-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eef2f7}
 .cart-x{border:none;background:#fee2e2;color:#dc2626;border-radius:8px;width:30px;height:30px;font-size:14px;cursor:pointer}

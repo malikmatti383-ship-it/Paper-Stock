@@ -441,16 +441,59 @@ function stockLbl(p){
   return p.qty+' in stock';
 }
 function paintSaleDisc(){ const box=$('sale-disc-pill'); if(!box) return;
-  const p=DB.products.find(x=>x.id===salePickId);
-  const staged=p?(p.sell*(parseInt($('sale-qty').value)||1)):0;
-  const sub=saleCart.reduce((s,l)=>s+l.qty*l.unit,0)+staged;
+  const sub=saleSub();
   const bill=parseFloat($('sale-total-in').value)||0;
   box.innerHTML=(bill>0&&sub>bill)?`<span class="disc-pill">✓ ${pkr(sub-bill)} discount applied</span>`:'';
 }
 function paintWsDisc(){ const box=$('ws-disc-pill'); if(!box) return;
-  const tt=parseFloat($('ws-total').value)||0, sub=wsGrand();
+  const tt=parseFloat($('ws-total').value)||0, sub=wsSub();
   box.innerHTML=(tt>0&&sub>tt)?`<span class="disc-pill">✓ ${pkr(sub-tt)} discount applied</span>`:'';
 }
+/* ---- Explicit Discount (v149): amount or % via Discount button, below Add more items.
+   Rule: rate edit => NO discount (rate is final). Discount button or typed lower total => discount. ---- */
+let saleDisc={amt:0,pct:0}, wsDisc={amt:0,pct:0};
+function saleSub(){ const p=DB.products.find(x=>x.id===salePickId);
+  const staged=p?(parseFloat($('sale-rate').value)||p.sell)*(parseInt($('sale-qty').value)||1):0;
+  return saleCart.reduce((s,l)=>s+l.qty*l.unit,0)+staged; }
+function wsSub(){ const p=DB.products.find(x=>x.id===wsPickId);
+  const staged=p?(parseFloat($('ws-rate').value)||p.sell)*(parseInt($('ws-qty').value)||1):0;
+  return wsCart.reduce((s,l)=>s+l.qty*l.unit,0)+staged; }
+function reapplyDisc(which){ const D=which==='sale'?saleDisc:wsDisc; if(!(D.amt>0)&&!(D.pct>0)) return;
+  const sub=which==='sale'?saleSub():wsSub();
+  if(D.pct>0) D.amt=Math.min(Math.round(sub*D.pct/100),sub);
+  D.amt=Math.min(D.amt,sub);
+  if(which==='sale'){ $('sale-total-in').value=(sub-D.amt).toFixed(0); paintSaleDisc(); }
+  else{ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); } }
+function openDiscDlg(which){
+  const sub=which==='sale'?saleSub():wsSub();
+  if(!(sub>0)){ toast('Add items first'); return; }
+  const D=which==='sale'?saleDisc:wsDisc;
+  openSheet(`<h3>\U0001F3F7\uFE0F Discount</h3>
+    <div class="sub" style="margin-bottom:8px">Subtotal: <b>${pkr(sub)}</b> (at your rates)</div>
+    <div class="fld"><span class="fld-lbl">Amount (PKR)</span><input id="disc-amt" type="number" min="0" inputmode="decimal" placeholder="0" value="${D.amt||''}"></div>
+    <div class="fld"><span class="fld-lbl">Percentage (%)</span><input id="disc-pct" type="number" min="0" max="100" inputmode="decimal" placeholder="0" value="${D.pct||''}"></div>
+    <div class="sub" id="disc-hint" style="min-height:20px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn-save" id="disc-clear" style="background:#999;flex:1">CLEAR</button><button class="btn-save blue" id="disc-ok" style="flex:2">APPLY</button></div>`);
+  const amtEl=$('disc-amt'), pctEl=$('disc-pct'), hint=$('disc-hint');
+  const calc=()=>{ let a=parseFloat(amtEl.value)||0; const p=parseFloat(pctEl.value)||0;
+    if(!(a>0)&&p>0) a=Math.round(sub*p/100); return Math.min(a,sub); };
+  const paint=()=>{ const d=calc();
+    hint.innerHTML=d>0?`Discount: <b>${pkr(d)}</b> \u2192 New total: <b>${pkr(sub-d)}</b>`:''; };
+  amtEl.oninput=()=>{ if(parseFloat(amtEl.value)>0) pctEl.value=''; paint(); };
+  pctEl.oninput=()=>{ if(parseFloat(pctEl.value)>0) amtEl.value=''; paint(); };
+  paint();
+  $('disc-ok').onclick=()=>{ const a=parseFloat(amtEl.value)||0, p=parseFloat(pctEl.value)||0;
+    D.amt=calc(); D.pct=(p>0&&!(a>0))?p:0;
+    if(which==='sale'){ $('sale-total-in').value=(sub-D.amt).toFixed(0); paintSaleDisc(); }
+    else{ $('ws-total').value=(sub-D.amt).toFixed(0); paintWsDisc(); }
+    closeSheet(); toast('\u2705 Discount applied: '+pkr(D.amt)); };
+  $('disc-clear').onclick=()=>{ D.amt=0; D.pct=0;
+    if(which==='sale'){ $('sale-total-in').value=sub.toFixed(0); paintSaleDisc(); }
+    else{ $('ws-total').value=sub.toFixed(0); paintWsDisc(); }
+    closeSheet(); };
+}
+{ const _bsd=$('btn-sale-disc'); if(_bsd) _bsd.onclick=()=>openDiscDlg('sale');
+  const _bwd=$('btn-ws-disc'); if(_bwd) _bwd.onclick=()=>openDiscDlg('ws'); }
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;
   const p=DB.products.find(x=>x.id===salePickId);
   const bill=parseFloat($('sale-total-in').value)||0;
@@ -522,11 +565,11 @@ function renderSaleCart(){
     `<div class="cart-total"><span>Items total</span><b>${pkr(cartGrand())}</b></div></div>`;
   paintSaleDisc(); paintSaleCostWarn();
 }
-window.rmCartItem=ix=>{ saleCart.splice(ix,1); renderSaleCart(); };
+window.rmCartItem=ix=>{ saleCart.splice(ix,1); renderSaleCart(); reapplyDisc('sale'); };
 window.saleStep=(ix,d)=>{ const l=saleCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' in stock!'); return; } }
-  qtyReject=null; l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderSaleCart();
+  qtyReject=null; l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderSaleCart(); reapplyDisc('sale');
   $('sale-total-in').value=cartGrand().toFixed(0); };
 /* Staged product -> a sale line. Line total = bill field minus cart sum (item's share of the bill). */
 function stageLine(){
@@ -547,7 +590,7 @@ $('btn-add-item').onclick=()=>{
   if(it==='err') return;
   if(!it){ toast('Search and select a product first'); return; }
   saleCart.push(it); clearStaging();
-  renderSaleCart(); toast('✅ Added: '+it.name);
+  renderSaleCart(); reapplyDisc('sale'); toast('✅ Added: '+it.name);
 };
 $('sale-add-cust').onclick=()=>{ $('sale-cust').classList.remove('hidden'); $('sale-cust-phone').classList.remove('hidden'); $('sale-add-cust').classList.add('hidden'); $('sale-cust').focus(); };
 /* null-guarded: a stale cached page must never kill the whole app (v57 lesson) */
@@ -567,7 +610,7 @@ $('btn-sold').onclick=()=>{
   const rateSum=lines.reduce((s,l)=>s+l.qty*l.unit,0);
   let bill=parseFloat($('sale-total-in').value);
   if(!(bill>0)) bill=rateSum;
-  const correctTotal=Math.round(lines.reduce((ss,l)=>ss+l.qty*(l.sellRate!=null?l.sellRate:l.unit),0)*100)/100;
+  const correctTotal=Math.round(rateSum*100)/100;
   const billDiscount=Math.max(0,Math.round((correctTotal-bill)*100)/100);
   const totalCost=Math.round(lines.reduce((ss,l)=>{ const pr=DB.products.find(x=>x.id===l.productId); return ss+l.qty*((pr&&pr.cost)||0); },0)*100)/100;
   const items=lines.map((l)=>{
@@ -583,7 +626,7 @@ $('btn-sold').onclick=()=>{
     customer:$('sale-cust').value.trim(), phone:$('sale-cust-phone').value.trim(), date:saleDate, ts:(saleDate===dstr()?Date.now():new Date(saleDate+'T12:00').getTime()), items};
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()}); // pending print
-  save(); saleCart=[]; renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
+  save(); saleCart=[]; saleDisc={amt:0,pct:0}; renderSaleCart(); clearStaging(); $('sale-cust').value=''; $('sale-cust-phone').value='';
   renderSales(); updatePrintBadge(); toast('✅ Sold! '+pkr(bill));
   };
   const sLoss=items.filter(it=>it.price<(it.cost||0));
@@ -638,11 +681,11 @@ function renderWsCart(){
     `<div class="cart-total"><span>Items total</span><b>${pkr(wsGrand())}</b></div></div>`;
   paintWsDisc(); paintWsCostWarn();
 }
-window.rmWsItem=ix=>{ wsCart.splice(ix,1); renderWsCart(); $('ws-total').value=wsGrand().toFixed(0); };
+window.rmWsItem=ix=>{ wsCart.splice(ix,1); renderWsCart(); reapplyDisc('ws'); };
 window.wsStep=(ix,d)=>{ const l=wsCart[ix]; if(!l) return;
   if(d>0){ const p=DB.products.find(x=>x.id===l.productId);
     if(p&&l.qty+1>p.qty){ toast('Only '+p.qty+' available'); return; } }
-  qtyReject=null; l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderWsCart(); $('ws-total').value=wsGrand().toFixed(0); };
+  qtyReject=null; l.qty=Math.max(1,l.qty+d); l.total=l.qty*l.unit; renderWsCart(); reapplyDisc('ws'); };
 function stageWsLine(){
   const p=DB.products.find(x=>x.id===wsPickId);
   if(!p||!$('ws-psearch').value.trim()) return null;
@@ -657,7 +700,7 @@ $('btn-ws-add').onclick=()=>{
   const it=stageWsLine();
   if(it==='err') return;
   if(!it){ toast('Search and select a product first'); return; }
-  wsCart.push(it); clearWsStaging(); renderWsCart(); toast('\u2705 Added: '+it.name);
+  wsCart.push(it); clearWsStaging(); renderWsCart(); reapplyDisc('ws'); toast('\u2705 Added: '+it.name);
 };
 $('btn-ws-sold').onclick=()=>{
   if(!guardQtyEdit('ws')) return;
@@ -676,7 +719,7 @@ $('btn-ws-sold').onclick=()=>{
   const items=lines.map(l=>{ const pr=DB.products.find(x=>x.id===l.productId); pr.qty-=l.qty;
     return {productId:l.productId,name:l.name,qty:l.qty,price:l.unit,cost:pr.cost}; });
   let total=parseFloat($('ws-total').value); if(!(total>0)) total=items.reduce((s,i)=>s+i.qty*i.price,0);
-  const wsCorrect=Math.round(lines.reduce((ss,l)=>ss+l.qty*(l.sellRate!=null?l.sellRate:l.unit),0)*100)/100;
+  const wsCorrect=Math.round(items.reduce((s,i)=>s+i.qty*i.price,0)*100)/100;
   const wsDisc=Math.max(0,Math.round((wsCorrect-total)*100)/100);
   const sale={id:DB.seq.s++, kind:'wholesale', correctTotal:wsCorrect, discount:wsDisc,
     productId:lines.length===1?lines[0].productId:null,
@@ -685,7 +728,7 @@ $('btn-ws-sold').onclick=()=>{
     customer:shop, phone, date:wsDate, ts:(wsDate===dstr()?Date.now():new Date(wsDate+'T12:00').getTime()), items};
   DB.sales.push(sale);
   DB.printQueue.push({qid:Date.now(), saleId:sale.id, done:false, ts:Date.now()});
-  save(); wsCart=[]; renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
+  save(); wsCart=[]; wsDisc={amt:0,pct:0}; renderWsCart(); clearWsStaging(); $('ws-shop').value=''; $('ws-phone').value='';
   renderSales(); renderStock(); updatePrintBadge(); toast('\u2705 Wholesale sold! '+pkr(total));
   };
   const wsLoss=lines.filter(l=>l.unit<(l.cost||0));
@@ -961,8 +1004,9 @@ function renderDaySales(){
       <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
       ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
       <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
-      (sDisc>0.005?`<div class="sdet-row"><div><b>Correct Total</b></div><div class="sdet-r"><b>${pkr(sCorr)}</b></div></div><div class="sdet-row"><div><b>Discount</b></div><div class="sdet-r"><b style="color:var(--green)">− ${pkr(sDisc)}</b></div></div>`:'')+(hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
+      (sDisc>0.005?`<div class="sdet-row"><div><b>Total</b></div><div class="sdet-r"><b>${pkr(sCorr)}</b></div></div><div class="sdet-row"><div><b>Discount</b></div><div class="sdet-r"><b style="color:var(--green)">− ${pkr(sDisc)}</b></div></div>`:'')+(hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
       `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
+      ${(s.discount||0)>0.005?`<div class="disc-badge">🏷️ Discount: ${pkr(s.discount)}</div>`:''}
       <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
        <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
@@ -2074,7 +2118,7 @@ function updatePrintBadge(){
 }
 function billPrintHtml(s){
   const pdDisc=(s.discount||0), pdCorr=(s.correctTotal!=null?s.correctTotal:s.total);
-  const pdDiscRows=pdDisc>0.005?`<tr><td colspan="3"></td><td class="r">Correct Total</td><td class="r">${rsFmt(pdCorr)}</td></tr><tr><td colspan="3"></td><td class="r">Discount</td><td class="r">${rsFmt(-pdDisc)}</td></tr>`:'';  const bc=billTheme(); const prof=DB.profile;
+  const pdDiscRows=pdDisc>0.005?`<tr><td colspan="3"></td><td class="r">Total</td><td class="r">${rsFmt(pdCorr)}</td></tr><tr><td colspan="3"></td><td class="r">Discount</td><td class="r">${rsFmt(-pdDisc)}</td></tr>`:'';  const bc=billTheme(); const prof=DB.profile;
   const d=new Date(s.ts||Date.now());
   const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   const rows=s.items.map((it,i)=>`<tr><td>${i+1}.</td><td>${esc(it.name||'')}</td><td class="r">${it.qty}</td><td class="r">${rsFmt(it.price)}</td><td class="r">${rsFmt(it.qty*it.price)}</td></tr>`).join('');
@@ -2204,7 +2248,7 @@ function billPDF(s){
     const amt=it.qty*it.price;tq+=it.qty;
     drow(y,[sn+'. ',it.name||'',it.qty,rsFmt(it.price),rsFmt(amt)],hh);sn++;y+=hh;});
   const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
-  if(sDisc>0.005){ drow(y,['','','','Correct Total',rsFmt(sCorr)],rh);y+=rh; drow(y,['','','','Discount',rsFmt(-sDisc)],rh);y+=rh; }
+  if(sDisc>0.005){ drow(y,['','','','Total',rsFmt(sCorr)],rh);y+=rh; drow(y,['','','','Discount',rsFmt(-sDisc)],rh);y+=rh; }
   let x=M;doc.rect(x,y,bw-38,rh);doc.rect(x+bw-38,y,38,rh);
   doc.setFont('helvetica','bold');doc.setFontSize(12*f);
   doc.text('Total',x+bw-38-2,y+rh/2+1.6,{align:'right'});
