@@ -86,12 +86,13 @@
           <div id="edit-banner" class="hidden"><div class="edit-banner">Editing <b id="edit-banner-name"></b> · <span id="edit-banner-id"></span><button class="edit-x" onclick="cancelStockEdit()">✕</button></div></div>
           <div id="edit-fields" class="hidden">
             <div class="edit-prow"><div id="edit-pimg"></div></div>
+            <div class="cur-vals" id="edit-curvals"></div>
             <label class="fl">ITEM ID</label>
             <div class="id-row"><input id="edit-itemid" readonly style="background:#f1f5f9"></div>
             <label class="fl">ITEM NAME</label>
             <input id="edit-name" placeholder="e.g. A4 Rim 80gsm">
             <div class="two-col">
-              <div><label class="fl">QUANTITY</label><input id="edit-qty" type="number" min="0"></div>
+              <div><label class="fl">ADD QUANTITY</label><input id="edit-qty" type="number" min="0" placeholder="0"><div class="cur-hint" id="edit-qty-hint" style="font-size:11px;color:#94a3b8;margin-top:2px"></div></div>
               <div><label class="fl">UNIT</label><select id="edit-unit"><option>Rim</option><option>Ream</option><option>Kg</option><option>Bundle</option><option>Piece</option><option>Packet</option></select></div>
             </div>
             <div class="two-col">
