@@ -747,7 +747,8 @@ $('btn-ws-sold').onclick=()=>{ try{
   };
   const wsLoss=lines.filter(l=>l.unit<(l.cost||0));
   const wsTotalCost=lines.reduce((ss,l)=>{ const pr=DB.products.find(x=>x.id===l.productId); return ss+l.qty*((pr&&pr.cost)||0); },0);
-  const wsBillLoss=total<wsTotalCost;
+  const wsBill=parseFloat($('ws-total').value)||0;
+  const wsBillLoss=wsBill<wsTotalCost;
   if(wsLoss.length||wsBillLoss) lossConfirm('wholesale',(wsLoss.length?wsLoss:lines).map(l=>({name:l.name,unit:l.unit,cost:l.cost})),go);
   else go();
 }catch(err){ toast('⚠️ Error: '+(err&&err.message||err)); console.error(err); } };
