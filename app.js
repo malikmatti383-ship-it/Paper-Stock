@@ -429,15 +429,6 @@ $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sal
 let saleCart=[];
 $('sale-psearch').onfocus=()=>{ salePickId=null; renderSaleDD($('sale-psearch').value.toLowerCase().trim()); };
 $('sale-psearch').oninput=e=>{ salePickId=null; renderSaleDD(e.target.value.toLowerCase().trim()); };
-/* keyboard open -> scroll Sale/Wholesale/Expense pills up into view; keyboard close -> scroll back down */
-function kbScrollUp(){ setTimeout(()=>{ const seg=document.querySelector('#view-sales .seg');
-  if(seg) seg.scrollIntoView({behavior:'smooth',block:'start'}); },350); }
-function kbScrollDown(){ setTimeout(()=>{ window.scrollTo({top:0,behavior:'smooth'}); },150); }
-['sale-psearch','ws-psearch'].forEach(id=>{ const el=$(id); if(!el) return;
-  el.addEventListener('focus',kbScrollUp); el.addEventListener('blur',kbScrollDown); });
-['seg-sale','seg-ws','seg-exp'].forEach(id=>{ const b=$(id); if(!b) return;
-  b.addEventListener('click',()=>{ setTimeout(()=>{ const ae=document.activeElement;
-    if(ae&&ae.tagName==='INPUT'&&ae.type!=='date') kbScrollUp(); },120); }); });
 document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')){ $('sale-dd').classList.add('hidden'); const w=$('ws-dd'); if(w) w.classList.add('hidden'); } });
 function paintSaleQtyWarn(){ const box=$('sale-qty-warn'); if(!box) return;
   const p=DB.products.find(x=>x.id===salePickId);
