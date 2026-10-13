@@ -520,7 +520,7 @@ window.toggleSalePaid=()=>{ salePaid=!salePaid; paintPaidTg(); };
 window.toggleSaleBreakdown=e=>{ if(e) e.stopPropagation();
   const sub=$('sale-breakdown'), btn=$('sale-exp-btn'); if(!sub) return;
   sub.classList.toggle('hidden');
-  if(btn) btn.textContent=sub.classList.contains('hidden')?'\uD83D\uDD3D':'\uD83D\uDD3C'; };
+  if(btn) btn.textContent=sub.classList.contains('hidden')?'\u25BC':'\u25B2'; };
 window.toggleWsPaid=()=>{ wsPaid=!wsPaid; paintPaidTg(); };
 paintPaidTg();
 function paintSaleCostWarn(){ const box=$('sale-cost-warn'); if(!box) return;
