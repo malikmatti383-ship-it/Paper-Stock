@@ -424,6 +424,7 @@ $('sale-date-pill').onclick=()=>openDatePicker('sale-date');
 $('sale-date').onchange=e=>{ if(e.target.value){ saleDate=e.target.value; $('sale-date-txt').textContent=fmtDate(saleDate); saleDay=saleDate; renderDaySales(); } };
 /* ---- NADIR-style search dropdown + multi-item cart ---- */
 let saleCart=[];
+$('sale-psearch').onfocus=()=>{ salePickId=null; renderSaleDD($('sale-psearch').value.toLowerCase().trim()); };
 $('sale-psearch').oninput=e=>{ salePickId=null; renderSaleDD(e.target.value.toLowerCase().trim()); };
 document.addEventListener('click',e=>{ if(!e.target.closest('.dd-wrap')){ $('sale-dd').classList.add('hidden'); const w=$('ws-dd'); if(w) w.classList.add('hidden'); } });
 function paintSaleQtyWarn(){ const box=$('sale-qty-warn'); if(!box) return;
@@ -540,8 +541,7 @@ function paintWsCostWarn(){ const box=$('ws-cost-warn'); if(!box) return;
 }
 function renderSaleDD(q){
   const dd=$('sale-dd');
-  if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
-  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,8);
+  const list=(q?DB.products.filter(p=>pmatch(p,q)):DB.products.slice()).slice(0,50);
   dd.innerHTML=list.map(p=>`
     <div class="dd-item" onclick="pickSaleDD(${p.id})">${pimg(p,'dd-img')}
       <div style="flex:1;min-width:0">${p.brand?`<span class="dd-brand">${esc(p.brand)}</span>`:''}
@@ -658,13 +658,13 @@ $('btn-sold').onclick=()=>{
 };
 /* ================= WHOLESALE (shopkeeper sales at stock rates) ================= */
 let wsPickId=null, wsDate=dstr(), wsCart=[];
+$('ws-psearch').onfocus=()=>{ wsPickId=null; renderWsDD($('ws-psearch').value.toLowerCase().trim()); };
 $('ws-psearch').oninput=e=>{ wsPickId=null; renderWsDD(e.target.value.toLowerCase().trim()); };
 $('ws-date-pill').onclick=()=>openDatePicker('ws-date');
 $('ws-date').onchange=e=>{ if(e.target.value){ wsDate=e.target.value; $('ws-date-txt').textContent=fmtDate(wsDate); saleDay=wsDate; renderDaySales(); } };
 function renderWsDD(q){
   const dd=$('ws-dd'); if(!dd) return;
-  if(!q){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
-  const list=DB.products.filter(p=>pmatch(p,q)).slice(0,8);
+  const list=(q?DB.products.filter(p=>pmatch(p,q)):DB.products.slice()).slice(0,50);
   dd.innerHTML=list.map(p=>`
     <div class="dd-item" onclick="pickWsDD(${p.id})">${pimg(p,'dd-img')}
       <div style="flex:1;min-width:0">${p.brand?`<span class="dd-brand">${esc(p.brand)}</span>`:''}
