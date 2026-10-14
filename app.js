@@ -1206,9 +1206,27 @@ document.querySelectorAll('#stock-chips .chip').forEach(c=>c.onclick=()=>{
 });
 $('stock-search').oninput=e=>{ stockQ=e.target.value.toLowerCase(); renderStock(); };
 function stockBadge(p){ if(p.qty<=0) return '<span class="badge out">OUT</span>'; if(p.qty<=5) return '<span class="badge low">Low</span>'; return ''; }
-let stockSort=0;
-const SORT_LBL=['Default order','Name A–Z','Qty: high to low','Cost: high to low'];
-window.cycleStockSort=()=>{ stockSort=(stockSort+1)%4; renderStock(); toast('\u21C5 '+SORT_LBL[stockSort]); };
+const STOCK_SORTS=[
+ {id:'date',t:'Date added',s:'Newest first',ic:'\U0001F552'},
+ {id:'name-az',t:'Name',s:'A \u2192 Z',ic:'\U0001F524'},
+ {id:'name-za',t:'Name',s:'Z \u2192 A',ic:'\U0001F524'},
+ {id:'qty-hl',t:'Quantity',s:'High \u2192 low',ic:'\U0001F4E6'},
+ {id:'qty-lh',t:'Quantity',s:'Low \u2192 high',ic:'\U0001F4E6'},
+ {id:'cost-hl',t:'Cost price',s:'High \u2192 low',ic:'\U0001F4B0'},
+ {id:'cost-lh',t:'Cost price',s:'Low \u2192 high',ic:'\U0001F4B0'}];
+let stockSortBy='date', tmpSortBy='date', tmpStockF='all';
+window.openStockSortSheet=()=>{ tmpSortBy=stockSortBy; tmpStockF=stockF; openSheet(sfSheetHTML()); paintSF(); };
+function sfSheetHTML(){ return `<div class="sheet-head"><b style="font-size:18px">Sort &amp; Filter</b><button class="sf-reset" onclick="resetStockSF()">Reset</button></div>
+ <div class="sf-lbl">SORT BY</div><div class="sf-grid">`+STOCK_SORTS.map(o=>`<button class="sf-card" data-s="${o.id}" onclick="pickSFSort('${o.id}')"><span class="sf-ic">${o.ic}</span><span class="sf-t">${o.t}</span><span class="sf-s">${o.s}</span><span class="sf-check">\u2713</span></button>`).join('')+`</div>
+ <div class="sf-lbl">SHOW</div><div class="sf-shows">`+[['all','All'],['in','In stock'],['low','Low stock'],['out','Out of stock']].map(x=>`<button class="sf-show" data-f="${x[0]}" onclick="pickSFShow('${x[0]}')">${x[1]}</button>`).join('')+`</div>
+ <div class="sf-btns"><button class="sf-cancel" onclick="closeSheet()">CANCEL</button><button class="sf-apply" onclick="applyStockSF()">APPLY</button></div>`; }
+window.pickSFSort=id=>{ tmpSortBy=id; paintSF(); };
+window.pickSFShow=f=>{ tmpStockF=f; paintSF(); };
+window.resetStockSF=()=>{ tmpSortBy='date'; tmpStockF='all'; paintSF(); };
+function paintSF(){ document.querySelectorAll('.sf-card').forEach(b=>b.classList.toggle('sel',b.dataset.s===tmpSortBy));
+ document.querySelectorAll('.sf-show').forEach(b=>b.classList.toggle('sel',b.dataset.f===tmpStockF)); }
+window.applyStockSF=()=>{ stockSortBy=tmpSortBy; stockF=tmpStockF; syncStockChips(); renderStock(); closeSheet(); };
+function syncStockChips(){ document.querySelectorAll('#stock-chips .chip').forEach(ch=>ch.classList.toggle('active',ch.dataset.f===stockF)); }
 function stockStatus(p){ return p.qty<=0?'out':(p.qty<=5?'low':'in'); }
 function renderStock(){
   const cost=DB.products.reduce((s,p)=>s+p.qty*p.cost,0);
@@ -1221,9 +1239,14 @@ function renderStock(){
   if(stockF==='in') list=list.filter(p=>p.qty>5);
   if(stockF==='low') list=list.filter(p=>p.qty>0&&p.qty<=5);
   if(stockF==='out') list=list.filter(p=>p.qty<=0);
-  if(stockSort===1) list=[...list].sort((a,b)=>a.name.localeCompare(b.name));
-  if(stockSort===2) list=[...list].sort((a,b)=>b.qty-a.qty);
-  if(stockSort===3) list=[...list].sort((a,b)=>b.cost-a.cost);
+  const by=stockSortBy;
+  if(by==='date') list=[...list].sort((a,b)=>(b.id||0)-(a.id||0));
+  else if(by==='name-az') list=[...list].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(by==='name-za') list=[...list].sort((a,b)=>(b.name||'').localeCompare(a.name||''));
+  else if(by==='qty-hl') list=[...list].sort((a,b)=>(b.qty||0)-(a.qty||0));
+  else if(by==='qty-lh') list=[...list].sort((a,b)=>(a.qty||0)-(b.qty||0));
+  else if(by==='cost-hl') list=[...list].sort((a,b)=>(b.cost||0)-(a.cost||0));
+  else if(by==='cost-lh') list=[...list].sort((a,b)=>(a.cost||0)-(b.cost||0));
   $('stock-list').innerHTML=list.map(p=>{
     const st=stockStatus(p);
     const lbl=st==='out'?'OUT OF STOCK':(st==='low'?'LOW STOCK':'IN STOCK');
