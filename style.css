@@ -619,14 +619,16 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .cur-vals .cv{background:#f1f5f9;border-radius:10px;padding:6px 12px;font-size:12px;color:#475569}
 .cur-vals .cv b{color:#111827}
 .sf-lbl{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#94a3b8;margin:16px 2px 8px}
-.sf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.sf-card{position:relative;border:2px solid #eef2f7;background:#f8fafc;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;cursor:pointer;transition:border-color .15s}
-.sf-card.sel{border-color:var(--teal);background:#eaf6fc}
-.sf-ic{font-size:22px}
-.sf-t{font-weight:800;font-size:14px;color:#1c2733}
+.sf-list{display:flex;flex-direction:column;gap:2px}
+.sf-row{display:flex;align-items:center;gap:12px;border:none;background:none;padding:9px 4px;cursor:pointer;border-bottom:1px solid #f1f5f9;text-align:left;width:100%}
+.sf-row:last-child{border-bottom:none}
+.sf-ric{font-size:18px;width:30px;height:30px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex:none}
+.sf-rt{flex:1;display:flex;flex-direction:column}
+.sf-t{font-weight:700;font-size:14px;color:#1c2733}
 .sf-s{font-size:12px;color:#8a94a3}
-.sf-check{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-size:13px;display:none;align-items:center;justify-content:center;font-weight:800}
-.sf-card.sel .sf-check{display:flex}
+.sf-tick{width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-size:13px;display:none;align-items:center;justify-content:center;font-weight:800;flex:none}
+.sf-row.sel .sf-tick{display:flex}
+.sf-row.sel .sf-t{color:var(--teal-d)}
 .sf-shows{display:flex;gap:8px;flex-wrap:wrap}
 .sf-show{border:2px solid #eef2f7;background:#f8fafc;border-radius:999px;padding:9px 18px;font-weight:700;font-size:14px;color:#1c2733;cursor:pointer}
 .sf-show.sel{border-color:var(--teal);background:#eaf6fc;color:var(--teal-d);font-weight:800}

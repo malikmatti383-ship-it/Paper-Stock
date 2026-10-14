@@ -1217,13 +1217,13 @@ const STOCK_SORTS=[
 let stockSortBy='date', tmpSortBy='date', tmpStockF='all';
 window.openStockSortSheet=()=>{ tmpSortBy=stockSortBy; tmpStockF=stockF; openSheet(sfSheetHTML()); paintSF(); };
 function sfSheetHTML(){ return `<div class="sheet-head"><b style="font-size:18px">Sort &amp; Filter</b><button class="sf-reset" onclick="resetStockSF()">Reset</button></div>
- <div class="sf-lbl">SORT BY</div><div class="sf-grid">`+STOCK_SORTS.map(o=>`<button class="sf-card" data-s="${o.id}" onclick="pickSFSort('${o.id}')"><span class="sf-ic">${o.ic}</span><span class="sf-t">${o.t}</span><span class="sf-s">${o.s}</span><span class="sf-check">\u2713</span></button>`).join('')+`</div>
+ <div class="sf-lbl">SORT BY</div><div class="sf-list">`+STOCK_SORTS.map(o=>`<button class="sf-row" data-s="${o.id}" onclick="pickSFSort('${o.id}')"><span class="sf-ric">${o.ic}</span><span class="sf-rt"><span class="sf-t">${o.t}</span><span class="sf-s">${o.s}</span></span><span class="sf-tick">\u2713</span></button>`).join('')+`</div>
  <div class="sf-lbl">SHOW</div><div class="sf-shows">`+[['all','All'],['in','In stock'],['low','Low stock'],['out','Out of stock']].map(x=>`<button class="sf-show" data-f="${x[0]}" onclick="pickSFShow('${x[0]}')">${x[1]}</button>`).join('')+`</div>
  <div class="sf-btns"><button class="sf-cancel" onclick="closeSheet()">CANCEL</button><button class="sf-apply" onclick="applyStockSF()">APPLY</button></div>`; }
 window.pickSFSort=id=>{ tmpSortBy=id; paintSF(); };
 window.pickSFShow=f=>{ tmpStockF=f; paintSF(); };
 window.resetStockSF=()=>{ tmpSortBy='date'; tmpStockF='all'; paintSF(); };
-function paintSF(){ document.querySelectorAll('.sf-card').forEach(b=>b.classList.toggle('sel',b.dataset.s===tmpSortBy));
+function paintSF(){ document.querySelectorAll('.sf-row').forEach(b=>b.classList.toggle('sel',b.dataset.s===tmpSortBy));
  document.querySelectorAll('.sf-show').forEach(b=>b.classList.toggle('sel',b.dataset.f===tmpStockF)); }
 window.applyStockSF=()=>{ stockSortBy=tmpSortBy; stockF=tmpStockF; syncStockChips(); renderStock(); closeSheet(); };
 function syncStockChips(){ document.querySelectorAll('#stock-chips .chip').forEach(ch=>ch.classList.toggle('active',ch.dataset.f===stockF)); }
