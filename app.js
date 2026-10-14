@@ -1207,13 +1207,13 @@ document.querySelectorAll('#stock-chips .chip').forEach(c=>c.onclick=()=>{
 $('stock-search').oninput=e=>{ stockQ=e.target.value.toLowerCase(); renderStock(); };
 function stockBadge(p){ if(p.qty<=0) return '<span class="badge out">OUT</span>'; if(p.qty<=5) return '<span class="badge low">Low</span>'; return ''; }
 const STOCK_SORTS=[
- {id:'date',t:'Date added',s:'Newest first',ic:'\U0001F552'},
- {id:'name-az',t:'Name',s:'A \u2192 Z',ic:'\U0001F524'},
- {id:'name-za',t:'Name',s:'Z \u2192 A',ic:'\U0001F524'},
- {id:'qty-hl',t:'Quantity',s:'High \u2192 low',ic:'\U0001F4E6'},
- {id:'qty-lh',t:'Quantity',s:'Low \u2192 high',ic:'\U0001F4E6'},
- {id:'cost-hl',t:'Cost price',s:'High \u2192 low',ic:'\U0001F4B0'},
- {id:'cost-lh',t:'Cost price',s:'Low \u2192 high',ic:'\U0001F4B0'}];
+ {id:'date',t:'Date added',s:'Newest first',ic:'🕐'},
+ {id:'name-az',t:'Name',s:'A \u2192 Z',ic:'🔤'},
+ {id:'name-za',t:'Name',s:'Z \u2192 A',ic:'🔤'},
+ {id:'qty-hl',t:'Quantity',s:'High \u2192 low',ic:'📦'},
+ {id:'qty-lh',t:'Quantity',s:'Low \u2192 high',ic:'📦'},
+ {id:'cost-hl',t:'Cost price',s:'High \u2192 low',ic:'💰'},
+ {id:'cost-lh',t:'Cost price',s:'Low \u2192 high',ic:'💰'}];
 let stockSortBy='date', tmpSortBy='date', tmpStockF='all';
 window.openStockSortSheet=()=>{ tmpSortBy=stockSortBy; tmpStockF=stockF; openSheet(sfSheetHTML()); paintSF(); };
 function sfSheetHTML(){ return `<div class="sheet-head"><b style="font-size:18px">Sort &amp; Filter</b><button class="sf-reset" onclick="resetStockSF()">Reset</button></div>
