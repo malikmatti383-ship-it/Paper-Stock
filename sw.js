@@ -1,5 +1,5 @@
-/* Paper Stock offline support v13 — v82: network-first for app shell (updates apply on every online load), cache fallback offline */
-const CACHE='paper-stock-v171';
+/* Paper Stock offline support — v172: instant open (serve cache first, refresh in background) */
+const CACHE='paper-stock-v172';
 const ASSETS=['./','./index.html','./app.js','./auth.js?v=1','./lib/jspdf.umd.min.js','./style.css','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
@@ -13,9 +13,12 @@ self.addEventListener('fetch',e=>{
   try{ same=new URL(e.request.url).origin===self.location.origin; }catch(_){}
   if(!same) return;
   e.respondWith(
-    fetch(e.request).then(res=>{
-      if(res.ok){ const cp=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,cp)); }
-      return res;
-    }).catch(()=>caches.match(e.request).then(hit=>hit||caches.match('./index.html')))
+    caches.match(e.request).then(hit=>{
+      const net=fetch(e.request).then(res=>{
+        if(res.ok){ const cp=res.clone(); caches.open(CACHE).then(c=>c.put(e.request,cp)); }
+        return res;
+      }).catch(()=>hit);
+      return hit||net.then(r=>r||caches.match('./index.html'));
+    })
   );
 });
