@@ -153,6 +153,21 @@ function initAuth(){
     setSyncPill('synced');
 }
 
+/* ---------- First-launch login gate ---------- */
+function initGate(){
+  const g=$('login-gate'); if(!g) return;
+  const need=!!(window.PaperAuth&&PaperAuth.isConfigured()&&!PaperAuth.getToken());
+  g.style.display=need?'flex':'none';
+}
+window.gateLogin=function(){
+  if(!window.PaperAuth) return;
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){
+    const m=$('gate-msg'); if(m) m.textContent='No internet connection. Connect once to log in \u2014 after that, the app works offline.';
+    return;
+  }
+  PaperAuth.login();
+};
+
 /* ---------- Subscription (manual payment) ---------- */
 const SUB_PLANS_FALLBACK=[
   {key:'monthly',amountRs:300,days:30,label:'Monthly'},
@@ -2215,7 +2230,7 @@ window.sendMsg=(id,kind)=>{
 };
 
 /* ---------- Init ---------- */
-load(); applyTheme(curTheme()); renderStoreName(); initAdd(); initAuth(); applyTabOrder(true); showView('view-sales');
+load(); applyTheme(curTheme()); renderStoreName(); initAdd(); initAuth(); initGate(); applyTabOrder(true); showView('view-sales');
 updateBellBadge(); updatePrintBadge(); checkReminders();
 
 /* ================= BELL: reminders + bulk send ================= */
