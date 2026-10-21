@@ -129,8 +129,8 @@ function applyRemote(data,updatedAt){
 function authSection(){
   if(!window.PaperAuth||!PaperAuth.isConfigured()) return '';
   if(!PaperAuth.getToken())
-    return `<button class="btn-go" style="width:100%;margin-bottom:4px" onclick="PaperAuth.login()">🔐 Login with Gmail</button>
-    <div class="sub" style="text-align:center;margin-bottom:10px">One login — sync your data on 5 devices</div>`;
+    return `<button class="btn-go" style="width:100%;margin-bottom:4px" onclick="openCodeLogin()">🔐 Login with Gmail</button>
+    <div class="sub" style="text-align:center;margin-bottom:10px">We email you a login code — sync your data on 5 devices</div>`;
   let u=null; try{ u=JSON.parse(localStorage.getItem('ps_user')||'null'); }catch(e){}
   const nm=u?(u.name||u.email):'...', em=u?(u.email||''):'' ;
   const av=u&&u.picture?`<img src="${u.picture}">`:esc((nm||'G').charAt(0).toUpperCase());
@@ -159,13 +159,68 @@ function initGate(){
   const need=!!(window.PaperAuth&&PaperAuth.isConfigured()&&!PaperAuth.getToken());
   g.style.display=need?'flex':'none';
 }
-window.gateLogin=function(){
+/* ---------- Email-code login (gate + profile) ---------- */
+let clEmail='';
+function clMsg(id,t,ok){ const m=$(id); if(m){ m.textContent=t||''; m.style.color=ok?'#1e9e57':''; } }
+function clSend(ids){
   if(!window.PaperAuth) return;
-  if(typeof navigator!=='undefined'&&navigator.onLine===false){
-    const m=$('gate-msg'); if(m) m.textContent='No internet connection. Connect once to log in \u2014 after that, the app works offline.';
-    return;
-  }
-  PaperAuth.login();
+  const em=($(ids.email).value||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)){ clMsg(ids.msg,'Please enter a valid email address.'); return; }
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){ clMsg(ids.msg,'No internet connection. Connect once to log in \u2014 after that, the app works offline.'); return; }
+  const btn=$(ids.sendBtn);
+  if(btn){ btn.disabled=true; btn.textContent='Sending code\u2026 (first time can take a minute)'; }
+  clMsg(ids.msg,'');
+  PaperAuth.requestCode(em).then(()=>{
+    clEmail=em;
+    $(ids.stepEmail).style.display='none';
+    $(ids.stepCode).style.display='block';
+    const n=$(ids.note); if(n) n.textContent='We emailed a 6-digit code to '+em+'. Enter it here:';
+    const ci=$(ids.code); if(ci){ ci.value=''; setTimeout(()=>{ try{ci.focus();}catch(e){} },60); }
+  }).catch(e=>{
+    clMsg(ids.msg,(e&&e.message)||'Could not send the code. Please try again.');
+  }).then(()=>{ if(btn){ btn.disabled=false; btn.textContent='Email me a login code'; } });
+}
+function clVerify(ids){
+  const cd=($(ids.code).value||'').trim();
+  if(!/^\d{6}$/.test(cd)){ clMsg(ids.msg,'Enter the 6-digit code from your email.'); return; }
+  const btn=$(ids.verifyBtn);
+  if(btn){ btn.disabled=true; btn.textContent='Checking\u2026'; }
+  PaperAuth.verifyCode(clEmail, cd).then(()=>{ location.reload(); })
+    .catch(e=>{
+      clMsg(ids.msg,(e&&e.message)||'Login failed. Please try again.');
+      if(btn){ btn.disabled=false; btn.textContent='Login'; }
+    });
+}
+function clBack(ids){
+  $(ids.stepCode).style.display='none';
+  $(ids.stepEmail).style.display='block';
+  clMsg(ids.msg,'');
+}
+const GATE_IDS={email:'gate-email',code:'gate-code',stepEmail:'gate-step-email',stepCode:'gate-step-code',sendBtn:'gate-send-btn',verifyBtn:'gate-verify-btn',msg:'gate-msg',note:'gate-code-note'};
+window.gateSendCode=function(){ clSend(GATE_IDS); };
+window.gateVerifyCode=function(){ clVerify(GATE_IDS); };
+window.gateBack=function(){ clBack(GATE_IDS); };
+const CL_IDS={email:'cl-email',code:'cl-code',stepEmail:'cl-step-email',stepCode:'cl-step-code',sendBtn:'cl-send-btn',verifyBtn:'cl-verify-btn',msg:'cl-msg',note:'cl-code-note'};
+window.clSendCode=function(){ clSend(CL_IDS); };
+window.clVerifyCode=function(){ clVerify(CL_IDS); };
+window.clBack=function(){ clBack(CL_IDS); };
+window.openCodeLogin=function(){
+  openSheet(`
+  <div class="sheet-title">Login with Gmail</div>
+  <div class="sub" style="margin:2px 0 10px">We email you a 6-digit code \u2014 no password needed. One login syncs your data on all your devices.</div>
+  <div id="cl-step-email">
+    <input class="inp" id="cl-email" type="email" inputmode="email" autocomplete="email" placeholder="Your Gmail address" style="width:100%;box-sizing:border-box;margin-bottom:10px">
+    <button class="btn-go" id="cl-send-btn" style="width:100%" onclick="clSendCode()">Email me a login code</button>
+  </div>
+  <div id="cl-step-code" style="display:none">
+    <div class="sub" id="cl-code-note" style="margin-bottom:8px"></div>
+    <input class="inp" id="cl-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" style="width:100%;box-sizing:border-box;margin-bottom:10px;text-align:center;font-size:20px;font-weight:700;letter-spacing:6px">
+    <button class="btn-go" id="cl-verify-btn" style="width:100%" onclick="clVerifyCode()">Login</button>
+    <div style="margin-top:8px"><button class="btn-ghost" onclick="clBack()">\u2190 Different email</button>
+    <button class="btn-ghost" onclick="clSendCode()">Resend code</button></div>
+  </div>
+  <div id="cl-msg" style="margin-top:10px;font-size:13px;color:#b3261e;min-height:18px"></div>
+  <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
 };
 
 /* ---------- Subscription (manual payment) ---------- */

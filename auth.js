@@ -30,6 +30,35 @@
     location.href = base() + '/auth/google';
   }
 
+  /* Email-code login: works inside the Android wrapper, where the Google
+     page can never open. Server emails a 6-digit code; verify returns the
+     same 365-day session token Google login would have created. */
+  function postJson(path, body){
+    return fetch(base() + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    }).then(function (res) {
+      return res.json().catch(function(){ return {}; }).then(function (j) {
+        if (!res.ok) throw new Error(j.error || ('Request failed (' + res.status + ')'));
+        return j;
+      });
+    });
+  }
+
+  function requestCode(email){
+    if (!isConfigured()) return Promise.reject(new Error('Login is not set up yet.'));
+    return postJson('/api/auth/code/request', { email: email });
+  }
+
+  function verifyCode(email, code){
+    if (!isConfigured()) return Promise.reject(new Error('Login is not set up yet.'));
+    return postJson('/api/auth/code/verify', { email: email, code: code }).then(function (j) {
+      if (j && j.token) setToken(j.token);
+      return j;
+    });
+  }
+
   function api(path, opts){
     opts = opts || {};
     var headers = opts.headers || {};
@@ -82,6 +111,7 @@
   window.PaperAuth = {
     isConfigured: isConfigured, getToken: getToken, handleAuthRedirect: handleAuthRedirect,
     login: login, logout: logout, api: api, startAutoSync: startAutoSync,
+    requestCode: requestCode, verifyCode: verifyCode,
     setServerUrl: function (u) { PAPER_SERVER_URL = u; }
   };
 })();
