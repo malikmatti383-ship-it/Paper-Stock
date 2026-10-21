@@ -137,7 +137,8 @@ function authSection(){
   return `<div class="mrow" style="align-items:center;margin-bottom:10px">
     <div class="pavatar" style="width:44px;height:44px;font-size:18px;flex-shrink:0">${av}</div>
     <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b><div class="sub">${esc(em)}</div></div>
-    <button class="btn-ghost" style="flex-shrink:0" onclick="doLogout()">Logout</button></div>`;
+    <button class="btn-ghost" style="flex-shrink:0" onclick="doLogout()">Logout</button></div>
+    <div id="plan-box"></div>`;
 }
 window.doLogout=()=>{ if(!window.PaperAuth) return;
   PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); }catch(e){} location.reload(); });
@@ -151,6 +152,96 @@ function initAuth(){
   syncCtl=PaperAuth.startAutoSync(()=>DB, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} setSyncPill('synced'); });
     setSyncPill('synced');
 }
+
+/* ---------- Subscription (manual payment) ---------- */
+const SUB_PLANS_FALLBACK=[
+  {key:'monthly',amountRs:300,days:30,label:'Monthly'},
+  {key:'halfyearly',amountRs:1566,days:180,label:'6 Months'},
+  {key:'yearly',amountRs:2664,days:365,label:'1 Year'},
+];
+let _subPlan='monthly', _subCfg=null, _subMine=[];
+function _subUser(){ try{ return JSON.parse(localStorage.getItem('ps_user')||'null'); }catch(e){ return null; } }
+function _subPremiumActive(u){ return !!(u&&u.plan==='premium'&&u.planExpiresAt&&new Date(u.planExpiresAt).getTime()>Date.now()); }
+function _fmtDate(iso){ try{ return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } }
+function initPlanBox(){
+  const box=$('plan-box'); if(!box) return;
+  renderPlanBox();
+  if(!window.PaperAuth||!PaperAuth.isConfigured()||!PaperAuth.getToken()) return;
+  PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} renderPlanBox(); }).catch(()=>{});
+  PaperAuth.api('/api/pay/manual/config').then(c=>{ _subCfg=c; renderPlanBox(); }).catch(()=>{});
+  PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; renderPlanBox(); }).catch(()=>{});
+}
+function renderPlanBox(){
+  const box=$('plan-box'); if(!box) return;
+  if(!window.PaperAuth||!PaperAuth.isConfigured()||!PaperAuth.getToken()){ box.innerHTML=''; return; }
+  const u=_subUser(), active=_subPremiumActive(u);
+  const cfg=_subCfg, plans=(cfg&&cfg.plans&&cfg.plans.length)?cfg.plans:SUB_PLANS_FALLBACK;
+  if(!plans.some(p=>p.key===_subPlan)) _subPlan=plans[0].key;
+  let h=`<div class="lbl" style="margin:12px 0 6px">SUBSCRIPTION</div>`;
+  if(active){
+    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Premium active</b><div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>`;
+  } else if(u&&u.plan==='premium'){
+    h+=`<div class="sub" style="margin-bottom:8px">Your Premium ended on ${_fmtDate(u.planExpiresAt)}. Renew below.</div>`;
+  }
+  const pend=_subMine.filter(x=>x.status==='manual_pending');
+  if(pend.length){
+    h+=pend.map(x=>`<div class="sub" style="margin-bottom:6px">⏳ <b>${esc(x.plan)}</b> — Rs ${esc(x.amountRs)} — payment sent, waiting for verification.</div>`).join('');
+  }
+  const done=_subMine.filter(x=>x.status==='success').slice(0,2);
+  if(done.length&&!active){
+    h+=done.map(x=>`<div class="sub" style="margin-bottom:6px">✅ <b>${esc(x.plan)}</b> payment verified.</div>`).join('');
+  }
+  const rej=_subMine.filter(x=>x.status==='rejected').slice(0,1);
+  if(rej.length){
+    h+=`<div class="sub" style="margin-bottom:6px;color:#b3261e">❌ Your last payment could not be verified. Please check the transaction ID and try again.</div>`;
+  }
+  if(!cfg){
+    h+=`<div class="sub">Loading payment details…</div>`;
+  } else if(!cfg.configured){
+    h+=`<div class="sub">Subscription payments are being set up. Please check back soon.</div>`;
+  } else {
+    const baseP=((plans.find(p=>p.key==='monthly')||plans[0])||{}).amountRs||300;
+    const planRows=plans.map(p=>{
+      const full=baseP*Math.max(1,Math.round(p.days/30));
+      const pct=full>p.amountRs?Math.round((1-p.amountRs/full)*100):0;
+      const price=pct?`<span style="text-align:right"><s class="sub">Rs ${full}</s><br><b>Rs ${esc(p.amountRs)}</b></span>`:`<b>Rs ${esc(p.amountRs)}</b>`;
+      const save=pct?` <span style="color:#1a9e54;font-weight:700;font-size:12px">Save ${pct}%</span>`:'';
+      return `<div class="menu-row" onclick="pickSubPlan('${p.key}')"><span>${p.key===_subPlan?'🔘':'⚪'}</span><span style="flex:1"><b>${esc(p.key==='monthly'?'Monthly':p.key==='halfyearly'?'6 Months':'1 Year')}</b> <span class="sub">${p.days} days</span>${save}</span>${price}</div>`;
+    }).join('');
+    const mlist=(cfg.methods&&cfg.methods.length)?cfg.methods:([['jazzcash','JazzCash',cfg.jazzcash],['easypaisa','Easypaisa',cfg.easypaisa]].filter(x=>x[2]).map(x=>({key:x[0],label:x[1],number:x[2].number,title:x[2].title})));
+    const numRow=m=>`<div class="mrow" style="align-items:center;margin:4px 0"><div style="flex:1"><div class="sub">${esc(m.label)}</div><b style="font-size:16px">${esc(m.number)}</b> <span class="sub">${esc(m.title||'')}</span></div><button class="btn-ghost" onclick="copyTxt('${esc(m.number)}')">Copy</button></div>`;
+    const QR_FOR={jazzcash:'img/pay-qr-jazzcash.jpg',bank:'img/pay-qr-bank.jpg'};
+    const qrHtml=mlist.filter(m=>QR_FOR[m.key]).map(m=>`<div style="text-align:center;margin:8px 0"><div class="sub" style="margin-bottom:4px">${esc(m.label)} — scan to pay</div><img src="${QR_FOR[m.key]}" alt="${esc(m.label)} QR code" loading="lazy" onclick="window.open(this.src)" style="width:210px;max-width:82%;border-radius:10px;border:1px solid #e3e8f2;cursor:pointer"></div>`).join('');
+    h+=`${planRows}
+    <div class="sub" style="margin:8px 0 2px">Send the plan amount to any one of these:</div>
+    ${mlist.map(numRow).join('')}${qrHtml}
+    <div class="sub" style="margin:8px 0">After sending, enter the <b>Transaction ID</b> from your payment app:</div>
+    <select id="sub-method" style="width:100%;margin-bottom:6px">${mlist.map(m=>`<option value="${esc(m.key)}">${esc(m.label)}</option>`).join('')}</select>
+    <input id="sub-txn" placeholder="Transaction ID" autocapitalize="characters" style="width:100%;margin-bottom:6px">
+    <input id="sub-sname" placeholder="Your name (optional)" style="width:100%;margin-bottom:6px">
+    <input id="sub-snum" placeholder="Your mobile number (optional)" inputmode="tel" style="width:100%;margin-bottom:8px">
+    <button class="btn-go" style="width:100%" onclick="submitSubPayment()">Submit payment</button>`;
+  }
+  box.innerHTML=h;
+}
+window.pickSubPlan=k=>{ _subPlan=k; renderPlanBox(); };
+window.copyTxt=t=>{ const done=()=>toast('✅ Copied'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(done); } else done(); };
+window.submitSubPayment=()=>{
+  const txn=($('sub-txn')&&$('sub-txn').value||'').trim();
+  if(txn.length<5){ toast('❌ Please enter the Transaction ID'); return; }
+  const body={ plan:_subPlan, method:($('sub-method')||{}).value, txnId:txn,
+    senderName:($('sub-sname')||{}).value||'', senderNumber:($('sub-snum')||{}).value||'' };
+  PaperAuth.api('/api/pay/manual',{method:'POST',body}).then(()=>{
+    toast('✅ Sent! Your plan will be activated after verification.');
+    try{ initPlanBox(); }catch(e){}
+  }).catch(e=>{
+    const m=String(e&&e.message||'');
+    if(m.indexOf('409')>=0) toast('❌ This Transaction ID was already submitted');
+    else if(m.indexOf('503')>=0) toast('❌ Payments are not set up yet');
+    else if(m.indexOf('400')>=0) toast('❌ Please check the details and try again');
+    else toast('❌ Could not send. Check your internet and try again.');
+  });
+};
 
 /* ---------- Sheet / modal ---------- */
 function openSheet(html){ $('sheet-box').innerHTML=html; $('sheet').classList.remove('hidden'); }
@@ -291,6 +382,7 @@ $('btn-profile').onclick=()=>{
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
+  try{ initPlanBox(); }catch(e){}
 };
 $('btn-backup').onclick=()=>{ cloudBackup(); };
 window.cloudBackup=()=>{

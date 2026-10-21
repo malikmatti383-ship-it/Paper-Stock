@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   // Render deploy ke baad yahan server URL ayega. Khali = login band, app offline-only.
-  var PAPER_SERVER_URL = '';
+  var PAPER_SERVER_URL = 'https://paper-stock-server.onrender.com';
 
   var TOKEN_KEY = 'ps_token';
 
