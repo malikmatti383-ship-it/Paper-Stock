@@ -315,8 +315,11 @@
 </div>
 <div id="print-area"></div>
 <script src="lib/jspdf.umd.min.js"></script>
-    <script src="app.js"></script>
+<!-- auth.js MUST load before app.js: app.js runs its boot (initAuth/initGate)
+     immediately, and the login gate never appeared while PaperAuth was still
+     undefined at boot time (bug found 2026-10-22). -->
 <script src="auth.js?v=1"></script>
+    <script src="app.js"></script>
 <script>
 /* Auto-reload when a new service worker takes over, so updates appear on first reopen.
    Only reloads if the update happened right at launch/foreground (15s guard avoids mid-work reloads).
