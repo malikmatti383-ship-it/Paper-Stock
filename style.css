@@ -420,6 +420,7 @@ body[data-theme="classic"]{--cbtn-g1:#1268b1;--cbtn-g2:#14b2d6;--cbtn-check:#14b
    wide pill that squeezed out the store name. */
 .bk-badge{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;border-radius:9px;background:#16a34a;color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 3px;box-shadow:0 0 0 2px rgba(255,255,255,.9);line-height:1}
 .bk-badge.backing{background:#1a56db}
+.bk-badge.locked{background:#dc2626;font-size:10px;min-width:19px;height:19px}
 .bk-badge .spin{display:inline-block;animation:pprot 1s linear infinite;font-size:11px}
 @keyframes pprot{to{transform:rotate(360deg)}}
 

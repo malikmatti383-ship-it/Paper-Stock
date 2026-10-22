@@ -111,12 +111,15 @@ save=function(){ _saveLocal(); if(syncCtl&&!applyingRemote){ syncCtl.schedulePus
 function setSyncPill(mode){
   // v180: status badge on the header cloud (backup) button — spinning circle
   // while backing up, green tick when synced; no badge when logged out.
+  // v187: free plan = red lock badge (cloud backup is a Premium feature).
   const b=$('bk-badge'); if(!b) return;
   const btn=$('btn-backup');
   if(mode==='off'||!window.PaperAuth||!PaperAuth.getToken()){ b.classList.add('hidden'); return; }
   b.classList.remove('hidden');
+  if(mode==='locked'){ b.classList.remove('backing'); b.classList.add('locked'); b.textContent='🔒'; if(btn) btn.title='Cloud Backup — Premium'; return; }
+  b.classList.remove('locked');
   if(mode==='backing'){ b.classList.add('backing'); b.innerHTML='<span class="spin">↻</span>'; if(btn) btn.title='Backing up…'; }
-  else { b.classList.remove('backing'); b.textContent='✓'; if(btn) btn.title='Synced — tap for a backup file'; }
+  else { b.classList.remove('backing'); b.textContent='✓'; if(btn) btn.title='Cloud Backup'; }
 }
 function applyRemote(data,updatedAt){
   if(!data||!updatedAt||updatedAt<=syncedAt) return;
@@ -141,8 +144,7 @@ function authSection(){
   return `<div class="mrow" style="align-items:center;margin-bottom:10px">
     <div class="pavatar" style="width:44px;height:44px;font-size:18px;flex-shrink:0">${av}</div>
     <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b><div class="sub">${esc(em)}</div></div>
-    <button class="btn-ghost" style="flex-shrink:0" onclick="doLogout()">Logout</button></div>
-    <div id="plan-box"></div>`;
+    <button class="btn-ghost" style="flex-shrink:0" onclick="doLogout()">Logout</button></div>`;
 }
 window.doLogout=()=>{ if(!window.PaperAuth) return;
   PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); }catch(e){} location.reload(); });
@@ -151,10 +153,22 @@ function initAuth(){
   if(!window.PaperAuth) return;
   const fresh=PaperAuth.handleAuthRedirect();
   if(!PaperAuth.isConfigured()||!PaperAuth.getToken()) return;
-  if(fresh||!localStorage.getItem('ps_user'))
-    PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} }).catch(()=>{});
-  syncCtl=PaperAuth.startAutoSync(()=>DB, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} setSyncPill('synced'); });
-    setSyncPill('synced');
+  // v187: cloud backup is a Premium feature — always refresh the plan state,
+  // then start sync only for Premium users; free users get the red lock.
+  PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} refreshCloudGate(); }).catch(()=>{ refreshCloudGate(); });
+  refreshCloudGate();
+}
+function refreshCloudGate(){
+  const u=_subUser();
+  if(_subPremiumActive(u)) enableCloudSync();
+  else if(!syncCtl) setSyncPill('locked');
+}
+function enableCloudSync(){
+  if(!window.PaperAuth||!PaperAuth.getToken()) return;
+  if(!syncCtl){
+    syncCtl=PaperAuth.startAutoSync(()=>DB, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} setSyncPill('synced'); });
+  }
+  setSyncPill('synced');
 }
 
 /* ---------- First-launch login gate ---------- */
@@ -263,10 +277,26 @@ function renderPlanBox(){
   const u=_subUser(), active=_subPremiumActive(u);
   const cfg=_subCfg, plans=(cfg&&cfg.plans&&cfg.plans.length)?cfg.plans:(_subSf&&_subSf.plans&&_subSf.plans.length)?_subSf.plans:SUB_PLANS_FALLBACK;
   if(!plans.some(p=>p.key===_subPlan)) _subPlan=plans[0].key;
-  let h=`<div class="lbl" style="margin:12px 0 6px">SUBSCRIPTION</div>`;
+  let h='';
   if(active){
-    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Premium active</b><div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>`;
-  } else if(u&&u.plan==='premium'){
+    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Premium active</b><div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>
+    <div class="mrow" style="margin-bottom:10px">
+      <button class="btn-ghost" onclick="cloudSyncNow()">☁️<br><b>Sync now</b><br><small>Back up to cloud</small></button>
+      <button class="btn-ghost" onclick="cloudBackup()">⬇️<br><b>Backup file</b><br><small>Download a copy</small></button>
+    </div>
+    <div class="lbl" style="margin:12px 0 6px">EXTEND PREMIUM</div>`;
+  } else {
+    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#dc2626;font-size:16px;flex-shrink:0">🔒</span><div style="flex:1"><b>Cloud Backup is locked</b><div class="sub">Subscribe to turn on automatic cloud backup.</div></div></div>
+    <div class="lbl" style="margin:10px 0 6px">PREMIUM BENEFITS</div>
+    <div class="sub" style="line-height:2">
+      ☁️ <b>Automatic cloud backup</b> — all your sales, stock &amp; credit data, saved safely online<br>
+      📱 <b>Up to 5 devices</b> — same login, your data everywhere<br>
+      🔄 <b>Restore anytime</b> — change or lose your phone, your data comes back<br>
+      📴 <b>Works offline</b> — syncs by itself whenever internet is available
+    </div>
+    <div class="lbl" style="margin:12px 0 6px">CHOOSE A PACKAGE</div>`;
+  }
+  if(!active&&u&&u.plan==='premium'){
     h+=`<div class="sub" style="margin-bottom:8px">Your Premium ended on ${_fmtDate(u.planExpiresAt)}. Renew below.</div>`;
   }
   const pend=_subMine.filter(x=>x.status==='manual_pending');
@@ -347,6 +377,7 @@ function sfPollPending(n){
     if(r&&r.status==='success'){
       try{ localStorage.removeItem('sf_tracker'); }catch(e){}
       toast('🎉 Premium active! Thank you.');
+      PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} refreshCloudGate(); renderPlanBox(); }).catch(()=>{ refreshCloudGate(); });
       try{ initPlanBox(); }catch(e){}
     } else if(n<18){ setTimeout(()=>sfPollPending(n+1),5000); }
     else { try{ localStorage.removeItem('sf_tracker'); }catch(e){} }
@@ -518,10 +549,18 @@ $('btn-profile').onclick=()=>{
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
-  try{ initPlanBox(); }catch(e){}
   try{ refreshUpdateBadge(); }catch(e){}
 };
-$('btn-backup').onclick=()=>{ cloudBackup(); };
+$('btn-backup').onclick=()=>{ openCloudSheet(); };
+window.openCloudSheet=()=>{
+  openSheet(`<h3>☁️ Cloud Backup</h3><div id="plan-box"></div>
+    <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
+  try{ initPlanBox(); }catch(e){}
+};
+window.cloudSyncNow=()=>{
+  enableCloudSync();
+  if(syncCtl){ try{ syncCtl.push(); syncCtl.pull(); }catch(e){} toast('☁️ Syncing…'); }
+};
 window.cloudBackup=()=>{
   const blob=new Blob([JSON.stringify(DB,null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
