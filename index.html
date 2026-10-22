@@ -15,34 +15,40 @@
 </head>
 <body>
 <style>
-#login-gate{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#eef4ff 0%,#ffffff 55%,#e9f7ee 100%);display:none;align-items:center;justify-content:center;padding:24px;font-family:inherit}
-.gate-card{width:100%;max-width:340px;text-align:center}
-.gate-logo{width:96px;height:96px;border-radius:22px;box-shadow:0 8px 24px rgba(26,86,219,.25)}
-.gate-name{font-size:30px;font-weight:800;color:#12233f;margin-top:16px}
-.gate-tag{font-size:14px;color:#5b6b82;margin-top:6px;line-height:1.45}
-.gate-btn{margin-top:28px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;border:1px solid #d5dce8;border-radius:14px;padding:14px;font-size:16px;font-weight:600;color:#1f2a3d;cursor:pointer;box-shadow:0 2px 8px rgba(18,35,63,.08)}
-.gate-msg{margin-top:12px;font-size:13px;color:#b3261e;min-height:18px;line-height:1.4}
-.gate-note{margin-top:18px;font-size:12.5px;color:#71809a;line-height:1.5}
-.gate-legal{margin-top:14px;font-size:11.5px;color:#93a1b8;line-height:1.5}
-.gate-legal a{color:#1a56db;text-decoration:none}
-.gate-btn.primary{background:#1a56db;border-color:#1a56db;color:#fff}
+/* First-launch login gate — AYOME-style full-screen welcome (v179):
+   pastel gradient, big brand block on top, pill form, agreement pinned low.
+   Login itself stays email+code (a Google button can never complete inside
+   the Android wrapper). All element ids/handlers are unchanged. */
+#login-gate{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;align-items:center;padding:54px 26px 24px;font-family:inherit;background:radial-gradient(420px 300px at 88% -40px,rgba(147,197,253,.55),rgba(147,197,253,0) 70%),radial-gradient(520px 380px at -120px 32%,rgba(167,243,208,.65),rgba(167,243,208,0) 70%),radial-gradient(620px 520px at 112% 88%,rgba(191,219,254,.5),rgba(191,219,254,0) 70%),linear-gradient(165deg,#e8f3ff 0%,#eefbf3 55%,#e3f0ff 100%)}
+.gate-card{width:100%;max-width:340px;text-align:center;display:flex;flex-direction:column;flex:1}
+.gate-logo{width:104px;height:104px;border-radius:26px;box-shadow:0 12px 30px rgba(26,86,219,.28);margin:22px auto 0}
+.gate-name{font-size:34px;font-weight:800;color:#101c2e;margin-top:18px;letter-spacing:.2px}
+.gate-tag{font-size:14.5px;color:#51637c;margin-top:8px;line-height:1.5}
+.gate-form{margin-top:42px}
+.gate-input{width:100%;box-sizing:border-box;border:none;border-radius:999px;padding:16px 20px;font-size:16px;color:#1f2a3d;background:#fff;outline:none;box-shadow:0 4px 16px rgba(18,35,63,.10);text-align:center}
+.gate-input:focus{box-shadow:0 4px 16px rgba(18,35,63,.10),0 0 0 2px #1a56db}
+.gate-btn{margin-top:14px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#1a56db;border:none;border-radius:999px;padding:16px;font-size:16.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 8px 20px rgba(26,86,219,.35)}
 .gate-btn:disabled{opacity:.55;cursor:default}
-.gate-input{margin-top:16px;width:100%;box-sizing:border-box;border:1px solid #d5dce8;border-radius:14px;padding:14px;font-size:16px;color:#1f2a3d;background:#fff;outline:none}
-.gate-input:focus{border-color:#1a56db}
+.gate-msg{margin-top:12px;font-size:13px;color:#b3261e;min-height:18px;line-height:1.4}
+.gate-note{margin-top:16px;font-size:12.5px;color:#71809a;line-height:1.55}
 .gate-code-input{text-align:center;font-size:24px;font-weight:700;letter-spacing:8px}
-.gate-code-note{margin-top:20px;font-size:13.5px;color:#41536e;line-height:1.5}
+.gate-code-note{font-size:13.5px;color:#41536e;line-height:1.5;margin-bottom:14px}
 .gate-link{display:inline-block;margin-top:14px;margin-right:14px;background:none;border:none;color:#1a56db;font-size:13.5px;font-weight:600;cursor:pointer;padding:4px}
-.gate-step .gate-btn{margin-top:14px}
+.gate-legal{margin-top:auto;padding-top:22px;font-size:12px;color:#7c8aa0;line-height:1.55}
+.gate-legal a{color:#1a56db;text-decoration:none;font-weight:600}
 </style>
 <div id="login-gate">
   <div class="gate-card">
     <img class="gate-logo" src="icon-512.png" alt="PaperPilot">
     <div class="gate-name">PaperPilot</div>
     <div class="gate-tag">Stock, sales &amp; credit — your whole shop in one place.</div>
-    <div class="gate-step" id="gate-step-email"><input class="gate-input" id="gate-email" type="email" inputmode="email" autocomplete="email" placeholder="Your Gmail address"><button class="gate-btn primary" id="gate-send-btn" onclick="gateSendCode()">Email me a login code</button></div><div class="gate-step" id="gate-step-code" style="display:none"><div class="gate-code-note" id="gate-code-note"></div><input class="gate-input gate-code-input" id="gate-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="______"><button class="gate-btn primary" id="gate-verify-btn" onclick="gateVerifyCode()">Login</button><div><button class="gate-link" onclick="gateBack()">&#8592; Different email</button><button class="gate-link" onclick="gateSendCode()">Resend code</button></div></div>
-    <div class="gate-msg" id="gate-msg"></div>
-    <div class="gate-note">One-time login with internet. After that, the app works fully offline — and your data backs up to your account whenever you are online.</div>
-    <div class="gate-legal">By continuing, you agree to the <a href="https://paper-stock-server.onrender.com/terms" target="_blank" rel="noopener">Terms of Service</a> &amp; <a href="https://paper-stock-server.onrender.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></div>
+    <div class="gate-form">
+      <div class="gate-step" id="gate-step-email"><input class="gate-input" id="gate-email" type="email" inputmode="email" autocomplete="email" placeholder="Your Gmail address"><button class="gate-btn" id="gate-send-btn" onclick="gateSendCode()">Email me a login code</button></div>
+      <div class="gate-step" id="gate-step-code" style="display:none"><div class="gate-code-note" id="gate-code-note"></div><input class="gate-input gate-code-input" id="gate-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="______"><button class="gate-btn" id="gate-verify-btn" onclick="gateVerifyCode()">Login</button><div><button class="gate-link" onclick="gateBack()">&#8592; Different email</button><button class="gate-link" onclick="gateSendCode()">Resend code</button></div></div>
+      <div class="gate-msg" id="gate-msg"></div>
+      <div class="gate-note">One-time login with internet. After that, the app works fully offline — and your data backs up to your account whenever you are online.</div>
+    </div>
+    <div class="gate-legal">Logging in means you agree to the <a href="https://paper-stock-server.onrender.com/terms" target="_blank" rel="noopener">Terms of Service</a> &amp; <a href="https://paper-stock-server.onrender.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></div>
   </div>
 </div>
 
