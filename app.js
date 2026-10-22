@@ -353,6 +353,30 @@ function sfPollPending(n){
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) sfPollPending(0); });
 
+/* ---------- App update (APK) ---------- */
+let _apkInfo=null;
+function _installedVc(){ try{ return (window.AndroidApp&&AndroidApp.getVersionCode)?AndroidApp.getVersionCode():0; }catch(e){ return 0; } }
+function _fetchApkInfo(){ return fetch('./apk-version-book.json?t='+Date.now()).then(r=>r.json()).then(j=>{ _apkInfo=j; return j; }); }
+function refreshUpdateBadge(){
+  _fetchApkInfo().then(j=>{
+    const mine=_installedVc(), dot=$('upd-dot'), txt=$('upd-txt');
+    if(!dot) return;
+    if(j&&j.versionCode&&mine&&j.versionCode>mine){ dot.style.display='inline-block'; if(txt)txt.textContent='New: v'+(j.versionName||''); }
+    else { dot.style.display='none'; if(txt)txt.textContent=''; }
+  }).catch(()=>{});
+}
+window.checkAppUpdate=()=>{
+  const go=j=>{
+    const mine=_installedVc();
+    if(j&&j.versionCode&&mine&&j.versionCode<=mine){ toast('✅ Already on the latest version'); return; }
+    if(window.AndroidApp&&AndroidApp.checkUpdate){ try{ AndroidApp.checkUpdate(); return; }catch(e){} }
+    if(j&&j.apkUrl){ location.href=j.apkUrl; return; }
+    toast('✅ Already on the latest version');
+  };
+  if(_apkInfo){ go(_apkInfo); return; }
+  _fetchApkInfo().then(go).catch(()=>toast('❌ Could not check. Please check your internet.'));
+};
+
 /* ---------- Sheet / modal ---------- */
 function openSheet(html){ $('sheet-box').innerHTML=html; $('sheet').classList.remove('hidden'); }
 function closeSheet(){ $('sheet').classList.add('hidden'); $('sheet').classList.remove('center'); $('sheet-box').innerHTML=''; }
@@ -488,11 +512,13 @@ $('btn-profile').onclick=()=>{
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
     <div class="menu-row" onclick="openThemePicker()"><span class="ic">${themeDot(curTheme())}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="openSettings()"><span class="ic">⚙️</span> Settings<span class="arw">›</span></div>
+    <div class="menu-row" onclick="checkAppUpdate()"><span class="ic">🔄</span> Update <span id="upd-dot" style="display:none;width:9px;height:9px;border-radius:50%;background:#22c55e"></span><span class="sub" id="upd-txt"></span><span class="arw">›</span></div>
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
   try{ initPlanBox(); }catch(e){}
+  try{ refreshUpdateBadge(); }catch(e){}
 };
 $('btn-backup').onclick=()=>{ cloudBackup(); };
 window.cloudBackup=()=>{
