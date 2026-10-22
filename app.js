@@ -334,8 +334,9 @@ window.payWithSafepay=()=>{
     try{ localStorage.setItem('sf_tracker',r.tracker); }catch(e){}
     location.href=r.checkoutUrl; // wrapper opens it in the browser; polling settles on return
   }).catch(e=>{
-    const m=String(e&&e.message||'');
+    const m=String(e&&e.message||''), d=String(e&&e.detail||'');
     if(m.indexOf('503')>=0) toast('❌ Online payments are not set up yet');
+    else if(d) toast(('❌ Payment error: '+d).slice(0,140));
     else toast('❌ Could not start payment. Check your internet and try again.');
   });
 };
