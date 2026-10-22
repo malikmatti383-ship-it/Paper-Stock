@@ -109,10 +109,14 @@ try{ syncedAt=+(localStorage.getItem('ps_synced_at')||0); }catch(e){}
 const _saveLocal=save;
 save=function(){ _saveLocal(); if(syncCtl&&!applyingRemote){ syncCtl.schedulePush(); setSyncPill('backing'); } };
 function setSyncPill(mode){
-  const p=$('sync-pill'); if(!p) return;
-  if(mode==='off'||!window.PaperAuth||!PaperAuth.getToken()){ p.classList.add('hidden'); return; }
-  p.classList.remove('hidden');
-  p.innerHTML = mode==='backing' ? '<span class="spin">↻</span> Backing up...' : '✓ Synced';
+  // v180: status badge on the header cloud (backup) button — spinning circle
+  // while backing up, green tick when synced; no badge when logged out.
+  const b=$('bk-badge'); if(!b) return;
+  const btn=$('btn-backup');
+  if(mode==='off'||!window.PaperAuth||!PaperAuth.getToken()){ b.classList.add('hidden'); return; }
+  b.classList.remove('hidden');
+  if(mode==='backing'){ b.classList.add('backing'); b.innerHTML='<span class="spin">↻</span>'; if(btn) btn.title='Backing up…'; }
+  else { b.classList.remove('backing'); b.textContent='✓'; if(btn) btn.title='Synced — tap for a backup file'; }
 }
 function applyRemote(data,updatedAt){
   if(!data||!updatedAt||updatedAt<=syncedAt) return;

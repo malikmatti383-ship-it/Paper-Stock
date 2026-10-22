@@ -415,8 +415,12 @@ body[data-theme="classic"]{--cbtn-g1:#1268b1;--cbtn-g2:#14b2d6;--cbtn-check:#14b
 .disc-pill{display:inline-block;background:#dcfce7;color:#15803d;font-weight:800;font-size:13px;border-radius:999px;padding:6px 14px;margin:2px 0 8px}
 .loss-pill{display:inline-block;background:#fee2e2;color:#b91c1c;font-weight:800;font-size:13px;border-radius:999px;padding:6px 14px;margin:2px 0 8px}
 .icon-btn{font-size:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
-.sync-pill{background:#fff;color:var(--pp-teal-d);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);margin-left:auto;white-space:nowrap}
-.sync-pill .spin{display:inline-block;animation:pprot 1s linear infinite;font-size:14px}
+/* v180: backup status lives ON the header cloud button as a small badge
+   (spinning circle while backing up, green tick when synced) instead of the
+   wide pill that squeezed out the store name. */
+.bk-badge{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;border-radius:9px;background:#16a34a;color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 3px;box-shadow:0 0 0 2px rgba(255,255,255,.9);line-height:1}
+.bk-badge.backing{background:#1a56db}
+.bk-badge .spin{display:inline-block;animation:pprot 1s linear infinite;font-size:11px}
 @keyframes pprot{to{transform:rotate(360deg)}}
 
 /* Floating pill bottom nav */
