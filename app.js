@@ -145,7 +145,7 @@ function authSection(){
   let pkg=''; try{ pkg=PLAN_NAME[localStorage.getItem('ps_pkg')||'']||''; }catch(e){}
   return `<div class="mrow" style="align-items:center;margin-bottom:10px">
     <div class="pavatar" style="width:44px;height:44px;font-size:18px;flex-shrink:0">${av}</div>
-    <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b> ${prem?`<span class="pkg-pill" id="pkg-pill">${esc(pkg||'Premium')}</span>`:`<span class="pkg-pill free">Free</span>`}<div class="sub">${esc(em)}</div></div></div>`;
+    <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b> ${prem?`<span class="pkg-pill" id="pkg-pill">${esc(pkg||'Premium')}</span>`:`<span class="pkg-pill free">Free</span>`}<div class="sub">${esc(em)}</div>${u&&u.uid?`<div class="sub" style="margin-top:1px">Your ID: <b style="color:#14213d">RB-${esc(u.uid)}</b> <span class="copy-chip" onclick="copyTxt('RB-${esc(u.uid)}')">Copy</span></div>`:''}</div></div>`;
 }
 window.doLogout=()=>{ if(!window.PaperAuth) return;
   PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); }catch(e){} location.reload(); });
@@ -347,14 +347,22 @@ function renderPlanBox(){
     const QR_FOR={jazzcash:'img/pay-qr-jazzcash.jpg',bank:'img/pay-qr-bank.jpg'};
     const qrHtml=mlist.filter(m=>QR_FOR[m.key]).map(m=>`<div style="text-align:center;margin:8px 0"><div class="sub" style="margin-bottom:4px">${esc(m.label)} — scan to pay</div><img src="${QR_FOR[m.key]}" alt="${esc(m.label)} QR code" loading="lazy" onerror="this.parentNode.style.display='none'" onclick="window.open(this.src)" style="width:210px;max-width:82%;border-radius:10px;border:1px solid #e3e8f2;cursor:pointer"></div>`).join('');
     const selP=plans.find(p=>p.key===_subPlan)||plans[0];
+    _slipData='';
+    const _cu=(()=>{ try{ return JSON.parse(localStorage.getItem('ps_user')||'null'); }catch(e){ return null; } })();
+    const uidLine=(_cu&&_cu.uid)?`<div class="sub" style="margin:0 0 8px">Your ID: <b style="color:#14213d">RB-${esc(_cu.uid)}</b> — the shop owner sees this ID with your payment.</div>`:'';
     h+=`${planRows}
     <div style="font-size:17px;font-weight:800;margin:16px 0 8px">What you get</div>${GET_HTML}
     <div class="pay-card">
-    <div class="sub" style="margin:0 0 4px">Send <b style="color:#14213d">Rs ${fmtRs(selP.amountRs)}</b> to any one of these:</div>
+    ${uidLine}<div class="sub" style="margin:0 0 4px">Send <b style="color:#14213d">Rs ${fmtRs(selP.amountRs)}</b> to any one of these:</div>
     ${mlist.map(numRow).join('')}${qrHtml}
-    <div class="sub" style="margin:10px 0 6px">After sending, enter the <b>Transaction ID</b> from your payment app:</div>
+    <div class="sub" style="margin:10px 0 6px">After sending, fill these two things:</div>
     <select id="sub-method" style="width:100%;margin-bottom:6px">${mlist.map(m=>`<option value="${esc(m.key)}">${esc(m.label)}</option>`).join('')}</select>
-    <input id="sub-txn" placeholder="Transaction ID" autocapitalize="characters" style="width:100%;margin-bottom:6px">
+    <div class="sub-lbl">Transaction ID <b style="color:#d33">*</b></div>
+    <input id="sub-txn" placeholder="Transaction ID from your payment app" autocapitalize="characters" style="width:100%;margin-bottom:8px">
+    <div class="sub-lbl">Payment slip photo <b style="color:#d33">*</b></div>
+    <input id="sub-slip" type="file" accept="image/*" style="display:none" onchange="slipPicked(this)">
+    <button type="button" id="sub-slip-btn" class="sbtn" style="width:100%;margin:0 0 6px" onclick="document.getElementById('sub-slip').click()">📷 Attach slip photo</button>
+    <img id="sub-slip-prev" style="display:none;width:100%;border-radius:10px;margin:0 0 10px" alt="">
     <input id="sub-sname" placeholder="Your name (optional)" style="width:100%;margin-bottom:6px">
     <input id="sub-snum" placeholder="Your mobile number (optional)" inputmode="tel" style="width:100%;margin-bottom:10px">
     <button class="btn-subscribe" onclick="submitSubPayment()">Submit payment</button>
@@ -364,12 +372,35 @@ function renderPlanBox(){
 }
 window.pickSubPlan=k=>{ _subPlan=k; renderPlanBox(); };
 window.copyTxt=t=>{ const done=()=>toast('✅ Copied'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(done); } else done(); };
+/* slip photo: picked file is shrunk on the phone (max 1100px, JPEG) before upload */
+let _slipData='';
+window.slipPicked=inp=>{
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  const url=URL.createObjectURL(f); const img=new Image();
+  img.onload=()=>{
+    try{
+      let w=img.naturalWidth||img.width||0, h=img.naturalHeight||img.height||0;
+      const sc=Math.min(1, 1100/Math.max(w||1,h||1)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      _slipData=cv.toDataURL('image/jpeg',0.82);
+    }catch(e){ _slipData=''; }
+    URL.revokeObjectURL(url);
+    const pv=$('sub-slip-prev'); if(pv&&_slipData){ pv.src=_slipData; pv.style.display='block'; }
+    const bt=$('sub-slip-btn'); if(bt) bt.textContent=_slipData?'📷 Slip attached ✓ — tap to change':'📷 Attach slip photo';
+    if(!_slipData) toast('❌ That photo could not be read — try another');
+  };
+  img.onerror=()=>{ URL.revokeObjectURL(url); toast('❌ That photo could not be read — try another'); };
+  img.src=url;
+};
 window.submitSubPayment=()=>{
   const txn=($('sub-txn')&&$('sub-txn').value||'').trim();
   if(txn.length<5){ toast('❌ Please enter the Transaction ID'); return; }
+  if(!_slipData){ toast('❌ Please attach the payment slip photo'); return; }
   const body={ plan:_subPlan, method:($('sub-method')||{}).value, txnId:txn,
-    senderName:($('sub-sname')||{}).value||'', senderNumber:($('sub-snum')||{}).value||'' };
+    senderName:($('sub-sname')||{}).value||'', senderNumber:($('sub-snum')||{}).value||'', slip:_slipData };
   PaperAuth.api('/api/pay/manual',{method:'POST',body}).then(()=>{
+    _slipData='';
     toast('✅ Sent! Your plan will be activated after verification.');
     try{ initPlanBox(); }catch(e){}
   }).catch(e=>{
