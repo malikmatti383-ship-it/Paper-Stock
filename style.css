@@ -690,3 +690,12 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .pkg-pill{background:var(--pp-soft);color:var(--pp-teal-d)}
 .btn-subscribe{background:var(--pp-grad);color:var(--pp-btn-ink,#fff);box-shadow:0 5px 14px rgba(20,20,40,.3)}
 .copy-chip{background:var(--pp-soft);color:var(--pp-teal-d)}
+/* v199: compact plan grid — Premium is a short full-width card below, not a tall tower */
+.plan-grid{grid-template-columns:1fr 1fr;min-width:0}
+.pc-a{grid-column:1;grid-row:1}
+.pc-b{grid-column:2;grid-row:1}
+.plan-hero{grid-column:1/span 2;grid-row:2}
+.plan-card{min-width:0}
+.pc-price{white-space:normal}
+.plan-hero .pc-check{color:var(--pp-teal-d)}
+.sheet-box{overflow-x:hidden}
