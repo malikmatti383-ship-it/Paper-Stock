@@ -121,8 +121,66 @@ function claimLegacyFor(em){
   let em=_lsGet('ps_active_email')||'';
   const tok=window.PaperAuth&&PaperAuth.getToken&&PaperAuth.getToken();
   if(!em&&tok){ try{ const u=JSON.parse(_lsGet('ps_user')||'null'); if(u&&u.email) em=String(u.email).toLowerCase().trim(); }catch(e){} if(em) _lsSet('ps_active_email',em); }
-  if(tok&&em) DB_KEY_CUR=slotKey(em);
+  if(tok&&em){ const reg=ensureReg(em); DB_KEY_CUR=shopDataKey(em, reg.active); }
 })();
+/* v207: MULTI-SHOP — aik hi Gmail me kai stores. Har shop ka data alag key
+   par, bilkul fresh. Pehli (main) shop kabhi delete nahi hoti; baqi shops
+   delete ho sakti hain. Switch karne par app usi shop par dobara khulti hai. */
+function curEmail(){ return (_lsGet('ps_active_email')||'').toLowerCase().trim(); }
+function shopsRegKey(em){ return slotKey(em)+':shops'; }
+function shopDataKey(em,id){ return id==='main' ? slotKey(em) : slotKey(em)+':shop:'+id; }
+function readReg(em){ try{ const r=JSON.parse(_lsGet(shopsRegKey(em))||'null'); if(r&&r.shops&&r.shops.length) return r; }catch(e){} return null; }
+function writeReg(em,reg){ _lsSet(shopsRegKey(em), JSON.stringify(reg)); }
+function peekShopName(em,id){ try{ const d=JSON.parse(_lsGet(shopDataKey(em,id))||_lsGet(DB_KEY)||'null'); if(d&&d.profile&&d.profile.name) return d.profile.name; }catch(e){} return 'Paper Store'; }
+function ensureReg(em){ let reg=readReg(em); if(!reg){ reg={ shops:[{id:'main', name:peekShopName(em,'main')}], active:'main' }; writeReg(em,reg); } if(!reg.shops.some(s=>s.id===reg.active)) reg.active=reg.shops[0].id; return reg; }
+function curShopName(){ try{ const em=curEmail(); if(!em) return ''; const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active); return s?s.name:''; }catch(e){ return ''; } }
+window.openShops=()=>{
+  const em=curEmail(); if(!em){ toast('Login first'); return; }
+  const reg=ensureReg(em);
+  openSheet(`<h3>🏬 Shops</h3>
+  <div class="sub" style="margin:2px 0 8px">The app reopens on the shop you pick. Every shop has its own fresh, separate data — nothing mixes.</div>
+  ${reg.shops.map(s=>{ const act=s.id===reg.active; return `<div class="menu-row" onclick="switchShop('${s.id}')"><span class="radio${act?' on':''}"></span><div style="flex:1;min-width:0"><div>${esc(s.name)}${s.id==='main'?' <span class="sub" style="color:var(--pp-teal-d)">· Main shop</span>':''}</div><div class="sub">${act?'Current shop':'Tap to switch'}</div></div><button class="mini-pdf" onclick="event.stopPropagation();renameShop('${s.id}')">✏️ Rename</button>${(!act&&s.id!=='main')?`<button class="mini-pdf" style="color:#d7263d" onclick="event.stopPropagation();deleteShop('${s.id}')">🗑 Delete</button>`:''}</div>`; }).join('')}
+  <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="addShop()">＋ Add a shop</button>
+  <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
+};
+window.switchShop=id=>{ const em=curEmail(); const reg=ensureReg(em); if(id===reg.active){ $('btn-profile').click(); return; } reg.active=id; writeReg(em,reg); toast('Switching shop…'); setTimeout(()=>location.reload(),250); };
+window.addShop=()=>{
+  openSheet(`<h3>＋ Add a shop</h3>
+  <div class="sub" style="margin:2px 0 8px">The new shop starts completely fresh — its own stock, sales and credit.</div>
+  <div class="fld"><span class="fld-lbl">Shop name</span><div class="fld-in"><input id="ns-name" placeholder="e.g. City Branch"></div></div>
+  <div class="mrow"><button class="btn-ghost" onclick="openShops()">Back</button><button class="btn-go" onclick="saveNewShop()">Create shop</button></div>`);
+  setTimeout(()=>{ const i=$('ns-name'); if(i) i.focus(); },80);
+};
+window.saveNewShop=()=>{
+  const em=curEmail(); const name=($('ns-name').value||'').trim(); if(!name){ toast('Enter a shop name'); return; }
+  const reg=ensureReg(em); const id='s'+Date.now().toString(36);
+  const d=defDB(); d.profile.name=name;
+  _lsSet(shopDataKey(em,id), JSON.stringify(d));
+  reg.shops.push({id, name}); reg.active=id; writeReg(em,reg);
+  toast('✅ Shop created — opening it…'); setTimeout(()=>location.reload(),300);
+};
+window.renameShop=id=>{
+  const em=curEmail(); const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id); if(!s) return;
+  openSheet(`<h3>✏️ Shop name</h3><div class="sub" style="margin:2px 0 8px">Shown on the app header, reports and exports.</div>
+  <div class="fld"><span class="fld-lbl">Shop name</span><div class="fld-in"><input id="rs-name" value="${esc(s.name)}" maxlength="40"></div></div>
+  <div class="mrow"><button class="btn-ghost" onclick="openShops()">Back</button><button class="btn-go" onclick="saveShopName('${id}')">Save</button></div>`);
+};
+window.saveShopName=id=>{
+  const em=curEmail(); const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id); if(!s) return;
+  const name=($('rs-name').value||'').trim(); if(!name){ toast('Enter a shop name'); return; }
+  s.name=name; writeReg(em,reg);
+  try{ if(id===reg.active){ DB.profile.name=name; save(); renderStoreName(); } else { const dk=shopDataKey(em,id); const d=JSON.parse(_lsGet(dk)||'null'); if(d){ d.profile.name=name; _lsSet(dk, JSON.stringify(d)); } } }catch(e){}
+  toast('✅ Shop renamed'); openShops();
+};
+window.deleteShop=id=>{
+  const em=curEmail(); const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id);
+  if(!s||id==='main'||id===reg.active) return;
+  confirmDlg('Delete shop?','Delete "'+s.name+'" and ALL its data (stock, sales, credit)? This cannot be undone.','DELETE',()=>{
+    _lsDel(shopDataKey(em,id));
+    reg.shops=reg.shops.filter(x=>x.id!==id); writeReg(em,reg);
+    toast('Shop deleted'); openShops();
+  });
+};
 function load(){ let raw=null; try{ raw=localStorage.getItem(DB_KEY_CUR); if(!raw&&!legacyHardClaimed()) raw=localStorage.getItem(DB_KEY); DB=JSON.parse(raw)||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency(); }
 function save(){ localStorage.setItem(DB_KEY_CUR,JSON.stringify(DB)); }
 
@@ -144,8 +202,38 @@ function setSyncPill(mode){
   if(mode==='backing'){ b.classList.add('backing'); b.innerHTML='<span class="spin">↻</span>'; if(btn) btn.title='Backing up…'; }
   else { b.classList.remove('backing'); b.textContent='✓'; if(btn) btn.title='Cloud Backup'; }
 }
+function syncBundleOut(){
+  try{
+    const em=curEmail(); if(!em) return DB;
+    const reg=readReg(em); if(!reg||reg.shops.length<=1) return DB;
+    const shops={}; reg.shops.forEach(s=>{ if(s.id===reg.active) shops[s.id]=DB; else { try{ const d=JSON.parse(_lsGet(shopDataKey(em,s.id))||'null'); if(d) shops[s.id]=d; }catch(e){} } });
+    return { __shops:1, reg:{shops:reg.shops, active:reg.active}, shops };
+  }catch(e){ return DB; }
+}
 function applyRemote(data,updatedAt){
   if(!data||!updatedAt||updatedAt<=syncedAt) return;
+  const em=curEmail();
+  /* v207: multi-shop bundle — har shop ka data us ki apni key par jata hai */
+  if(data.__shops&&data.shops&&em){
+    applyingRemote=true;
+    try{
+      const localActive=ensureReg(em).active;
+      const remoteReg={ shops:data.reg.shops||ensureReg(em).shops, active:data.reg.active||localActive };
+      Object.keys(data.shops).forEach(id=>{ _lsSet(shopDataKey(em,id), JSON.stringify(data.shops[id])); });
+      writeReg(em, remoteReg);
+      syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){}
+      if(remoteReg.active!==localActive){ toast('☁️ Cloud synced — reopening on the synced shop'); setTimeout(()=>location.reload(),700); return; }
+      DB=data.shops[remoteReg.active]||DB;
+      if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
+      _saveLocal();
+      renderStoreName(); applyTheme(curTheme());
+      const av=document.querySelector('.view.active'); if(av) showView(av.id);
+    }finally{ applyingRemote=false; }
+    toast('☁️ Cloud synced');
+    return;
+  }
+  /* purana single-shop remote: agar koi aur shop khuli hai to data main shop me rakho */
+  if(em){ const reg=readReg(em); if(reg&&reg.active!=='main'){ _lsSet(slotKey(em), JSON.stringify(data)); syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} return; } }
   applyingRemote=true;
   try{
     DB=data; if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
@@ -194,7 +282,7 @@ function refreshCloudGate(){
 function enableCloudSync(){
   if(!window.PaperAuth||!PaperAuth.getToken()) return;
   if(!syncCtl){
-    syncCtl=PaperAuth.startAutoSync(()=>DB, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} setSyncPill('synced'); });
+    syncCtl=PaperAuth.startAutoSync(syncBundleOut, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} setSyncPill('synced'); });
   }
   setSyncPill('synced');
 }
@@ -577,6 +665,7 @@ const IC_ALARM=_svg('<circle cx="12" cy="13" r="7"/><polyline points="12 10 12 1
 const IC_MUSIC=_svg('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>');
 const IC_WARN=_svg('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>');
 const IC_LAYERS=_svg('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>');
+const IC_SHOP=_svg('<path d="M3 9.5 4.6 4h14.8L21 9.5"/><path d="M4 9.5V20h16V9.5"/><path d="M9.5 20v-5.5h5V20"/><path d="M3 9.5c.6 1.2 1.7 2 3 2s2.4-.8 3-2c.6 1.2 1.7 2 3 2s2.4-.8 3-2c.6 1.2 1.7 2 3 2s2.4-.8 3-2"/>');
 
 /* ---------- Nav ---------- */
 function showView(id){
@@ -641,6 +730,7 @@ $('btn-profile').onclick=()=>{
     <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">${IC_CAM}</button></div>
     <div><b style="font-size:19px">${esc(p.name||'Paper Store')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">${IC_EDIT}</button><div class="sub">${esc(p.email||'')}</div></div></div>
     <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
+    <div class="menu-row" onclick="openShops()"><span class="ic">${IC_SHOP}</span> Switch shop <span class="sub">${esc(curShopName())}</span><span class="arw">›</span></div>
     <div class="lbl" style="margin:10px 0">YOUR DATA</div>
     <div class="mrow" style="margin-bottom:6px">
       <button class="btn-ghost" onclick="cloudBackup()"><span class="big-ic">${IC_UL}</span><br><b>Back up</b><br><small>Download file</small></button>
@@ -2517,11 +2607,15 @@ function syncAlarms(){
     if(DB.profile&&DB.profile.phoneAlarm===false){ AndroidApp.syncAlarms(JSON.stringify({sound,list:[]})); return; }
     const now=Date.now();
     const t12=t=>{ if(!t) return ''; const p=String(t).split(':'); let h=parseInt(p[0])||0; const m=String(parseInt(p[1])||0).padStart(2,'0'); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+m+' '+ap; };
-    const list=DB.customers.filter(c=>c.promiseDate&&custBal(c)>0.005)
-      .map(c=>({ cid:c.id, name:c.name||'Customer', amount:pkr(custBal(c)),
-        time:(fmtDate(c.promiseDate)+' '+t12(c.promiseTime)).trim(),
-        ts:new Date(c.promiseDate+'T'+(c.promiseTime||'10:00')).getTime() }))
-      .filter(a=>a.ts>now).sort((a,b)=>a.ts-b.ts).slice(0,40);
+    /* v207: saari shops ke waaday aik sath — jo shop khuli nahi, us ke
+       alarms bhi bajte hain (naam ke sath shop ka naam bhi jata hai). */
+    const srcs=[{customers:DB.customers||[], tag:'', off:0}];
+    try{ const em=curEmail(); const reg=em?readReg(em):null;
+      if(em&&reg&&reg.shops.length>1){ reg.shops.forEach((s,ix)=>{ if(s.id===reg.active) return; try{ const d=JSON.parse(_lsGet(shopDataKey(em,s.id))||'null'); if(d&&d.customers) srcs.push({customers:d.customers, tag:' ('+s.name+')', off:(ix+1)*100000}); }catch(e){} }); }
+    }catch(e){}
+    const all=[];
+    srcs.forEach(src=>{ src.customers.filter(c=>c.promiseDate&&custBal(c)>0.005).forEach(c=>{ all.push({ cid:(src.off||0)+c.id, name:(c.name||'Customer')+src.tag, amount:pkr(custBal(c)), time:(fmtDate(c.promiseDate)+' '+t12(c.promiseTime)).trim(), ts:new Date(c.promiseDate+'T'+(c.promiseTime||'10:00')).getTime() }); }); });
+    const list=all.filter(a=>a.ts>now).sort((a,b)=>a.ts-b.ts).slice(0,40);
     AndroidApp.syncAlarms(JSON.stringify({sound,list}));
   }catch(e){}
 }
