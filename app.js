@@ -699,7 +699,7 @@ const IC_SHARE=_svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/
 const SHARE_LINK='https://malikmatti383-ship-it.github.io/Paper-Stock/download.html';
 window.shareApp=()=>{
   openSheet(`<h3>📤 Share ReamBook</h3>
-  <div style="text-align:center;margin:10px 0 4px"><img src="icon-192.png" style="width:72px;height:72px;border-radius:18px;box-shadow:0 8px 18px rgba(0,60,100,.18)"></div>
+  <div style="text-align:center;margin:10px 0 4px"><img src="icon.svg" style="width:72px;height:72px;border-radius:18px;box-shadow:0 8px 18px rgba(0,60,100,.18)"></div>
   <div style="text-align:center;font-weight:800;font-size:17px">ReamBook</div>
   <div class="sub" style="text-align:center;margin-bottom:10px">Sale, Stock, Credit & Reports</div>
   <div style="font-size:14px;line-height:1.9">✔ Sale & billing — send bill photos on WhatsApp<br>✔ Stock management<br>✔ Credit record with auto reminders<br>✔ Daily & monthly reports<br>✔ Cloud backup — data is never lost<br>✔ Works without internet</div>
@@ -707,14 +707,13 @@ window.shareApp=()=>{
   <div class="mrow"><button class="btn-ghost" onclick="copyShareLink()">📋 Copy link</button><button class="btn-go" onclick="doShareApp()">📤 Share</button></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
-window.copyShareLink=()=>{ const done=()=>toast('🔗 Link copied'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(SHARE_LINK).then(done).catch(()=>{ fallbackCopy(SHARE_LINK); done(); }); } else { fallbackCopy(SHARE_LINK); done(); } };
+function copyLinkToast(msg){ const done=()=>toast(msg||'🔗 Link copied'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(SHARE_LINK).then(done).catch(()=>{ fallbackCopy(SHARE_LINK); done(); }); } else { fallbackCopy(SHARE_LINK); done(); } }
+window.copyShareLink=()=>{ copyLinkToast('🔗 Link copied'); };
 window.doShareApp=()=>{
-  const text='📒 *ReamBook* — Sale, Stock, Credit & Reports\n\nApni dukaan ka pura hisaab ab aik hi app me! ✅\n\n✔ Sale & billing — bill ki photo WhatsApp par bhejein\n✔ Stock management\n✔ Credit (udhaar) record + auto reminders\n✔ Daily & monthly reports\n✔ Cloud backup — data kabhi gum nahi hota\n✔ Bina internet ke bhi chalta hai\n\n👇 Abhi FREE download karein:\n'+SHARE_LINK;
+  const text='📒 *ReamBook* — Sale, Stock, Credit & Reports\n\n✔ Sale & billing — send bill photos on WhatsApp\n✔ Stock management\n✔ Credit record with auto reminders\n✔ Daily & monthly reports\n✔ Cloud backup — data is never lost\n✔ Works without internet\n\n👇 Download FREE:\n'+SHARE_LINK;
   if(window.AndroidApp&&AndroidApp.shareText){ try{ AndroidApp.shareText(text); return; }catch(e){} }
-  if(navigator.share){ navigator.share({ title:'ReamBook', text:text }).catch(()=>{}); return; }
-  const done=()=>toast('Link copied - WhatsApp par paste karke share karein');
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(SHARE_LINK).then(done).catch(()=>{ fallbackCopy(SHARE_LINK); done(); }); }
-  else { fallbackCopy(SHARE_LINK); done(); }
+  if(navigator.share){ navigator.share({ title:'ReamBook', text:text }).then(()=>{}).catch(()=>{ copyLinkToast('🔗 Link copied — WhatsApp me paste karke bhej dein'); }); return; }
+  copyLinkToast('🔗 Link copied — WhatsApp me paste karke bhej dein');
 };
 function fallbackCopy(t){ try{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){} }
 
