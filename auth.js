@@ -12,7 +12,7 @@
   function base(){ return PAPER_SERVER_URL.replace(/\/$/, ''); }
   function getToken(){ try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; } }
   function setToken(t){ try { localStorage.setItem(TOKEN_KEY, t); } catch (e) {} }
-  function clearToken(){ try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+  function clearToken(){ try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('ps_paycfg'); localStorage.removeItem('ps_user'); } catch (e) {} }
 
   function handleAuthRedirect(){
     var h = location.hash || '';

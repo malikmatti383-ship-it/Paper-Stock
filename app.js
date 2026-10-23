@@ -243,11 +243,17 @@ window.openCodeLogin=function(){
 
 /* ---------- Subscription (manual payment) ---------- */
 const SUB_PLANS_FALLBACK=[
-  {key:'monthly',amountRs:300,days:30,label:'Monthly'},
-  {key:'halfyearly',amountRs:1566,days:180,label:'6 Months'},
-  {key:'yearly',amountRs:2664,days:365,label:'1 Year'},
+  {key:'monthly',amountRs:300,days:30,label:'Basic'},
+  {key:'halfyearly',amountRs:1566,days:180,label:'Pro'},
+  {key:'yearly',amountRs:2664,days:365,label:'Premium'},
 ];
 let _subPlan='monthly', _subCfg=null, _subMine=[], _subSf=null;
+/* Instant-paint cache: plans + payment numbers change rarely, so keep the last
+   server response on the phone and render immediately on open; initPlanBox
+   refreshes it in the background every time. Without this, a cold server
+   left users staring at "Loading payment details…" for 30-60s. */
+try{ const _pc=JSON.parse(localStorage.getItem('ps_paycfg')||'null'); if(_pc&&_pc.ts&&(Date.now()-_pc.ts)<7*86400000){ _subCfg=_pc.cfg||null; _subSf=_pc.sf||null; } }catch(e){}
+function _savePayCfg(){ try{ localStorage.setItem('ps_paycfg',JSON.stringify({cfg:_subCfg,sf:_subSf,ts:Date.now()})); }catch(e){} }
 function _subUser(){ try{ return JSON.parse(localStorage.getItem('ps_user')||'null'); }catch(e){ return null; } }
 function _subPremiumActive(u){ return !!(u&&u.plan==='premium'&&u.planExpiresAt&&new Date(u.planExpiresAt).getTime()>Date.now()); }
 function _fmtDate(iso){ try{ return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } }
@@ -256,9 +262,9 @@ function initPlanBox(){
   renderPlanBox();
   if(!window.PaperAuth||!PaperAuth.isConfigured()||!PaperAuth.getToken()) return;
   PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} renderPlanBox(); }).catch(()=>{});
-  PaperAuth.api('/api/pay/manual/config').then(c=>{ _subCfg=c; renderPlanBox(); }).catch(()=>{});
+  PaperAuth.api('/api/pay/manual/config').then(c=>{ _subCfg=c; _savePayCfg(); renderPlanBox(); }).catch(()=>{});
   PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; renderPlanBox(); }).catch(()=>{});
-  PaperAuth.api('/api/safepay/config').then(c=>{ _subSf=c; renderPlanBox(); }).catch(()=>{});
+  PaperAuth.api('/api/safepay/config').then(c=>{ _subSf=c; _savePayCfg(); renderPlanBox(); }).catch(()=>{});
   sfPollPending(0);
 }
 function subPlanRows(plans){
@@ -268,7 +274,7 @@ function subPlanRows(plans){
     const pct=full>p.amountRs?Math.round((1-p.amountRs/full)*100):0;
     const price=pct?`<span style="text-align:right"><s class="sub">Rs ${full}</s><br><b>Rs ${esc(p.amountRs)}</b></span>`:`<b>Rs ${esc(p.amountRs)}</b>`;
     const save=pct?` <span style="color:#1a9e54;font-weight:700;font-size:12px">Save ${pct}%</span>`:'';
-    return `<div class="menu-row" onclick="pickSubPlan('${p.key}')"><span>${p.key===_subPlan?'🔘':'⚪'}</span><span style="flex:1"><b>${esc(p.key==='monthly'?'Monthly':p.key==='halfyearly'?'6 Months':'1 Year')}</b> <span class="sub">${p.days} days</span>${save}</span>${price}</div>`;
+    return `<div class="menu-row" onclick="pickSubPlan('${p.key}')"><span>${p.key===_subPlan?'🔘':'⚪'}</span><span style="flex:1"><b>${esc(p.key==='monthly'?'Basic':p.key==='halfyearly'?'Pro':'Premium')}</b> <span class="sub">${p.days>=360?'1 year':p.days>=180?'6 months':p.days+' days'}</span>${save}</span>${price}</div>`;
   }).join('');
 }
 function renderPlanBox(){
@@ -279,7 +285,7 @@ function renderPlanBox(){
   if(!plans.some(p=>p.key===_subPlan)) _subPlan=plans[0].key;
   let h='';
   if(active){
-    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Premium active</b><div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>
+    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Cloud Backup active</b><div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>
     <div class="mrow" style="margin-bottom:10px">
       <button class="btn-ghost" onclick="cloudSyncNow()">☁️<br><b>Sync now</b><br><small>Back up to cloud</small></button>
       <button class="btn-ghost" onclick="cloudBackup()">⬇️<br><b>Backup file</b><br><small>Download a copy</small></button>
@@ -315,7 +321,7 @@ function renderPlanBox(){
     const sel=plans.find(p=>p.key===_subPlan)||plans[0];
     h+=`${subPlanRows(plans)}
     <div class="sub" style="margin:8px 0">Pay online with card, JazzCash or Easypaisa. Premium activates automatically — no waiting, no approval.</div>
-    <button class="btn-go" style="width:100%" onclick="payWithSafepay()">Pay Rs ${esc(sel.amountRs)} — ${esc(sel.key==='monthly'?'Monthly':sel.key==='halfyearly'?'6 Months':'1 Year')}</button>`;
+    <button class="btn-go" style="width:100%" onclick="payWithSafepay()">Pay Rs ${esc(sel.amountRs)} — ${esc(sel.key==='monthly'?'Basic':sel.key==='halfyearly'?'Pro':'Premium')}</button>`;
   } else if(!cfg){
     h+=`<div class="sub">Loading payment details…</div>`;
   } else if(!cfg.configured){
@@ -325,7 +331,7 @@ function renderPlanBox(){
     const mlist=(cfg.methods&&cfg.methods.length)?cfg.methods:([['jazzcash','JazzCash',cfg.jazzcash],['easypaisa','Easypaisa',cfg.easypaisa]].filter(x=>x[2]).map(x=>({key:x[0],label:x[1],number:x[2].number,title:x[2].title})));
     const numRow=m=>`<div class="mrow" style="align-items:center;margin:4px 0"><div style="flex:1"><div class="sub">${esc(m.label)}</div><b style="font-size:16px">${esc(m.number)}</b> <span class="sub">${esc(m.title||'')}</span></div><button class="btn-ghost" onclick="copyTxt('${esc(m.number)}')">Copy</button></div>`;
     const QR_FOR={jazzcash:'img/pay-qr-jazzcash.jpg',bank:'img/pay-qr-bank.jpg'};
-    const qrHtml=mlist.filter(m=>QR_FOR[m.key]).map(m=>`<div style="text-align:center;margin:8px 0"><div class="sub" style="margin-bottom:4px">${esc(m.label)} — scan to pay</div><img src="${QR_FOR[m.key]}" alt="${esc(m.label)} QR code" loading="lazy" onclick="window.open(this.src)" style="width:210px;max-width:82%;border-radius:10px;border:1px solid #e3e8f2;cursor:pointer"></div>`).join('');
+    const qrHtml=mlist.filter(m=>QR_FOR[m.key]).map(m=>`<div style="text-align:center;margin:8px 0"><div class="sub" style="margin-bottom:4px">${esc(m.label)} — scan to pay</div><img src="${QR_FOR[m.key]}" alt="${esc(m.label)} QR code" loading="lazy" onerror="this.parentNode.style.display='none'" onclick="window.open(this.src)" style="width:210px;max-width:82%;border-radius:10px;border:1px solid #e3e8f2;cursor:pointer"></div>`).join('');
     h+=`${planRows}
     <div class="sub" style="margin:8px 0 2px">Send the plan amount to any one of these:</div>
     ${mlist.map(numRow).join('')}${qrHtml}
@@ -376,7 +382,7 @@ function sfPollPending(n){
   PaperAuth.api('/api/safepay/status?tracker='+encodeURIComponent(tr)).then(r=>{
     if(r&&r.status==='success'){
       try{ localStorage.removeItem('sf_tracker'); }catch(e){}
-      toast('🎉 Premium active! Thank you.');
+      toast('🎉 Cloud Backup active! Thank you.');
       PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} refreshCloudGate(); renderPlanBox(); }).catch(()=>{ refreshCloudGate(); });
       try{ initPlanBox(); }catch(e){}
     } else if(n<18){ setTimeout(()=>sfPollPending(n+1),5000); }
