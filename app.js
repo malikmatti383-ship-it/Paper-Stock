@@ -145,7 +145,7 @@ function authSection(){
   let pkg=''; try{ pkg=PLAN_NAME[localStorage.getItem('ps_pkg')||'']||''; }catch(e){}
   return `<div class="mrow" style="align-items:center;margin-bottom:10px">
     <div class="pavatar" style="width:44px;height:44px;font-size:18px;flex-shrink:0">${av}</div>
-    <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b> ${prem?`<span class="pkg-pill" id="pkg-pill">${esc(pkg||'Premium')}</span>`:`<span class="pkg-pill free">Free</span>`}<div class="sub">${esc(em)}</div>${u&&u.uid?`<div class="sub" style="margin-top:8px;display:flex;align-items:center;gap:7px">Your ID: <b style="color:#14213d;font-size:13px">RB-${esc(u.uid)}</b><span onclick="copyTxt('RB-${esc(u.uid)}')" title="Copy ID" style="background:#eef3ff;border-radius:8px;padding:3px 9px;font-size:13px;cursor:pointer;line-height:1.25">📋</span></div>`:''}</div></div>`;
+    <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b> ${prem?`<span class="pkg-pill" id="pkg-pill">${esc(pkg||'Premium')}</span>`:`<span class="pkg-pill free">Free</span>`}<div class="sub">${esc(em)}</div>${u&&u.uid?`<div class="sub" style="margin-top:8px;display:flex;align-items:center;gap:7px">Your ID: <b style="color:#14213d;font-size:13px">RB-${esc(u.uid)}</b><span onclick="copyTxt('RB-${esc(u.uid)}')" title="Copy ID" style="background:var(--pp-soft,#eef3ff);border-radius:8px;padding:3px 9px;font-size:13px;cursor:pointer;line-height:1.25">📋</span></div>`:''}</div></div>`;
 }
 window.doLogout=()=>{ if(!window.PaperAuth) return;
   PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); }catch(e){} location.reload(); });
