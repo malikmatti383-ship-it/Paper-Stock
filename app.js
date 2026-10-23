@@ -703,14 +703,16 @@ window.shareApp=()=>{
   <div style="text-align:center;font-weight:800;font-size:17px">ReamBook</div>
   <div class="sub" style="text-align:center;margin-bottom:10px">Sale, Stock, Credit & Reports</div>
   <div style="font-size:14px;line-height:1.9">✔ Sale & billing — send bill photos on WhatsApp<br>✔ Stock management<br>✔ Credit record with auto reminders<br>✔ Daily & monthly reports<br>✔ Cloud backup — data is never lost<br>✔ Works without internet</div>
-  <div class="fld" style="margin-top:12px"><span class="fld-lbl">Share link</span><div class="fld-in" style="word-break:break-all;font-size:13px">${SHARE_LINK}</div></div>
-  <div class="mrow"><button class="btn-ghost" onclick="copyShareLink()">📋 Copy link</button><button class="btn-go" onclick="doShareApp()">📤 Share</button></div>
+  <div class="fld" style="margin-top:12px"><span class="fld-lbl">Or share the download link</span><div class="fld-in" style="word-break:break-all;font-size:13px">${SHARE_LINK}</div></div>
+  <div class="sub" style="text-align:center;margin-top:10px">Share APK sends the ReamBook app itself, with your message — the other person installs it directly.</div>
+  <div class="mrow"><button class="btn-ghost" onclick="copyShareLink()">📋 Copy link</button><button class="btn-go" onclick="doShareApp()">📤 Share APK</button></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 function copyLinkToast(msg){ const done=()=>toast(msg||'🔗 Link copied'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(SHARE_LINK).then(done).catch(()=>{ fallbackCopy(SHARE_LINK); done(); }); } else { fallbackCopy(SHARE_LINK); done(); } }
 window.copyShareLink=()=>{ copyLinkToast('🔗 Link copied'); };
 window.doShareApp=()=>{
   const text='📒 *ReamBook* — Sale, Stock, Credit & Reports\n\n✔ Sale & billing — send bill photos on WhatsApp\n✔ Stock management\n✔ Credit record with auto reminders\n✔ Daily & monthly reports\n✔ Cloud backup — data is never lost\n✔ Works without internet\n\n👇 Download FREE:\n'+SHARE_LINK;
+  if(window.AndroidApp&&AndroidApp.shareApk){ try{ AndroidApp.shareApk(text); return; }catch(e){} }
   if(window.AndroidApp&&AndroidApp.shareText){ try{ AndroidApp.shareText(text); return; }catch(e){} }
   if(navigator.share){ navigator.share({ title:'ReamBook', text:text }).then(()=>{}).catch(()=>{ copyLinkToast('🔗 Link copied — WhatsApp me paste karke bhej dein'); }); return; }
   copyLinkToast('🔗 Link copied — WhatsApp me paste karke bhej dein');
