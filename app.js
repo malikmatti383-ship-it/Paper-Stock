@@ -490,6 +490,7 @@ window.openSettings=()=>{
   <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Warns when below cost — sale, wholesale, edit & credit</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NOTIFICATIONS</div>
   <div class="menu-row" onclick="toggleBellAlert()"><span class="ic">🔔</span><div><div>Overdue bell alert</div><div class="sub">Bell rings when a promise date passes</div></div><button id="bell-tswitch" class="tswitch${DB.profile.bellAlert!==false?' on':''}" onclick="event.stopPropagation();toggleBellAlert()"><span class="tlbl">${DB.profile.bellAlert!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="menu-row" onclick="togglePhoneAlarm()"><span class="ic">⏰</span><div><div>Phone alarm</div><div class="sub">Notification alarm at the promise time — even if the app is closed</div></div><button id="alarm-tswitch" class="tswitch${DB.profile.phoneAlarm!==false?' on':''}" onclick="event.stopPropagation();togglePhoneAlarm()"><span class="tlbl">${DB.profile.phoneAlarm!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
   <div class="menu-row" onclick="openTabOrder()"><span class="ic">📑</span><div><div>Tab order</div><div class="sub">${tabOrder().map(k=>TAB_LABEL[k]).join(', ')} — tap to change</div></div><span class="arw">›</span></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
@@ -506,6 +507,10 @@ window.setTabOrder=i=>{ DB.profile.tabOrder=i; save(); applyTabOrder(true); open
 window.toggleBellAlert=()=>{ DB.profile.bellAlert=DB.profile.bellAlert===false; save(); updateBellBadge();
   const on=DB.profile.bellAlert!==false, btn=document.querySelector('#bell-tswitch');
   if(btn){ btn.classList.toggle('on',on); btn.querySelector('.tlbl').textContent=on?'On':'Off'; } };
+window.togglePhoneAlarm=()=>{ DB.profile.phoneAlarm=DB.profile.phoneAlarm===false; save(); syncAlarms();
+  const on=DB.profile.phoneAlarm!==false, btn=document.querySelector('#alarm-tswitch');
+  if(btn){ btn.classList.toggle('on',on); btn.querySelector('.tlbl').textContent=on?'On':'Off'; }
+  toast(on?'⏰ Phone alarm On':'⏰ Phone alarm Off'); };
 window.toggleLossAsk=()=>{ DB.profile.lossAsk=DB.profile.lossAsk===false; save();
   const on=DB.profile.lossAsk!==false, btn=document.querySelector('#loss-tswitch');
   if(btn){ btn.classList.toggle('on',on); btn.querySelector('.tlbl').textContent=on?'On':'Off'; } };
@@ -2214,7 +2219,7 @@ window.wusoolCheck=id=>{ const c=DB.customers.find(x=>x.id===id); if(!c) return 
 window.saveWusool=id=>{ const c=DB.customers.find(x=>x.id===id); if(!c) return;
   const a=Math.max(0,parseFloat($('w-amt').value)||0); if(!a){toast('Enter amount');return;}
   if(a>custBal(c)+0.005){ wusoolCheck(id); toast('\u26a0\ufe0f Cannot receive more than the due balance!'); return; }
-  c.received+=a; c.log.push({t:'Received',a,d:dtstr()}); save(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
+  c.received+=a; c.log.push({t:'Received',a,d:dtstr()}); save(); syncAlarms(); creditDetail(id); renderCredit(); toast('✅ '+pkr(a)+' received'); };
 /* ---- direct balance edit: sets Received so balance becomes the typed value ---- */
 window.editBalance=id=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -2430,7 +2435,7 @@ window.saveEditCustomer=id=>{
 window.delCustomer=id=>{ const c=DB.customers.find(x=>x.id===id);
   if(!c) return;
   confirmDlg('Delete customer?','Are you sure you want to delete "'+c.name+'"?','DELETE',()=>{
-    DB.customers=DB.customers.filter(x=>x.id!==id); save(); closeSheet(); renderCredit(); toast('Deleted'); }); };
+    DB.customers=DB.customers.filter(x=>x.id!==id); save(); syncAlarms(); closeSheet(); renderCredit(); toast('Deleted'); }); };
 /* WhatsApp / SMS with balance message (per sketch) */
 window.sendMsg=(id,kind)=>{
   const c=DB.customers.find(x=>x.id===id); if(!c) return;
@@ -2458,11 +2463,28 @@ function promiseDue(c){
   const dt=new Date(c.promiseDate+'T'+(c.promiseTime||'23:59'));
   return dt<=new Date();
 }
+/* v202: hand the upcoming promise list to the Android shell so it can ring a
+   real phone alarm at each promise time (no-op on older shells / browser). */
+function syncAlarms(){
+  try{
+    if(!window.AndroidApp||!AndroidApp.syncAlarms) return;
+    if(DB.profile&&DB.profile.phoneAlarm===false){ AndroidApp.syncAlarms('[]'); return; }
+    const now=Date.now();
+    const t12=t=>{ if(!t) return ''; const p=String(t).split(':'); let h=parseInt(p[0])||0; const m=String(parseInt(p[1])||0).padStart(2,'0'); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+m+' '+ap; };
+    const list=DB.customers.filter(c=>c.promiseDate&&custBal(c)>0.005)
+      .map(c=>({ cid:c.id, name:c.name||'Customer', amount:pkr(custBal(c)),
+        time:(fmtDate(c.promiseDate)+' '+t12(c.promiseTime)).trim(),
+        ts:new Date(c.promiseDate+'T'+(c.promiseTime||'10:00')).getTime() }))
+      .filter(a=>a.ts>now).sort((a,b)=>a.ts-b.ts).slice(0,40);
+    AndroidApp.syncAlarms(JSON.stringify(list));
+  }catch(e){}
+}
 function updateBellBadge(){
   const n=DB.customers.filter(promiseDue).length;
   const b=$('bell-badge');
   b.classList.toggle('hidden',!n); b.textContent=n;
   $('btn-bell').classList.toggle('bell-ringing', n>0 && DB.profile.bellAlert!==false);
+  syncAlarms();
 }
 window.openBellSheet=(tab)=>{
   if('Notification' in window && Notification.permission==='default'){
