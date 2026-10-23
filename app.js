@@ -134,15 +134,18 @@ function writeReg(em,reg){ _lsSet(shopsRegKey(em), JSON.stringify(reg)); }
 function peekShopName(em,id){ try{ const d=JSON.parse(_lsGet(shopDataKey(em,id))||_lsGet(DB_KEY)||'null'); if(d&&d.profile&&d.profile.name) return d.profile.name; }catch(e){} return 'Paper Store'; }
 function ensureReg(em){ let reg=readReg(em); if(!reg){ reg={ shops:[{id:'main', name:peekShopName(em,'main')}], active:'main' }; writeReg(em,reg); } if(!reg.shops.some(s=>s.id===reg.active)) reg.active=reg.shops[0].id; return reg; }
 function curShopName(){ try{ const em=curEmail(); if(!em) return ''; const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active); return s?s.name:''; }catch(e){ return ''; } }
-window.openShops=()=>{
+window.openShops=(lockMsg)=>{
   const em=curEmail(); if(!em){ toast('Login first'); return; }
   const reg=ensureReg(em);
+  const prem=_subPremiumActive(_subUser());
   openSheet(`<h3>🏬 Shops</h3>
   <div class="sub" style="margin:2px 0 8px">The app reopens on the shop you pick. Every shop has its own fresh, separate data — nothing mixes.</div>
   ${reg.shops.map(s=>{ const act=s.id===reg.active; return `<div class="menu-row" onclick="switchShop('${s.id}')"><span class="radio${act?' on':''}"></span><div style="flex:1;min-width:0"><div>${esc(s.name)}${s.id==='main'?' <span class="sub" style="color:var(--pp-teal-d)">· Main shop</span>':''}</div><div class="sub">${act?'Current shop':'Tap to switch'}</div></div><button class="mini-pdf" onclick="event.stopPropagation();renameShop('${s.id}')">✏️ Rename</button>${(!act&&s.id!=='main')?`<button class="mini-pdf" style="color:#d7263d" onclick="event.stopPropagation();deleteShop('${s.id}')">🗑 Delete</button>`:''}</div>`; }).join('')}
-  <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="addShop()">＋ Add a shop</button>
+  ${lockMsg?`<div style="background:#fdecec;color:#b3261e;border:1.5px solid #f0b4b4;border-radius:12px;padding:12px 14px;font-weight:700;text-align:center;margin-top:12px">Please Buy The Subscription To Add Multiple Stores Or Manage Your Products. Thank You (⌒‿⌒)</div><button class="btn-go" style="width:100%;margin-top:10px" onclick="openCloudSheet()">⭐ Buy subscription</button>`:''}
+  <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="${prem?'addShop()':'shopLockMsg()'}">${prem?'':'🔒 '}＋ Add a shop</button>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
+window.shopLockMsg=()=>{ openShops(true); };
 window.switchShop=id=>{ const em=curEmail(); const reg=ensureReg(em); if(id===reg.active){ $('btn-profile').click(); return; } reg.active=id; writeReg(em,reg); toast('Switching shop…'); setTimeout(()=>location.reload(),250); };
 window.addShop=()=>{
   openSheet(`<h3>＋ Add a shop</h3>
@@ -152,6 +155,7 @@ window.addShop=()=>{
   setTimeout(()=>{ const i=$('ns-name'); if(i) i.focus(); },80);
 };
 window.saveNewShop=()=>{
+  if(!_subPremiumActive(_subUser())){ openShops(true); return; }
   const em=curEmail(); const name=($('ns-name').value||'').trim(); if(!name){ toast('Enter a shop name'); return; }
   const reg=ensureReg(em); const id='s'+Date.now().toString(36);
   const d=defDB(); d.profile.name=name;
