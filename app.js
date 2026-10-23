@@ -280,12 +280,13 @@ const GET_HTML=`<div class="get-card">
 function _cachePkg(){ try{ const lastOk=_subMine.filter(x=>x.status==='success').sort((a,b)=>new Date(b.paidAt||b.createdAt||0)-new Date(a.paidAt||a.createdAt||0))[0]; if(lastOk) localStorage.setItem('ps_pkg',lastOk.plan); }catch(e){} }
 function _activePkgName(){ const lastOk=_subMine.filter(x=>x.status==='success').sort((a,b)=>new Date(b.paidAt||b.createdAt||0)-new Date(a.paidAt||a.createdAt||0))[0]; if(lastOk) return PLAN_NAME[lastOk.plan]||''; try{ return PLAN_NAME[localStorage.getItem('ps_pkg')||'']||''; }catch(e){ return ''; } }
 /* v191: clean plan cards (no discount %, no strikethrough) */
+function fmtRs(n){ const v=Number(n); return isFinite(v)?v.toLocaleString('en-US'):String(n); }
 function planCardsHtml(plans){
   const baseM=((plans.find(p=>p.key==='monthly')||{}).amountRs)||300;
   const card=(p,cls)=>{
     const full=baseM*Math.max(1,Math.round(p.days/30));
     const pct=full>p.amountRs?Math.round((1-p.amountRs/full)*100):0;
-    return `<div class="plan-card ${cls} ${p.key===_subPlan?'sel':''}" onclick="pickSubPlan('${p.key}')"><span class="pc-check">✓</span>${p.key==='yearly'?`<span class="pc-badge">${pct?`Save ${pct}%`:'Best value'}</span>`:''}<div class="pc-name">${PLAN_NAME[p.key]||esc(p.label||p.key)}${pct&&p.key!=='yearly'?`<span class="pc-save">−${pct}%</span>`:''}</div><div class="pc-price">Rs ${esc(p.amountRs)}</div><div class="pc-per">${PLAN_DUR[p.key]||(p.days+' days')}${p.key==='monthly'?'':` · Rs ${Math.ceil(p.amountRs/Math.max(1,Math.round(p.days/30)))}/mo`}</div></div>`;
+    return `<div class="plan-card ${cls} ${p.key===_subPlan?'sel':''}" onclick="pickSubPlan('${p.key}')"><span class="pc-check">✓</span>${p.key==='yearly'?`<span class="pc-badge">${pct?`Save ${pct}%`:'Best value'}</span>`:''}<div class="pc-name">${PLAN_NAME[p.key]||esc(p.label||p.key)}${pct&&p.key!=='yearly'?`<span class="pc-save">−${pct}%</span>`:''}</div><div class="pc-price">Rs ${fmtRs(p.amountRs)}${pct?`<span class="pc-was">Rs ${fmtRs(full)}</span>`:''}</div><div class="pc-per">${PLAN_DUR[p.key]||(p.days+' days')}${p.key==='monthly'?'':` · Rs ${Math.ceil(p.amountRs/Math.max(1,Math.round(p.days/30)))}/mo`}</div></div>`;
   };
   const by=k=>plans.find(p=>p.key===k);
   const order=[['monthly','pc-a'],['halfyearly','pc-b'],['yearly','plan-hero']];
@@ -349,7 +350,7 @@ function renderPlanBox(){
     h+=`${planRows}
     <div style="font-size:17px;font-weight:800;margin:16px 0 8px">What you get</div>${GET_HTML}
     <div class="pay-card">
-    <div class="sub" style="margin:0 0 4px">Send <b style="color:#14213d">Rs ${esc(selP.amountRs)}</b> to any one of these:</div>
+    <div class="sub" style="margin:0 0 4px">Send <b style="color:#14213d">Rs ${fmtRs(selP.amountRs)}</b> to any one of these:</div>
     ${mlist.map(numRow).join('')}${qrHtml}
     <div class="sub" style="margin:10px 0 6px">After sending, enter the <b>Transaction ID</b> from your payment app:</div>
     <select id="sub-method" style="width:100%;margin-bottom:6px">${mlist.map(m=>`<option value="${esc(m.key)}">${esc(m.label)}</option>`).join('')}</select>

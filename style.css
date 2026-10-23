@@ -678,3 +678,5 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .plan-card.sel .pc-name{color:#d6efff}
 .plan-card.sel .pc-per{color:#d6efff}
 .plan-card.sel .pc-check{background:#fff;color:#0077BE}
+.pc-was{font-size:13px;font-weight:600;color:#8a94a3;text-decoration:line-through;margin-left:7px}
+.plan-card.sel .pc-was{color:#bfe3f7}
