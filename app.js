@@ -263,7 +263,24 @@ function authSection(){
     <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b> ${prem?`<span class="pkg-pill" id="pkg-pill">${esc(pkg||'Premium')}</span>`:`<span class="pkg-pill free">Free</span>`}<div class="sub">${esc(em)}</div>${u&&u.uid?`<div class="sub" style="margin-top:8px;display:flex;align-items:center;gap:7px">Your ID: <b style="color:#14213d;font-size:13px">RB-${esc(u.uid)}</b><span onclick="copyTxt('RB-${esc(u.uid)}')" title="Copy ID" style="background:var(--pp-soft,#eef3ff);border-radius:8px;padding:3px 9px;font-size:13px;cursor:pointer;line-height:1.25">📋</span></div>`:''}</div></div>`;
 }
 window.doLogout=()=>{ if(!window.PaperAuth) return;
-  PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); localStorage.removeItem('ps_active_email'); }catch(e){} location.reload(); });
+  /* Pehle logout server ke jawab ka intezaar karta tha — is liye pehla tap
+     bekaar lagta tha. Ab: server ko peechay se batao, local sab foran saaf
+     karke reload — aik hi tap, foran reaction. */
+  try{ PaperAuth.logout(); }catch(e){}
+  try{ localStorage.removeItem('ps_token'); localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); localStorage.removeItem('ps_active_email'); localStorage.removeItem('ps_paycfg'); }catch(e){}
+  location.reload();
+};
+window.confirmLogout=()=>{
+  const u=_subUser(); const email=(u&&u.email)||'';
+  const store=(DB.profile&&DB.profile.name)||'this store';
+  openSheet(`
+  <div style="text-align:center;padding:6px 4px 2px">
+    <div style="width:74px;height:74px;margin:2px auto 10px;border-radius:50%;background:linear-gradient(135deg,#ffe3e3,#ffc9c9);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 20px rgba(214,48,49,.25)">👋</div>
+    <h3 style="margin:0 0 6px">Sign out?</h3>
+    <div style="font-size:15px;line-height:1.55">Are you sure you want to sign out<br><b>${esc(email)}</b><br>from <b>${esc(store)}</b>?</div>
+    <div class="sub" style="margin:10px auto 2px;max-width:300px">Don't worry — all your shop data stays saved. Sign in again with the same Gmail and everything comes right back. ✨</div>
+  </div>
+  <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Stay signed in</button><button class="btn-go" style="background:linear-gradient(135deg,#e03131,#c92a2a)" onclick="doLogout()">Yes, sign out</button></div>`);
 };
 function initAuth(){
   if(!window.PaperAuth) return;
@@ -747,7 +764,7 @@ $('btn-profile').onclick=()=>{
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">${IC_DL}</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">${IC_EDIT}</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
-    ${(window.PaperAuth&&PaperAuth.getToken())?`<div class="menu-row" onclick="doLogout()"><span class="ic ic-red">${IC_OUT}</span> <span style="color:#b3261e;font-weight:700">Sign out</span></div>`:''}
+    ${(window.PaperAuth&&PaperAuth.getToken())?`<div class="menu-row" onclick="confirmLogout()"><span class="ic ic-red">${IC_OUT}</span> <span style="color:#b3261e;font-weight:700">Sign out</span></div>`:''}
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
   try{ refreshUpdateBadge(); }catch(e){}
   try{ if(window.PaperAuth&&PaperAuth.getToken()) PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; _cachePkg(); const pel=$('pkg-pill'); if(pel){ const pn=_activePkgName(); if(pn) pel.textContent=pn; } }).catch(()=>{}); }catch(e){}
