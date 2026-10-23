@@ -356,7 +356,8 @@ function renderPlanBox(){
     <input id="sub-txn" placeholder="Transaction ID" autocapitalize="characters" style="width:100%;margin-bottom:6px">
     <input id="sub-sname" placeholder="Your name (optional)" style="width:100%;margin-bottom:6px">
     <input id="sub-snum" placeholder="Your mobile number (optional)" inputmode="tel" style="width:100%;margin-bottom:10px">
-    <button class="btn-subscribe" onclick="submitSubPayment()">Submit payment</button></div>`;
+    <button class="btn-subscribe" onclick="submitSubPayment()">Submit payment</button>
+    <div style="margin-top:12px;background:#fdecec;border:1px solid #f5c6c6;border-radius:12px;padding:10px 12px;color:#b3261e;font-size:13px;line-height:1.5">⚠️ <b>Warning:</b> Don't try a fake payment, and don't send a low balance — always send the <b>full plan amount</b>. Every payment is checked before activation, and a fake or short payment will be rejected.</div></div>`;
   }
   box.innerHTML=h;
 }
