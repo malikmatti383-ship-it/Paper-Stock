@@ -1403,7 +1403,7 @@ function renderDaySales(){
       `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
    ${(s.discount||0)>0.005?(()=>{const dp=discPctLbl(s);return `<div class="disc-badge">🏷️ Discount: ${pkr(s.discount)}${dp?' - '+dp:''}</div>`;})():''}
       <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
-       <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button></div></div>`:'';
+       <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button><button class="bill-btn bill-img" onclick="event.stopPropagation();shareBillImage(${s.id})"><span class="bi">🖼️</span><span>Send image</span></button></div></div>`:'';
     return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
       <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.kind==='wholesale'?'<span class="ws-pill">🏪 Wholesale</span>':'<span class="sl-pill">🛒 Sale</span>'}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
       <div class="sub"><span class="id-box">ID${s.id}</span> ${sub}${s.customer?' · '+esc(s.customer):''}${miniPL}</div></div>
@@ -2063,6 +2063,7 @@ window.creditDetail=id=>{
       <button class="msg-btn wa" onclick="sendMsg(${c.id},'wa')">💬 WhatsApp</button>
       <button class="msg-btn sms" onclick="sendMsg(${c.id},'sms')">✉️ SMS</button>
       <button class="msg-btn pdf" onclick="shareCreditPDF(${c.id})">📄 PDF</button>
+      <button class="msg-btn img" onclick="shareCreditImage(${c.id})">🖼️ Image</button>
     </div>
     <div class="mrow"><button class="btn-ghost danger-t" onclick="delCustomer(${c.id})">Delete</button>
     <button class="btn-go" onclick="closeSheet()">Close</button></div>`);
@@ -3044,4 +3045,175 @@ window.shareBillPDF=id=>{
       setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast('⬇️ PDF downloaded');
     }
   }catch(e){toast('PDF failed');}
+};
+
+/* ================= BILL / CREDIT IMAGE SHARE (v201) ================= */
+function _wrapCv(ctx,text,maxW){
+  const words=String(text==null?'':text).split(/\s+/).filter(Boolean);
+  if(!words.length) return [''];
+  const lines=[]; let cur='';
+  for(const w of words){ const t=cur?cur+' '+w:w;
+    if(ctx.measureText(t).width>maxW&&cur){ lines.push(cur); cur=w; } else cur=t; }
+  if(cur) lines.push(cur);
+  return lines;
+}
+function _fitFont(ctx,text,maxW,start){
+  let sz=start; ctx.font='800 '+sz+'px system-ui, Roboto, sans-serif';
+  while(sz>16&&ctx.measureText(text).width>maxW){ sz-=2; ctx.font='800 '+sz+'px system-ui, Roboto, sans-serif'; }
+}
+function _shareCanvasImage(cv,fname,title){
+  if(window.AndroidApp&&AndroidApp.shareImage){ try{ AndroidApp.shareImage(cv.toDataURL('image/png'),fname); return; }catch(e){} }
+  cv.toBlob(b=>{
+    if(!b){ toast('Image failed'); return; }
+    const file=new File([b],fname,{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],title:title}).catch(()=>{}); }
+    else{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fname; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast('⬇️ Image saved'); }
+  },'image/png');
+}
+function _billCanvas(s){
+  const bc=billTheme(), prof=DB.profile;
+  const W=920,P=40,iw=W-2*P;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=3600;
+  const x=cv.getContext('2d');
+  const F=(sz,b)=>(b?'800 ':'600 ')+sz+'px system-ui, Roboto, sans-serif';
+  x.fillStyle='#ffffff'; x.fillRect(0,0,W,3600);
+  const g=x.createLinearGradient(0,0,W,0); g.addColorStop(0,bc[0]); g.addColorStop(1,bc[1]);
+  x.fillStyle=g; x.fillRect(0,0,W,172);
+  x.fillStyle='#fff'; x.textAlign='center';
+  const nm=String(prof.name||'Paper Store').toUpperCase();
+  _fitFont(x,nm,iw,46); x.fillText(nm,W/2,66);
+  const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join('  ·  ');
+  x.font=F(23,false); if(cl) x.fillText(cl,W/2,108);
+  x.font=F(26,true); x.fillText(s.kind==='wholesale'?'WHOLESALE':'SHOP SALE',W/2,150);
+  x.textAlign='left'; x.fillStyle='#14213d';
+  const d=new Date(s.ts||Date.now());
+  const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  let y=172+54;
+  const meta=(l1,v1,l2,v2)=>{
+    x.font=F(25,true); x.fillText(l1,P,y);
+    const w1=x.measureText(l1).width; x.font=F(25,false); x.fillText(String(v1),P+w1+8,y);
+    x.font=F(25,false); const rv=String(v2),wv=x.measureText(rv).width;
+    x.font=F(25,true); const wl=x.measureText(l2).width;
+    x.fillText(l2,W-P-wv-wl-8,y); x.font=F(25,false); x.fillText(rv,W-P-wv,y);
+    y+=46;
+  };
+  meta('Name:',s.customer||'-','Bill No.',s.id);
+  meta('Contact:',s.phone||'—','Date:',ds);
+  y+=10;
+  const cols=[['S.N',0.08],['Name of Item',0.44],['Qty',0.10],['Rate',0.16],['Amount',0.22]];
+  const cx=[]; { let ax=P; for(const c of cols){ cx.push(ax); ax+=c[1]*iw; } }
+  const rowH=48;
+  const hline=()=>{ x.strokeStyle='#d9dee6'; x.lineWidth=1.5; x.beginPath(); x.moveTo(P,y); x.lineTo(W-P,y); x.stroke(); };
+  x.fillStyle=bc[2]; x.fillRect(P,y,iw,rowH);
+  x.fillStyle='#fff'; x.font=F(24,true);
+  cols.forEach((c,i)=>{ const w=c[1]*iw;
+    if(i<2){ x.textAlign='left'; x.fillText(c[0],cx[i]+(i?10:6),y+33); }
+    else{ x.textAlign='right'; x.fillText(c[0],cx[i]+w-8,y+33); } });
+  x.textAlign='left'; y+=rowH; hline();
+  x.fillStyle='#14213d';
+  (s.items||[]).forEach((it,i)=>{
+    x.font=F(24,false);
+    const lines=_wrapCv(x,it.name||'',cols[1][1]*iw-16).slice(0,3);
+    const hh=Math.max(rowH,lines.length*30+16);
+    x.fillText(String(i+1)+'.',cx[0]+6,y+33);
+    lines.forEach((ln,li)=>x.fillText(ln,cx[1]+10,y+33+li*30));
+    x.textAlign='right';
+    x.fillText(String(it.qty),cx[2]+cols[2][1]*iw-8,y+33);
+    x.fillText(rsFmt(it.price),cx[3]+cols[3][1]*iw-8,y+33);
+    x.font=F(24,true); x.fillText(rsFmt((it.qty||0)*(it.price||0)),cx[4]+cols[4][1]*iw-8,y+33);
+    x.textAlign='left'; x.font=F(24,false); y+=hh; hline();
+  });
+  const totRow=(label,val,big,col)=>{
+    x.fillStyle=col||'#14213d'; x.textAlign='right';
+    x.font=F(big?29:24,true); x.fillText(val,W-P-8,y+36);
+    x.font=F(24,true); x.fillText(label,cx[4]-16,y+36);
+    x.textAlign='left'; y+=rowH; hline();
+  };
+  const disc=(s.discount||0), corr=(s.correctTotal!=null?s.correctTotal:s.total);
+  if(disc>0.005){ const pct=corr>0?(disc/corr*100).toFixed(1).replace(/\.0$/,'')+'%':'';
+    totRow('Total',rsFmt(corr)); totRow('Discount'+(pct?' - '+pct:''),rsFmt(-disc)); }
+  totRow('Total',rsFmt(s.total),true);
+  totRow(s.unpaid?'Not Received':'Received',rsFmt(s.total),true,s.unpaid?'#dc2626':'#16a34a');
+  y+=16; x.fillStyle='#14213d'; x.font=F(22,false);
+  _wrapCv(x,'In Word: '+numToWords(s.total),iw).forEach(ln=>{ x.fillText(ln,P,y); y+=30; });
+  y+=12;
+  const terms=['• Goods once sold will not be taken back.','• Our responsibility ceases when goods leave our shop.'];
+  const th=34+terms.length*29+14;
+  x.strokeStyle='#d9dee6'; x.lineWidth=1.5; x.strokeRect(P,y,iw,th);
+  x.fillStyle='#14213d'; x.font=F(22,true); x.fillText('Terms & Conditions:',P+14,y+32);
+  x.font=F(21,false); terms.forEach((t,i)=>x.fillText(t,P+14,y+32+29*(i+1)));
+  y+=th+36;
+  x.fillStyle='#8a94a3'; x.font=F(20,false); x.textAlign='center';
+  x.fillText('Generated by ReamBook',W/2,y); x.textAlign='left';
+  const out=document.createElement('canvas'); out.width=W; out.height=y+34;
+  const ox=out.getContext('2d'); ox.fillStyle='#fff'; ox.fillRect(0,0,W,out.height);
+  ox.drawImage(cv,0,0,W,out.height,0,0,W,out.height);
+  return out;
+}
+window.shareBillImage=id=>{
+  const s=DB.sales.find(x=>x.id===id); if(!s){ toast('Sale not found'); return; }
+  try{ _shareCanvasImage(_billCanvas(s),'BILL_'+s.id+'.png','Bill #'+s.id); }
+  catch(e){ toast('Image failed'); }
+};
+function _creditCanvas(c){
+  const bc=billTheme(), prof=DB.profile, b=custBal(c), dsc=custDisc(c);
+  const W=920,P=40,iw=W-2*P;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=3600;
+  const x=cv.getContext('2d');
+  const F=(sz,bb)=>(bb?'800 ':'600 ')+sz+'px system-ui, Roboto, sans-serif';
+  x.fillStyle='#ffffff'; x.fillRect(0,0,W,3600);
+  const g=x.createLinearGradient(0,0,W,0); g.addColorStop(0,bc[0]); g.addColorStop(1,bc[1]);
+  x.fillStyle=g; x.fillRect(0,0,W,172);
+  x.fillStyle='#fff'; x.textAlign='center';
+  const nm=String(prof.name||'Paper Store').toUpperCase();
+  _fitFont(x,nm,iw,46); x.fillText(nm,W/2,66);
+  const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join('  ·  ');
+  x.font=F(23,false); if(cl) x.fillText(cl,W/2,108);
+  x.font=F(26,true); x.fillText('CREDIT STATEMENT',W/2,150);
+  x.textAlign='left'; x.fillStyle='#14213d';
+  let y=172+54;
+  const meta=(l1,v1,l2,v2)=>{
+    x.font=F(25,true); x.fillText(l1,P,y);
+    const w1=x.measureText(l1).width; x.font=F(25,false); x.fillText(String(v1),P+w1+8,y);
+    if(l2){ x.font=F(25,false); const rv=String(v2),wv=x.measureText(rv).width;
+      x.font=F(25,true); const wl=x.measureText(l2).width;
+      x.fillText(l2,W-P-wv-wl-8,y); x.font=F(25,false); x.fillText(rv,W-P-wv,y); }
+    y+=46;
+  };
+  meta('Customer:',c.name||'-','ID',c.custId||c.id);
+  meta('Contact:',c.phone||'—','Date:',new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}));
+  y+=8;
+  const hline=()=>{ x.strokeStyle='#d9dee6'; x.lineWidth=1.5; x.beginPath(); x.moveTo(P,y); x.lineTo(W-P,y); x.stroke(); };
+  const kvRow=(label,val,big,col)=>{
+    x.fillStyle=col||'#14213d'; x.textAlign='left';
+    x.font=F(big?27:24,big); x.fillText(label,P,y+34);
+    x.textAlign='right'; x.font=F(big?29:24,true); x.fillText(val,W-P-4,y+34);
+    x.textAlign='left'; y+=50; hline();
+  };
+  if(c.items&&c.items.length){
+    x.font=F(24,true); x.fillText('Items:',P,y+30); y+=48; hline();
+    c.items.forEach(l=>{
+      const amt=(l.total!=null?l.total:(l.qty||0)*(l.rate||0));
+      kvRow(String(l.name||'')+' × '+(l.qty||0),pkr(amt));
+    });
+  } else if(c.product){ kvRow('Item',String(c.product)); }
+  y+=8;
+  kvRow('💰 Credit given',pkr(c.credit));
+  kvRow('💵 Received',pkr(c.received),false,'#16a34a');
+  if(dsc>0.005) kvRow('🏷️ Discount','−'+pkr(dsc),false,'#16a34a');
+  kvRow('📌 Total Balance',pkr(b),true,Math.abs(b)<0.005?'#16a34a':'#dc2626');
+  if(c.promiseDate){ y+=10; x.font=F(23,false); x.fillStyle='#14213d';
+    x.fillText('⏰ Promise: '+fmtDate(c.promiseDate)+(c.promiseTime?' · '+c.promiseTime:''),P,y+30); y+=44; }
+  y+=30; x.fillStyle='#8a94a3'; x.font=F(20,false); x.textAlign='center';
+  x.fillText('Generated by ReamBook',W/2,y); x.textAlign='left';
+  const out=document.createElement('canvas'); out.width=W; out.height=y+34;
+  const ox=out.getContext('2d'); ox.fillStyle='#fff'; ox.fillRect(0,0,W,out.height);
+  ox.drawImage(cv,0,0,W,out.height,0,0,W,out.height);
+  return out;
+}
+window.shareCreditImage=id=>{
+  const c=DB.customers.find(x=>x.id===id); if(!c){ toast('Credit not found'); return; }
+  try{ _shareCanvasImage(_creditCanvas(c),'CREDIT_'+(c.custId||c.id)+'.png','Credit statement'); }
+  catch(e){ toast('Image failed'); }
 };
