@@ -699,3 +699,5 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .pc-price{white-space:normal}
 .plan-hero .pc-check{color:var(--pp-teal-d)}
 .sheet-box{overflow-x:hidden}
+/* v200: struck price gets its own line in the small cards (never clipped at the edge) */
+.plan-grid .plan-card:not(.plan-hero) .pc-was{display:block;margin:3px 0 0}
