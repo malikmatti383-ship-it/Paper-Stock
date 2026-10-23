@@ -285,12 +285,17 @@ function renderPlanBox(){
   if(!plans.some(p=>p.key===_subPlan)) _subPlan=plans[0].key;
   let h='';
   if(active){
-    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Cloud Backup active</b><div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>
+    const lastOk=_subMine.filter(x=>x.status==='success').sort((a,b)=>new Date(b.paidAt||b.createdAt||0)-new Date(a.paidAt||a.createdAt||0))[0];
+    const pkgName=lastOk?({monthly:'Basic',halfyearly:'Pro',yearly:'Premium'})[lastOk.plan]||'':'';
+    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Cloud Backup active</b>${pkgName?`<div class="sub">Package: <b>${pkgName}</b></div>`:''}<div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>
     <div class="mrow" style="margin-bottom:10px">
       <button class="btn-ghost" onclick="cloudSyncNow()">☁️<br><b>Sync now</b><br><small>Back up to cloud</small></button>
       <button class="btn-ghost" onclick="cloudBackup()">⬇️<br><b>Backup file</b><br><small>Download a copy</small></button>
-    </div>
-    <div class="lbl" style="margin:12px 0 6px">EXTEND PREMIUM</div>`;
+    </div>`;
+    /* Premium users see ONLY the status + backup actions above — no packages,
+       payment numbers or submit form (owner's rule, 2026-10-23). The packages
+       return by themselves when the plan expires (the locked view below). */
+    box.innerHTML=h; return;
   } else {
     h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#dc2626;font-size:16px;flex-shrink:0">🔒</span><div style="flex:1"><b>Cloud Backup is locked</b><div class="sub">Subscribe to turn on automatic cloud backup.</div></div></div>
     <div class="lbl" style="margin:10px 0 6px">PREMIUM BENEFITS</div>
