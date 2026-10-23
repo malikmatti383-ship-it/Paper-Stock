@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReamBook — Download</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- WhatsApp / Facebook / Telegram par link share ho to app ki photo,
+     naam aur faiday wala card khud ban jata hai (Open Graph). -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://malikmatti383-ship-it.github.io/Paper-Stock/download.html">
+<meta property="og:title" content="ReamBook — Sale, Stock, Credit & Reports">
+<meta property="og:description" content="Apni dukaan ka pura hisaab aik hi app me! Sale & billing, stock, credit (udhaar) record with reminders, reports aur cloud backup. Bina internet ke bhi chalta hai. Free download karein!">
+<meta property="og:image" content="https://malikmatti383-ship-it.github.io/Paper-Stock/icon-512.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ReamBook — Sale, Stock, Credit & Reports">
+<meta name="twitter:description" content="Sale, stock, credit & reports — apni dukaan ka pura hisaab aik hi app me. Free download!">
+<meta name="twitter:image" content="https://malikmatti383-ship-it.github.io/Paper-Stock/icon-512.png">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#f2f7fb;color:#12303f;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+  .hero{width:100%;background:linear-gradient(135deg,#0077BE,#005a8f);color:#fff;text-align:center;padding:44px 20px 34px;border-bottom-left-radius:28px;border-bottom-right-radius:28px}
+  .hero img{width:96px;height:96px;border-radius:22px;box-shadow:0 10px 24px rgba(0,0,0,.25);background:#fff}
+  .hero h1{font-size:34px;margin-top:14px;letter-spacing:.3px}
+  .hero p{opacity:.92;font-size:16px;margin-top:4px}
+  .card{background:#fff;width:calc(100% - 32px);max-width:440px;margin:-18px 16px 0;border-radius:20px;box-shadow:0 12px 30px rgba(0,60,100,.12);padding:22px 20px 20px;text-align:center}
+  .ver{color:#5b7a8c;font-size:13px;margin-bottom:14px}
+  .dl{display:block;background:linear-gradient(135deg,#0077BE,#005a8f);color:#fff;text-decoration:none;font-size:19px;font-weight:700;padding:16px;border-radius:14px;box-shadow:0 8px 18px rgba(0,119,190,.35)}
+  .dl:active{transform:scale(.98)}
+  .feats{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .feats span{background:#e8f3fa;color:#005a8f;font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:999px}
+  .steps{width:calc(100% - 32px);max-width:440px;margin:18px 16px 0;background:#fff;border-radius:20px;box-shadow:0 12px 30px rgba(0,60,100,.08);padding:20px}
+  .steps h2{font-size:17px;margin-bottom:12px}
+  .step{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start}
+  .step:last-child{margin-bottom:0}
+  .n{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#0077BE;color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+  .step p{font-size:14.5px;line-height:1.45;padding-top:3px}
+  .note{width:calc(100% - 32px);max-width:440px;margin:16px;background:#e9f7ee;border:1.5px solid #bfe6cc;color:#14532d;border-radius:16px;padding:14px 16px;font-size:14px;line-height:1.5}
+  footer{margin-top:auto;padding:18px;font-size:12.5px;color:#7b97a6;text-align:center}
+</style>
+</head>
+<body>
+  <div class="hero">
+    <img src="icon.svg" alt="ReamBook logo">
+    <h1>ReamBook</h1>
+    <p>Sale, Stock, Credit &amp; Reports</p>
+  </div>
+
+  <div class="card">
+    <div class="ver" id="ver">Latest version for Android</div>
+    <a class="dl" href="https://paper-stock-server.onrender.com/app/ReamBook.apk">⬇ Download ReamBook</a>
+    <div class="feats"><span>📴 Works offline</span><span>☁️ Cloud backup</span><span>🏬 Multi-shop</span></div>
+  </div>
+
+  <div class="steps">
+    <h2>How to install</h2>
+    <div class="step"><div class="n">1</div><p>Tap <b>Download</b> above and wait for the file to finish.</p></div>
+    <div class="step"><div class="n">2</div><p>Open the downloaded file and tap <b>Install</b>. If your phone asks, allow <b>"Install from this source"</b> — it is safe, this is the official ReamBook app.</p></div>
+    <div class="step"><div class="n">3</div><p>Open <b>ReamBook</b>, sign in with your Gmail — and your shop is ready!</p></div>
+  </div>
+
+  <div class="note">✅ <b>Already using ReamBook?</b> Installing this file simply <b>updates</b> your app — all your data stays safe, nothing is lost.</div>
+
+  <footer>ReamBook — your shop's complete hisaab, in one app.</footer>
+
+<script>
+  fetch('apk-version-book.json?t=' + Date.now()).then(function(r){ return r.json(); }).then(function(j){
+    if (j && j.versionName) document.getElementById('ver').textContent = 'Version ' + j.versionName + ' • Android';
+  }).catch(function(){});
+</script>
+</body>
+</html>

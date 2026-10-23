@@ -692,6 +692,31 @@ const IC_MUSIC=_svg('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><c
 const IC_WARN=_svg('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>');
 const IC_LAYERS=_svg('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>');
 const IC_SHOP=_svg('<path d="M3 9.5 4.6 4h14.8L21 9.5"/><path d="M4 9.5V20h16V9.5"/><path d="M9.5 20v-5.5h5V20"/><path d="M3 9.5c.6 1.2 1.7 2 3 2s2.4-.8 3-2c.6 1.2 1.7 2 3 2s2.4-.8 3-2c.6 1.2 1.7 2 3 2s2.4-.8 3-2"/>');
+const IC_SHARE=_svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4"/><path d="M15.4 6.5l-6.8 4"/>');
+/* v211: Share app — doston/groups ko download link bhejo. Jo pehle se
+   user hai, us ke liye yehi file sirf UPDATE ban kar lagti hai (same
+   package + same signature), data mehfooz rehta hai. */
+const SHARE_LINK='https://malikmatti383-ship-it.github.io/Paper-Stock/download.html';
+window.shareApp=()=>{
+  openSheet(`<h3>📤 Share ReamBook</h3>
+  <div style="text-align:center;margin:10px 0 4px"><img src="icon-192.png" style="width:72px;height:72px;border-radius:18px;box-shadow:0 8px 18px rgba(0,60,100,.18)"></div>
+  <div style="text-align:center;font-weight:800;font-size:17px">ReamBook</div>
+  <div class="sub" style="text-align:center;margin-bottom:10px">Sale, Stock, Credit & Reports</div>
+  <div style="font-size:14px;line-height:1.9">✔ Sale & billing — send bill photos on WhatsApp<br>✔ Stock management<br>✔ Credit record with auto reminders<br>✔ Daily & monthly reports<br>✔ Cloud backup — data is never lost<br>✔ Works without internet</div>
+  <div class="fld" style="margin-top:12px"><span class="fld-lbl">Share link</span><div class="fld-in" style="word-break:break-all;font-size:13px">${SHARE_LINK}</div></div>
+  <div class="mrow"><button class="btn-ghost" onclick="copyShareLink()">📋 Copy link</button><button class="btn-go" onclick="doShareApp()">📤 Share</button></div>
+  <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
+};
+window.copyShareLink=()=>{ const done=()=>toast('🔗 Link copied'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(SHARE_LINK).then(done).catch(()=>{ fallbackCopy(SHARE_LINK); done(); }); } else { fallbackCopy(SHARE_LINK); done(); } };
+window.doShareApp=()=>{
+  const text='📒 *ReamBook* — Sale, Stock, Credit & Reports\n\nApni dukaan ka pura hisaab ab aik hi app me! ✅\n\n✔ Sale & billing — bill ki photo WhatsApp par bhejein\n✔ Stock management\n✔ Credit (udhaar) record + auto reminders\n✔ Daily & monthly reports\n✔ Cloud backup — data kabhi gum nahi hota\n✔ Bina internet ke bhi chalta hai\n\n👇 Abhi FREE download karein:\n'+SHARE_LINK;
+  if(window.AndroidApp&&AndroidApp.shareText){ try{ AndroidApp.shareText(text); return; }catch(e){} }
+  if(navigator.share){ navigator.share({ title:'ReamBook', text:text }).catch(()=>{}); return; }
+  const done=()=>toast('Link copied - WhatsApp par paste karke share karein');
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(SHARE_LINK).then(done).catch(()=>{ fallbackCopy(SHARE_LINK); done(); }); }
+  else { fallbackCopy(SHARE_LINK); done(); }
+};
+function fallbackCopy(t){ try{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){} }
 
 /* ---------- Nav ---------- */
 function showView(id){
@@ -757,6 +782,7 @@ $('btn-profile').onclick=()=>{
     <div><b style="font-size:19px">${esc(p.name||'ReamBook')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">${IC_EDIT}</button><div class="sub">${esc(p.email||'')}</div></div></div>
     <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
     <div class="menu-row" onclick="openShops()"><span class="ic">${IC_SHOP}</span> Switch shop <span class="sub">${esc(curShopName())}</span><span class="arw">›</span></div>
+    <div class="menu-row" onclick="shareApp()"><span class="ic">${IC_SHARE}</span> Share app <span class="sub">Send to friends & groups</span><span class="arw">›</span></div>
     <div class="lbl" style="margin:10px 0">YOUR DATA</div>
     <div class="mrow" style="margin-bottom:6px">
       <button class="btn-ghost" onclick="cloudBackup()"><span class="big-ic">${IC_UL}</span><br><b>Back up</b><br><small>Download file</small></button>
