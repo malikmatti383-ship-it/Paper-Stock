@@ -99,7 +99,7 @@ window.setCurrency=code=>{
 
 
 /* ---------- Data ---------- */
-function defDB(){ return { profile:{name:'Paper Store',email:'',logo:''}, products:[], sales:[], expenses:[], customers:[], printQueue:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
+function defDB(){ return { profile:{name:'ReamBook',email:'',logo:''}, products:[], sales:[], expenses:[], customers:[], printQueue:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
 /* v206: PER-ACCOUNT data — har Gmail ka data phone par us ke APNE slot me
    rehta hai. Naya account = bilkul fresh; purana account wapas login ho to
    us ka data wapas. Purana single store (paperstock_v1) pehle sahi login
@@ -131,7 +131,7 @@ function shopsRegKey(em){ return slotKey(em)+':shops'; }
 function shopDataKey(em,id){ return id==='main' ? slotKey(em) : slotKey(em)+':shop:'+id; }
 function readReg(em){ try{ const r=JSON.parse(_lsGet(shopsRegKey(em))||'null'); if(r&&r.shops&&r.shops.length) return r; }catch(e){} return null; }
 function writeReg(em,reg){ _lsSet(shopsRegKey(em), JSON.stringify(reg)); }
-function peekShopName(em,id){ try{ const d=JSON.parse(_lsGet(shopDataKey(em,id))||_lsGet(DB_KEY)||'null'); if(d&&d.profile&&d.profile.name) return d.profile.name; }catch(e){} return 'Paper Store'; }
+function peekShopName(em,id){ try{ const d=JSON.parse(_lsGet(shopDataKey(em,id))||_lsGet(DB_KEY)||'null'); if(d&&d.profile&&d.profile.name) return d.profile.name; }catch(e){} return 'ReamBook'; }
 function ensureReg(em){ let reg=readReg(em); if(!reg){ reg={ shops:[{id:'main', name:peekShopName(em,'main')}], active:'main' }; writeReg(em,reg); } if(!reg.shops.some(s=>s.id===reg.active)) reg.active=reg.shops[0].id; return reg; }
 function curShopName(){ try{ const em=curEmail(); if(!em) return ''; const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active); return s?s.name:''; }catch(e){ return ''; } }
 window.openShops=(lockMsg)=>{
@@ -185,7 +185,12 @@ window.deleteShop=id=>{
     toast('Shop deleted'); openShops();
   });
 };
-function load(){ let raw=null; try{ raw=localStorage.getItem(DB_KEY_CUR); if(!raw&&!legacyHardClaimed()) raw=localStorage.getItem(DB_KEY); DB=JSON.parse(raw)||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency(); }
+function load(){ let raw=null; try{ raw=localStorage.getItem(DB_KEY_CUR); if(!raw&&!legacyHardClaimed()) raw=localStorage.getItem(DB_KEY); DB=JSON.parse(raw)||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
+  /* v210: purana default naam 'Paper Store' tha — app ka naam ReamBook hai.
+     Jis ne naam khud nahi badla, us ka default auto ReamBook ho jata hai. */
+  try{ if(DB.profile&&DB.profile.name==='Paper Store'){ DB.profile.name='ReamBook'; setTimeout(()=>{ try{ localStorage.setItem(DB_KEY_CUR,JSON.stringify(DB)); }catch(e){} },60);
+    const em=curEmail(); if(em){ const reg=readReg(em); if(reg){ const m=reg.shops.find(s=>s.id==='main'); if(m&&m.name==='Paper Store'){ m.name='ReamBook'; writeReg(em,reg); } } } } }catch(e){}
+}
 function save(){ localStorage.setItem(DB_KEY_CUR,JSON.stringify(DB)); }
 
 /* ---------- Cloud sync (Gmail login) ---------- */
@@ -276,7 +281,7 @@ window.confirmLogout=()=>{
   openSheet(`
   <div style="text-align:center;padding:6px 4px 2px">
     <div style="width:74px;height:74px;margin:2px auto 10px;border-radius:50%;background:linear-gradient(135deg,#ffe3e3,#ffc9c9);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 20px rgba(214,48,49,.25)">👋</div>
-    <h3 style="margin:0 0 6px">Sign out?</h3>
+    <h3 style="margin:0 0 6px">Sign out of ReamBook?</h3>
     <div style="font-size:15px;line-height:1.55">Are you sure you want to sign out<br><b>${esc(email)}</b><br>from <b>${esc(store)}</b>?</div>
     <div class="sub" style="margin:10px auto 2px;max-width:300px">Don't worry — all your shop data stays saved. Sign in again with the same Gmail and everything comes right back. ✨</div>
   </div>
@@ -703,7 +708,7 @@ function showView(id){
 document.querySelectorAll('.tt').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 
 /* ---------- Profile / backup ---------- */
-function renderStoreName(){ const nm=DB.profile.name||'Paper Store', el=$('store-name');
+function renderStoreName(){ const nm=DB.profile.name||'ReamBook', el=$('store-name');
   el.innerHTML=`<span class="sn-txt" id="sn-txt">${esc(nm)}</span>`;
   requestAnimationFrame(()=>{ const t=$('sn-txt'); if(!t) return;
     if(el.scrollWidth>el.clientWidth+8){ el.classList.add('marquee-on');
@@ -749,7 +754,7 @@ $('btn-profile').onclick=()=>{
   const av=p.logo?`<img src="${p.logo}">`:esc(init);
   openSheet(`${authSection()}<div class="profile-top"><div class="pav-wrap"><div class="pavatar">${av}</div>
     <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">${IC_CAM}</button></div>
-    <div><b style="font-size:19px">${esc(p.name||'Paper Store')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">${IC_EDIT}</button><div class="sub">${esc(p.email||'')}</div></div></div>
+    <div><b style="font-size:19px">${esc(p.name||'ReamBook')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">${IC_EDIT}</button><div class="sub">${esc(p.email||'')}</div></div></div>
     <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
     <div class="menu-row" onclick="openShops()"><span class="ic">${IC_SHOP}</span> Switch shop <span class="sub">${esc(curShopName())}</span><span class="arw">›</span></div>
     <div class="lbl" style="margin:10px 0">YOUR DATA</div>
@@ -802,7 +807,7 @@ window.editProfile=()=>{
     <input id="pf-email" value="${esc(DB.profile.email||'')}" placeholder="Email" inputmode="email">
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button><button class="btn-go" onclick="saveProfile()">Save</button></div>`);
 };
-window.saveProfile=()=>{ DB.profile.name=$('pf-name').value.trim()||'Paper Store'; DB.profile.phone=$('pf-phone').value.trim(); DB.profile.address=$('pf-addr').value.trim(); DB.profile.email=$('pf-email').value.trim(); save(); renderStoreName(); closeSheet(); toast('✅ Saved'); };
+window.saveProfile=()=>{ DB.profile.name=$('pf-name').value.trim()||'ReamBook'; DB.profile.phone=$('pf-phone').value.trim(); DB.profile.address=$('pf-addr').value.trim(); DB.profile.email=$('pf-email').value.trim(); save(); renderStoreName(); closeSheet(); toast('✅ Saved'); };
 window.resetAll=()=>{
   confirmDlg('Delete ALL data?','This will erase everything in the app. Are you sure?','DELETE',()=>{
     confirmDlg('Final warning','Really delete everything? This cannot be undone.','YES, DELETE',()=>{
@@ -2792,7 +2797,7 @@ function billPrintHtml(s){
   const cl=[prof.phone?('Phone: '+esc(prof.phone)):'',prof.email?('Email: '+esc(prof.email)):''].filter(Boolean).join(' | ');
   return `<div class="billprint">
   <div class="bp-banner" style="background:linear-gradient(135deg,${bc[0]},${bc[1]})">
-    <div class="bp-name">${esc(String(prof.name||'Paper Store').toUpperCase())}</div>
+    <div class="bp-name">${esc(String(prof.name||'ReamBook').toUpperCase())}</div>
     ${prof.address?`<div class="bp-sub">${esc(prof.address)}</div>`:''}
     ${cl?`<div class="bp-sub">${cl}</div>`:''}
     <div class="bp-tag">${s.kind==='wholesale'?'WHOLESALE':'SHOP SALE'}</div>
@@ -2877,7 +2882,7 @@ function billPDF(s){
   for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const c=col||[0,0,0];doc.setTextColor(c[0],c[1],c[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const WH=[255,255,255];
-  txt(String(prof.name||'Paper Store').toUpperCase(),W/2,11+6*f,24*f,true,'center',WH);
+  txt(String(prof.name||'ReamBook').toUpperCase(),W/2,11+6*f,24*f,true,'center',WH);
   const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
   if(cl)txt(cl,W/2,19+6*f,10*f,false,'center',WH);
   txt(s.kind==='wholesale'?'WHOLESALE':'SHOP SALE',W-M,28+6*f,15*f,true,'right',WH);
@@ -2951,7 +2956,7 @@ function creditPDF(c){
   for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const WH=[255,255,255],GREEN=[22,163,74],RED=[220,38,38];
-  txt(String(prof.name||'Paper Store').toUpperCase(),W/2,11+6*f,24*f,true,'center',WH);
+  txt(String(prof.name||'ReamBook').toUpperCase(),W/2,11+6*f,24*f,true,'center',WH);
   const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
   if(cl)txt(cl,W/2,19+6*f,10*f,false,'center',WH);
   txt('CREDIT STATEMENT',M,28+6*f,15*f,true,'left',WH);
@@ -3061,7 +3066,7 @@ function dateHistPDF(c,dk,entries){
   for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const WH=[255,255,255];
-  txt(String(prof.name||'Paper Store').toUpperCase(),W/2,11,20,true,'center',WH);
+  txt(String(prof.name||'ReamBook').toUpperCase(),W/2,11,20,true,'center',WH);
   const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
   if(cl)txt(cl,W/2,19,9.5,false,'center',WH);
   txt('CREDIT HISTORY',M,28,14,true,'left',WH);
@@ -3130,7 +3135,7 @@ function selectedHistPDF(c,dates){
   const WH=[255,255,255], BH=46, GN=48;
   const txt=(t,x,yy,sz,bold,align,col)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz);const cc=col||[0,0,0];doc.setTextColor(cc[0],cc[1],cc[2]);doc.text(String(t),x,yy,{align:align||'left'});doc.setTextColor(0,0,0);};
   const head=(l1,l2,l3)=>{ for(let i=0;i<GN;i++){const k=i/(GN-1);doc.setFillColor(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);doc.rect(W*i/GN,0,W/GN+0.3,BH,'F');}
-    txt(String(prof.name||'Paper Store').toUpperCase(),W/2,11,20,true,'center',WH);
+    txt(String(prof.name||'ReamBook').toUpperCase(),W/2,11,20,true,'center',WH);
     const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join(' \u00b7 ');
   if(cl)txt(cl,W/2,19,9.5,false,'center',WH);
     txt(l1,M,28,14,true,'left',WH);
@@ -3282,7 +3287,7 @@ function _billCanvas(s){
   const g=x.createLinearGradient(0,0,W,0); g.addColorStop(0,bc[0]); g.addColorStop(1,bc[1]);
   x.fillStyle=g; x.fillRect(0,0,W,172);
   x.fillStyle='#fff'; x.textAlign='center';
-  const nm=String(prof.name||'Paper Store').toUpperCase();
+  const nm=String(prof.name||'ReamBook').toUpperCase();
   _fitFont(x,nm,iw,46); x.fillText(nm,W/2,66);
   const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join('  ·  ');
   x.font=F(23,false); if(cl) x.fillText(cl,W/2,108);
@@ -3367,7 +3372,7 @@ function _creditCanvas(c){
   const g=x.createLinearGradient(0,0,W,0); g.addColorStop(0,bc[0]); g.addColorStop(1,bc[1]);
   x.fillStyle=g; x.fillRect(0,0,W,172);
   x.fillStyle='#fff'; x.textAlign='center';
-  const nm=String(prof.name||'Paper Store').toUpperCase();
+  const nm=String(prof.name||'ReamBook').toUpperCase();
   _fitFont(x,nm,iw,46); x.fillText(nm,W/2,66);
   const cl=[prof.address,prof.phone?('Phone: '+prof.phone):'',prof.email||''].filter(Boolean).join('  ·  ');
   x.font=F(23,false); if(cl) x.fillText(cl,W/2,108);
