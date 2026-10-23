@@ -491,6 +491,7 @@ window.openSettings=()=>{
   <div class="lbl" style="margin:8px 0 2px">NOTIFICATIONS</div>
   <div class="menu-row" onclick="toggleBellAlert()"><span class="ic">🔔</span><div><div>Overdue bell alert</div><div class="sub">Bell rings when a promise date passes</div></div><button id="bell-tswitch" class="tswitch${DB.profile.bellAlert!==false?' on':''}" onclick="event.stopPropagation();toggleBellAlert()"><span class="tlbl">${DB.profile.bellAlert!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="menu-row" onclick="togglePhoneAlarm()"><span class="ic">⏰</span><div><div>Phone alarm</div><div class="sub">Notification alarm at the promise time — even if the app is closed</div></div><button id="alarm-tswitch" class="tswitch${DB.profile.phoneAlarm!==false?' on':''}" onclick="event.stopPropagation();togglePhoneAlarm()"><span class="tlbl">${DB.profile.phoneAlarm!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="menu-row" onclick="openAlarmSounds()"><span class="ic">🎵</span><div><div>Alarm sound</div><div class="sub">${alarmSoundName()} — tap to change &amp; hear</div></div><span class="arw">›</span></div>
   <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
   <div class="menu-row" onclick="openTabOrder()"><span class="ic">📑</span><div><div>Tab order</div><div class="sub">${tabOrder().map(k=>TAB_LABEL[k]).join(', ')} — tap to change</div></div><span class="arw">›</span></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
@@ -2468,7 +2469,8 @@ function promiseDue(c){
 function syncAlarms(){
   try{
     if(!window.AndroidApp||!AndroidApp.syncAlarms) return;
-    if(DB.profile&&DB.profile.phoneAlarm===false){ AndroidApp.syncAlarms('[]'); return; }
+    const sound=(DB.profile&&DB.profile.alarmSound)||'default';
+    if(DB.profile&&DB.profile.phoneAlarm===false){ AndroidApp.syncAlarms(JSON.stringify({sound,list:[]})); return; }
     const now=Date.now();
     const t12=t=>{ if(!t) return ''; const p=String(t).split(':'); let h=parseInt(p[0])||0; const m=String(parseInt(p[1])||0).padStart(2,'0'); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+m+' '+ap; };
     const list=DB.customers.filter(c=>c.promiseDate&&custBal(c)>0.005)
@@ -2476,9 +2478,27 @@ function syncAlarms(){
         time:(fmtDate(c.promiseDate)+' '+t12(c.promiseTime)).trim(),
         ts:new Date(c.promiseDate+'T'+(c.promiseTime||'10:00')).getTime() }))
       .filter(a=>a.ts>now).sort((a,b)=>a.ts-b.ts).slice(0,40);
-    AndroidApp.syncAlarms(JSON.stringify(list));
+    AndroidApp.syncAlarms(JSON.stringify({sound,list}));
   }catch(e){}
 }
+const ALARM_SOUNDS=[
+  {k:'default',n:'Default alarm',d:'Your phone\u2019s own alarm tone'},
+  {k:'bell',n:'Bell',d:'Classic bell strikes'},
+  {k:'beeps',n:'Beeps',d:'Loud repeating beeps'},
+  {k:'chime',n:'Chime',d:'Soft rising chime'},
+  {k:'digital',n:'Digital',d:'Sharp digital blips'},
+  {k:'siren',n:'Siren',d:'Alternating siren tones'}];
+function alarmSoundName(){ const s=ALARM_SOUNDS.find(x=>x.k===((DB.profile&&DB.profile.alarmSound)||'default')); return s?s.n:'Default alarm'; }
+window.openAlarmSounds=()=>{
+  const cur=(DB.profile&&DB.profile.alarmSound)||'default';
+  openSheet(`<h3>🎵 Alarm sound</h3>
+  <div class="sub" style="margin:2px 0 8px">Tap a sound to select it — it will play so you can hear it. This sound rings when a customer's promise time is over.</div>
+  ${ALARM_SOUNDS.map(s=>`<div class="menu-row" onclick="setAlarmSound('${s.k}')"><span class="radio${s.k===cur?' on':''}"></span><div><div>${s.n}</div><div class="sub">${s.d}</div></div></div>`).join('')}
+  <div class="mrow"><button class="btn-ghost" onclick="openSettings()">Back</button></div>`);
+};
+window.setAlarmSound=k=>{ DB.profile.alarmSound=k; save(); syncAlarms();
+  try{ if(window.AndroidApp&&AndroidApp.previewAlarmSound) AndroidApp.previewAlarmSound(k); }catch(e){}
+  openAlarmSounds(); };
 function updateBellBadge(){
   const n=DB.customers.filter(promiseDue).length;
   const b=$('bell-badge');
