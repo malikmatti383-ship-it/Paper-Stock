@@ -1,5 +1,5 @@
 /* Paper Stock offline support — v176: first-launch Gmail login screen (one-time login, then fully offline) + subscription (manual payment) + payment QR codes + new prices (300/1566/2664) + instant open (serve cache first, refresh in background) */
-const CACHE='paper-stock-v205';
+const CACHE='paper-stock-v206';
 const ASSETS=['./','./index.html','./app.js','./auth.js?v=1','./lib/jspdf.umd.min.js','./style.css','./manifest.json','./icon.svg'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));

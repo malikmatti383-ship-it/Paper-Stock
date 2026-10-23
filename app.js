@@ -100,8 +100,31 @@ window.setCurrency=code=>{
 
 /* ---------- Data ---------- */
 function defDB(){ return { profile:{name:'Paper Store',email:'',logo:''}, products:[], sales:[], expenses:[], customers:[], printQueue:[], seq:{p:1,s:1,e:1,c:1,item:1} }; }
-function load(){ try{ DB=JSON.parse(localStorage.getItem(DB_KEY))||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency(); }
-function save(){ localStorage.setItem(DB_KEY,JSON.stringify(DB)); }
+/* v206: PER-ACCOUNT data — har Gmail ka data phone par us ke APNE slot me
+   rehta hai. Naya account = bilkul fresh; purana account wapas login ho to
+   us ka data wapas. Purana single store (paperstock_v1) pehle sahi login
+   par usi account ko claim ho jata hai jis ka wo data hai. */
+function slotKey(em){ return DB_KEY+'@'+String(em||'').toLowerCase().trim(); }
+function _lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function _lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function _lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+let DB_KEY_CUR=DB_KEY+'@gate';
+function legacyHardClaimed(){ return !!_lsGet('ps_legacy_hard'); }
+function claimLegacyFor(em){
+  em=String(em||'').toLowerCase().trim(); if(!em) return;
+  const legacy=_lsGet(DB_KEY); if(!legacy||legacyHardClaimed()) return;
+  let owner=em; try{ const pe=(JSON.parse(legacy).profile||{}).email; if(pe) owner=String(pe).toLowerCase().trim(); }catch(e){}
+  if(!_lsGet(slotKey(owner))) _lsSet(slotKey(owner), legacy);
+  _lsDel(DB_KEY); _lsSet('ps_legacy_hard', owner);
+}
+(function initDbSlot(){
+  let em=_lsGet('ps_active_email')||'';
+  const tok=window.PaperAuth&&PaperAuth.getToken&&PaperAuth.getToken();
+  if(!em&&tok){ try{ const u=JSON.parse(_lsGet('ps_user')||'null'); if(u&&u.email) em=String(u.email).toLowerCase().trim(); }catch(e){} if(em) _lsSet('ps_active_email',em); }
+  if(tok&&em) DB_KEY_CUR=slotKey(em);
+})();
+function load(){ let raw=null; try{ raw=localStorage.getItem(DB_KEY_CUR); if(!raw&&!legacyHardClaimed()) raw=localStorage.getItem(DB_KEY); DB=JSON.parse(raw)||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency(); }
+function save(){ localStorage.setItem(DB_KEY_CUR,JSON.stringify(DB)); }
 
 /* ---------- Cloud sync (Gmail login) ---------- */
 let syncCtl=null, applyingRemote=false, syncedAt=0;
@@ -148,7 +171,7 @@ function authSection(){
     <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b> ${prem?`<span class="pkg-pill" id="pkg-pill">${esc(pkg||'Premium')}</span>`:`<span class="pkg-pill free">Free</span>`}<div class="sub">${esc(em)}</div>${u&&u.uid?`<div class="sub" style="margin-top:8px;display:flex;align-items:center;gap:7px">Your ID: <b style="color:#14213d;font-size:13px">RB-${esc(u.uid)}</b><span onclick="copyTxt('RB-${esc(u.uid)}')" title="Copy ID" style="background:var(--pp-soft,#eef3ff);border-radius:8px;padding:3px 9px;font-size:13px;cursor:pointer;line-height:1.25">📋</span></div>`:''}</div></div>`;
 }
 window.doLogout=()=>{ if(!window.PaperAuth) return;
-  PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); }catch(e){} location.reload(); });
+  PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); localStorage.removeItem('ps_active_email'); }catch(e){} location.reload(); });
 };
 function initAuth(){
   if(!window.PaperAuth) return;
@@ -156,7 +179,11 @@ function initAuth(){
   if(!PaperAuth.isConfigured()||!PaperAuth.getToken()) return;
   // v187: cloud backup is a Premium feature — always refresh the plan state,
   // then start sync only for Premium users; free users get the red lock.
-  PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} refreshCloudGate(); }).catch(()=>{ refreshCloudGate(); });
+  PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){}
+    if(fresh&&me&&me.email){ try{ claimLegacyFor(me.email); _lsSet('ps_active_email', String(me.email).toLowerCase().trim()); }catch(e){}
+      if(DB_KEY_CUR!==slotKey(me.email)){ location.reload(); return; } }
+    else if(me&&me.email&&!_lsGet('ps_active_email')){ _lsSet('ps_active_email', String(me.email).toLowerCase().trim()); }
+    refreshCloudGate(); }).catch(()=>{ refreshCloudGate(); });
   refreshCloudGate();
 }
 function refreshCloudGate(){
@@ -204,7 +231,7 @@ function clVerify(ids){
   if(!/^\d{6}$/.test(cd)){ clMsg(ids.msg,'Enter the 6-digit code from your email.'); return; }
   const btn=$(ids.verifyBtn);
   if(btn){ btn.disabled=true; btn.textContent='Checking\u2026'; }
-  PaperAuth.verifyCode(clEmail, cd).then(()=>{ location.reload(); })
+  PaperAuth.verifyCode(clEmail, cd).then(()=>{ try{ claimLegacyFor(clEmail); _lsSet('ps_active_email', String(clEmail).toLowerCase().trim()); }catch(e){} location.reload(); })
     .catch(e=>{
       clMsg(ids.msg,(e&&e.message)||'Login failed. Please try again.');
       if(btn){ btn.disabled=false; btn.textContent='Login'; }
