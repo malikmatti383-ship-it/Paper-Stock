@@ -487,13 +487,13 @@ window.openSettings=()=>{
   const on=DB.profile.lossAsk!==false;
   openSheet(`<h3>⚙️ Settings</h3>
   <div class="lbl" style="margin:8px 0 2px">WARNINGS</div>
-  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">⚠️</span><div><div>Loss warning</div><div class="sub">Warns when below cost — sale, wholesale, edit & credit</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="menu-row" onclick="toggleLossAsk()"><span class="ic">${IC_WARN}</span><div><div>Loss warning</div><div class="sub">Warns when below cost — sale, wholesale, edit & credit</div></div><button id="loss-tswitch" class="tswitch${on?' on':''}" onclick="event.stopPropagation();toggleLossAsk()"><span class="tlbl">${on?'On':'Off'}</span><span class="tknob"></span></button></div>
   <div class="lbl" style="margin:8px 0 2px">NOTIFICATIONS</div>
-  <div class="menu-row" onclick="toggleBellAlert()"><span class="ic">🔔</span><div><div>Overdue bell alert</div><div class="sub">Bell rings when a promise date passes</div></div><button id="bell-tswitch" class="tswitch${DB.profile.bellAlert!==false?' on':''}" onclick="event.stopPropagation();toggleBellAlert()"><span class="tlbl">${DB.profile.bellAlert!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
-  <div class="menu-row" onclick="togglePhoneAlarm()"><span class="ic">⏰</span><div><div>Phone alarm</div><div class="sub">Notification alarm at the promise time — even if the app is closed</div></div><button id="alarm-tswitch" class="tswitch${DB.profile.phoneAlarm!==false?' on':''}" onclick="event.stopPropagation();togglePhoneAlarm()"><span class="tlbl">${DB.profile.phoneAlarm!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
-  <div class="menu-row" onclick="openAlarmSounds()"><span class="ic">🎵</span><div><div>Alarm sound</div><div class="sub">${alarmSoundName()} — tap to change &amp; hear</div></div><span class="arw">›</span></div>
+  <div class="menu-row" onclick="toggleBellAlert()"><span class="ic">${IC_BELL}</span><div><div>Overdue bell alert</div><div class="sub">Bell rings when a promise date passes</div></div><button id="bell-tswitch" class="tswitch${DB.profile.bellAlert!==false?' on':''}" onclick="event.stopPropagation();toggleBellAlert()"><span class="tlbl">${DB.profile.bellAlert!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="menu-row" onclick="togglePhoneAlarm()"><span class="ic">${IC_ALARM}</span><div><div>Phone alarm</div><div class="sub">Notification alarm at the promise time — even if the app is closed</div></div><button id="alarm-tswitch" class="tswitch${DB.profile.phoneAlarm!==false?' on':''}" onclick="event.stopPropagation();togglePhoneAlarm()"><span class="tlbl">${DB.profile.phoneAlarm!==false?'On':'Off'}</span><span class="tknob"></span></button></div>
+  <div class="menu-row" onclick="openAlarmSounds()"><span class="ic">${IC_MUSIC}</span><div><div>Alarm sound</div><div class="sub">${alarmSoundName()} — tap to change &amp; hear</div></div><span class="arw">›</span></div>
   <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
-  <div class="menu-row" onclick="openTabOrder()"><span class="ic">📑</span><div><div>Tab order</div><div class="sub">${tabOrder().map(k=>TAB_LABEL[k]).join(', ')} — tap to change</div></div><span class="arw">›</span></div>
+  <div class="menu-row" onclick="openTabOrder()"><span class="ic">${IC_LAYERS}</span><div><div>Tab order</div><div class="sub">${tabOrder().map(k=>TAB_LABEL[k]).join(', ')} — tap to change</div></div><span class="arw">›</span></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 window.openTabOrder=()=>{
@@ -533,6 +533,23 @@ window.pickCreditContact=()=>pickContact((n,ph)=>{ if(n) $('cc-name').value=n; i
 $('sheet').onclick=e=>{ if(e.target.id==='sheet') closeSheet(); };
 /* Clean trash icon used for every delete option */
 const TRASH='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+
+/* v205: one clean line-icon set for all menu rows (replaces emoji icons) */
+const _svg=(inner,s)=>`<svg width="${s||20}" height="${s||20}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const IC_THEME=_svg('<circle cx="12" cy="12" r="9"/><circle cx="8.4" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="7.4" r="1.2" fill="currentColor"/><circle cx="15.6" cy="10" r="1.2" fill="currentColor"/><circle cx="9.6" cy="15.2" r="1.2" fill="currentColor"/>');
+const IC_SET=_svg('<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>');
+const IC_UPD=_svg('<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>');
+const IC_DL=_svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>');
+const IC_UL=_svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',26);
+const IC_FOLDER=_svg('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',26);
+const IC_EDIT=_svg('<path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>');
+const IC_OUT=_svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>');
+const IC_CAM=_svg('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',17);
+const IC_BELL=_svg('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>');
+const IC_ALARM=_svg('<circle cx="12" cy="13" r="7"/><polyline points="12 10 12 13 14.5 15"/><path d="M5.5 2.5 3 5"/><path d="M18.5 2.5 21 5"/>');
+const IC_MUSIC=_svg('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>');
+const IC_WARN=_svg('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>');
+const IC_LAYERS=_svg('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>');
 
 /* ---------- Nav ---------- */
 function showView(id){
@@ -594,22 +611,22 @@ $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
   const av=p.logo?`<img src="${p.logo}">`:esc(init);
   openSheet(`${authSection()}<div class="profile-top"><div class="pav-wrap"><div class="pavatar">${av}</div>
-    <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">📷</button></div>
-    <div><b style="font-size:19px">${esc(p.name||'Paper Store')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">✏️</button><div class="sub">${esc(p.email||'')}</div></div></div>
+    <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">${IC_CAM}</button></div>
+    <div><b style="font-size:19px">${esc(p.name||'Paper Store')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">${IC_EDIT}</button><div class="sub">${esc(p.email||'')}</div></div></div>
     <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
     <div class="lbl" style="margin:10px 0">YOUR DATA</div>
     <div class="mrow" style="margin-bottom:6px">
-      <button class="btn-ghost" onclick="cloudBackup()">☁️⬆️<br><b>Back up</b><br><small>Download file</small></button>
-      <button class="btn-ghost" onclick="$('import-file').click()">⬇️<br><b>Restore</b><br><small>From file</small></button>
+      <button class="btn-ghost" onclick="cloudBackup()"><span class="big-ic">${IC_UL}</span><br><b>Back up</b><br><small>Download file</small></button>
+      <button class="btn-ghost" onclick="$('import-file').click()"><span class="big-ic">${IC_FOLDER}</span><br><b>Restore</b><br><small>From file</small></button>
     </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
-    <div class="menu-row" onclick="openThemePicker()"><span class="ic">${themeDot(curTheme())}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="openSettings()"><span class="ic">⚙️</span> Settings<span class="arw">›</span></div>
-    <div class="menu-row" onclick="checkAppUpdate()"><span class="ic">🔄</span> Update <span id="upd-dot" style="display:none;width:9px;height:9px;border-radius:50%;background:#22c55e"></span><span class="sub" id="upd-txt"></span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
+    <div class="menu-row" onclick="openThemePicker()"><span class="ic">${IC_THEME}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
+    <div class="menu-row" onclick="openSettings()"><span class="ic">${IC_SET}</span> Settings<span class="arw">›</span></div>
+    <div class="menu-row" onclick="checkAppUpdate()"><span class="ic">${IC_UPD}</span> Update <span id="upd-dot" style="display:none;width:9px;height:9px;border-radius:50%;background:#22c55e"></span><span class="sub" id="upd-txt"></span><span class="arw">›</span></div>
+    <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">${IC_DL}</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
+    <div class="menu-row" onclick="editProfile()"><span class="ic">${IC_EDIT}</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
-    ${(window.PaperAuth&&PaperAuth.getToken())?`<div class="menu-row" onclick="doLogout()"><span class="ic">↪️</span> <span style="color:#b3261e;font-weight:700">Sign out</span></div>`:''}
+    ${(window.PaperAuth&&PaperAuth.getToken())?`<div class="menu-row" onclick="doLogout()"><span class="ic ic-red">${IC_OUT}</span> <span style="color:#b3261e;font-weight:700">Sign out</span></div>`:''}
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
   try{ refreshUpdateBadge(); }catch(e){}
   try{ if(window.PaperAuth&&PaperAuth.getToken()) PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; _cachePkg(); const pel=$('pkg-pill'); if(pel){ const pn=_activePkgName(); if(pn) pel.textContent=pn; } }).catch(()=>{}); }catch(e){}

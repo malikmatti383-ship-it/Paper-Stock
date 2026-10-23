@@ -210,7 +210,11 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .profile-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .pavatar{width:64px;height:64px;border-radius:50%;background:var(--teal);color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center}
 .menu-row{display:flex;align-items:center;gap:12px;padding:14px 4px;font-size:16px;border-top:1px solid #eef1f6;cursor:pointer}
-.menu-row .ic{font-size:20px;width:28px}
+.menu-row .ic{width:40px;height:40px;border-radius:12px;background:var(--pp-soft,#eef3f9);color:var(--pp-teal-d,#0b6fa4);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.menu-row .ic svg{width:20px;height:20px}
+.menu-row.danger-t .ic,.menu-row .ic-red{background:#fdecec;color:#d7263d}
+.big-ic{display:inline-flex;color:var(--pp-teal-d,#0b6fa4)}
+.big-ic svg{width:26px;height:26px}
 .menu-row .arw{margin-left:auto;color:#b6bfcc}
 .radio{width:22px;height:22px;border-radius:50%;border:2px solid #b6bfcc;flex:none;position:relative}
 .radio.on{border-color:var(--teal)}
