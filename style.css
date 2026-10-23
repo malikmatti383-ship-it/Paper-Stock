@@ -668,3 +668,4 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .btn-subscribe:active{transform:scale(.98)}
 .pkg-pill{display:inline-block;background:#e3f2fb;color:#0077BE;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;vertical-align:middle}
 .pkg-pill.free{background:#eef1f6;color:#5b6b83}
+.pc-save{display:inline-block;background:#e2f4e5;color:#177245;font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;margin-left:6px;vertical-align:2px}

@@ -281,7 +281,12 @@ function _cachePkg(){ try{ const lastOk=_subMine.filter(x=>x.status==='success')
 function _activePkgName(){ const lastOk=_subMine.filter(x=>x.status==='success').sort((a,b)=>new Date(b.paidAt||b.createdAt||0)-new Date(a.paidAt||a.createdAt||0))[0]; if(lastOk) return PLAN_NAME[lastOk.plan]||''; try{ return PLAN_NAME[localStorage.getItem('ps_pkg')||'']||''; }catch(e){ return ''; } }
 /* v191: clean plan cards (no discount %, no strikethrough) */
 function planCardsHtml(plans){
-  const card=(p,cls)=>`<div class="plan-card ${cls} ${p.key===_subPlan?'sel':''}" onclick="pickSubPlan('${p.key}')"><span class="pc-check">✓</span>${p.key==='yearly'?'<span class="pc-badge">Best value</span>':''}<div class="pc-name">${PLAN_NAME[p.key]||esc(p.label||p.key)}</div><div class="pc-price">Rs ${esc(p.amountRs)}</div><div class="pc-per">${PLAN_DUR[p.key]||(p.days+' days')}${p.key==='yearly'?' · Rs 225/mo':''}</div></div>`;
+  const baseM=((plans.find(p=>p.key==='monthly')||{}).amountRs)||300;
+  const card=(p,cls)=>{
+    const full=baseM*Math.max(1,Math.round(p.days/30));
+    const pct=full>p.amountRs?Math.round((1-p.amountRs/full)*100):0;
+    return `<div class="plan-card ${cls} ${p.key===_subPlan?'sel':''}" onclick="pickSubPlan('${p.key}')"><span class="pc-check">✓</span>${p.key==='yearly'?`<span class="pc-badge">${pct?`Save ${pct}%`:'Best value'}</span>`:''}<div class="pc-name">${PLAN_NAME[p.key]||esc(p.label||p.key)}${pct&&p.key!=='yearly'?`<span class="pc-save">−${pct}%</span>`:''}</div><div class="pc-price">Rs ${esc(p.amountRs)}</div><div class="pc-per">${PLAN_DUR[p.key]||(p.days+' days')}${p.key==='yearly'?' · Rs 225/mo':''}</div></div>`;
+  };
   const by=k=>plans.find(p=>p.key===k);
   const order=[['monthly','pc-a'],['halfyearly','pc-b'],['yearly','plan-hero']];
   const cards=order.map(([k,cls])=>by(k)?card(by(k),cls):'').join('');
