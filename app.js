@@ -141,10 +141,11 @@ function authSection(){
   let u=null; try{ u=JSON.parse(localStorage.getItem('ps_user')||'null'); }catch(e){}
   const nm=u?(u.name||u.email):'...', em=u?(u.email||''):'' ;
   const av=u&&u.picture?`<img src="${u.picture}">`:esc((nm||'G').charAt(0).toUpperCase());
+  const prem=_subPremiumActive(u);
+  let pkg=''; try{ pkg=PLAN_NAME[localStorage.getItem('ps_pkg')||'']||''; }catch(e){}
   return `<div class="mrow" style="align-items:center;margin-bottom:10px">
     <div class="pavatar" style="width:44px;height:44px;font-size:18px;flex-shrink:0">${av}</div>
-    <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b><div class="sub">${esc(em)}</div></div>
-    <button class="btn-ghost" style="flex-shrink:0" onclick="doLogout()">Logout</button></div>`;
+    <div style="flex:1;min-width:0"><b style="font-size:15px">${esc(nm)}</b> ${prem?`<span class="pkg-pill" id="pkg-pill">${esc(pkg||'Premium')}</span>`:`<span class="pkg-pill free">Free</span>`}<div class="sub">${esc(em)}</div></div></div>`;
 }
 window.doLogout=()=>{ if(!window.PaperAuth) return;
   PaperAuth.logout().then(()=>{ try{ localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); }catch(e){} location.reload(); });
@@ -244,8 +245,8 @@ window.openCodeLogin=function(){
 /* ---------- Subscription (manual payment) ---------- */
 const SUB_PLANS_FALLBACK=[
   {key:'monthly',amountRs:300,days:30,label:'Basic'},
-  {key:'halfyearly',amountRs:1566,days:180,label:'Pro'},
-  {key:'yearly',amountRs:2664,days:365,label:'Premium'},
+  {key:'halfyearly',amountRs:1600,days:180,label:'Pro'},
+  {key:'yearly',amountRs:2700,days:365,label:'Premium'},
 ];
 let _subPlan='monthly', _subCfg=null, _subMine=[], _subSf=null;
 /* Instant-paint cache: plans + payment numbers change rarely, so keep the last
@@ -263,19 +264,28 @@ function initPlanBox(){
   if(!window.PaperAuth||!PaperAuth.isConfigured()||!PaperAuth.getToken()) return;
   PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){} renderPlanBox(); }).catch(()=>{});
   PaperAuth.api('/api/pay/manual/config').then(c=>{ _subCfg=c; _savePayCfg(); renderPlanBox(); }).catch(()=>{});
-  PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; renderPlanBox(); }).catch(()=>{});
+  PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; _cachePkg(); renderPlanBox(); }).catch(()=>{});
   PaperAuth.api('/api/safepay/config').then(c=>{ _subSf=c; _savePayCfg(); renderPlanBox(); }).catch(()=>{});
   sfPollPending(0);
 }
-function subPlanRows(plans){
-  const baseP=((plans.find(p=>p.key==='monthly')||plans[0])||{}).amountRs||300;
-  return plans.map(p=>{
-    const full=baseP*Math.max(1,Math.round(p.days/30));
-    const pct=full>p.amountRs?Math.round((1-p.amountRs/full)*100):0;
-    const price=pct?`<span style="text-align:right"><s class="sub">Rs ${full}</s><br><b>Rs ${esc(p.amountRs)}</b></span>`:`<b>Rs ${esc(p.amountRs)}</b>`;
-    const save=pct?` <span style="color:#1a9e54;font-weight:700;font-size:12px">Save ${pct}%</span>`:'';
-    return `<div class="menu-row" onclick="pickSubPlan('${p.key}')"><span>${p.key===_subPlan?'🔘':'⚪'}</span><span style="flex:1"><b>${esc(p.key==='monthly'?'Basic':p.key==='halfyearly'?'Pro':'Premium')}</b> <span class="sub">${p.days>=360?'1 year':p.days>=180?'6 months':p.days+' days'}</span>${save}</span>${price}</div>`;
-  }).join('');
+const PLAN_NAME={monthly:'Basic',halfyearly:'Pro',yearly:'Premium'};
+const PLAN_DUR={monthly:'30 days',halfyearly:'6 months',yearly:'1 year'};
+const GET_HTML=`<div class="get-card">
+  <div class="get-row"><div class="get-ic">☁️</div><div><b>Cloud backup</b><div class="sub">Saved automatically, so it's never lost.</div></div></div>
+  <div class="get-row"><div class="get-ic">🔄</div><div><b>Multi-device sync</b><div class="sub">Same login — your data on up to 5 devices.</div></div></div>
+  <div class="get-row"><div class="get-ic">⬇️</div><div><b>Backup &amp; restore</b><div class="sub">Download a copy anytime, restore it on a new phone.</div></div></div>
+  <div class="get-row"><div class="get-ic">📴</div><div><b>Works offline</b><div class="sub">Syncs by itself whenever internet is available.</div></div></div>
+  <div class="get-row"><div class="get-ic">✨</div><div><b>No ads</b><div class="sub">A clean app with nothing in your way.</div></div></div>
+</div>`;
+function _cachePkg(){ try{ const lastOk=_subMine.filter(x=>x.status==='success').sort((a,b)=>new Date(b.paidAt||b.createdAt||0)-new Date(a.paidAt||a.createdAt||0))[0]; if(lastOk) localStorage.setItem('ps_pkg',lastOk.plan); }catch(e){} }
+function _activePkgName(){ const lastOk=_subMine.filter(x=>x.status==='success').sort((a,b)=>new Date(b.paidAt||b.createdAt||0)-new Date(a.paidAt||a.createdAt||0))[0]; if(lastOk) return PLAN_NAME[lastOk.plan]||''; try{ return PLAN_NAME[localStorage.getItem('ps_pkg')||'']||''; }catch(e){ return ''; } }
+/* v191: clean plan cards (no discount %, no strikethrough) */
+function planCardsHtml(plans){
+  const card=(p,cls)=>`<div class="plan-card ${cls} ${p.key===_subPlan?'sel':''}" onclick="pickSubPlan('${p.key}')"><span class="pc-check">✓</span>${p.key==='yearly'?'<span class="pc-badge">Best value</span>':''}<div class="pc-name">${PLAN_NAME[p.key]||esc(p.label||p.key)}</div><div class="pc-price">Rs ${esc(p.amountRs)}</div><div class="pc-per">${PLAN_DUR[p.key]||(p.days+' days')}${p.key==='yearly'?' · Rs 225/mo':''}</div></div>`;
+  const by=k=>plans.find(p=>p.key===k);
+  const order=[['monthly','pc-a'],['halfyearly','pc-b'],['yearly','plan-hero']];
+  const cards=order.map(([k,cls])=>by(k)?card(by(k),cls):'').join('');
+  return `<div class="plan-grid">${cards||plans.map(p=>card(p,'')).join('')}</div>`;
 }
 function renderPlanBox(){
   const box=$('plan-box'); if(!box) return;
@@ -285,9 +295,8 @@ function renderPlanBox(){
   if(!plans.some(p=>p.key===_subPlan)) _subPlan=plans[0].key;
   let h='';
   if(active){
-    const lastOk=_subMine.filter(x=>x.status==='success').sort((a,b)=>new Date(b.paidAt||b.createdAt||0)-new Date(a.paidAt||a.createdAt||0))[0];
-    const pkgName=lastOk?({monthly:'Basic',halfyearly:'Pro',yearly:'Premium'})[lastOk.plan]||'':'';
-    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Cloud Backup active</b>${pkgName?`<div class="sub">Package: <b>${pkgName}</b></div>`:''}<div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>
+    const pkgName=_activePkgName();
+    h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="font-size:20px">⭐</span><div style="flex:1"><b>Cloud Backup active</b>${pkgName?` <span class="pkg-pill">${esc(pkgName)}</span>`:''}<div class="sub">Until ${_fmtDate(u.planExpiresAt)}</div></div></div>
     <div class="mrow" style="margin-bottom:10px">
       <button class="btn-ghost" onclick="cloudSyncNow()">☁️<br><b>Sync now</b><br><small>Back up to cloud</small></button>
       <button class="btn-ghost" onclick="cloudBackup()">⬇️<br><b>Backup file</b><br><small>Download a copy</small></button>
@@ -298,13 +307,6 @@ function renderPlanBox(){
     box.innerHTML=h; return;
   } else {
     h+=`<div class="mrow" style="align-items:center;margin-bottom:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#dc2626;font-size:16px;flex-shrink:0">🔒</span><div style="flex:1"><b>Cloud Backup is locked</b><div class="sub">Subscribe to turn on automatic cloud backup.</div></div></div>
-    <div class="lbl" style="margin:10px 0 6px">PREMIUM BENEFITS</div>
-    <div class="sub" style="line-height:2">
-      ☁️ <b>Automatic cloud backup</b> — all your sales, stock &amp; credit data, saved safely online<br>
-      📱 <b>Up to 5 devices</b> — same login, your data everywhere<br>
-      🔄 <b>Restore anytime</b> — change or lose your phone, your data comes back<br>
-      📴 <b>Works offline</b> — syncs by itself whenever internet is available
-    </div>
     <div class="lbl" style="margin:12px 0 6px">CHOOSE A PACKAGE</div>`;
   }
   if(!active&&u&&u.plan==='premium'){
@@ -312,11 +314,11 @@ function renderPlanBox(){
   }
   const pend=_subMine.filter(x=>x.status==='manual_pending');
   if(pend.length){
-    h+=pend.map(x=>`<div class="sub" style="margin-bottom:6px">⏳ <b>${esc(x.plan)}</b> — Rs ${esc(x.amountRs)} — payment sent, waiting for verification.</div>`).join('');
+    h+=pend.map(x=>`<div class="sub" style="margin-bottom:6px">⏳ <b>${esc(PLAN_NAME[x.plan]||x.plan)}</b> — Rs ${esc(x.amountRs)} — payment sent, waiting for verification.</div>`).join('');
   }
   const done=_subMine.filter(x=>x.status==='success').slice(0,2);
   if(done.length&&!active){
-    h+=done.map(x=>`<div class="sub" style="margin-bottom:6px">✅ <b>${esc(x.plan)}</b> payment verified.</div>`).join('');
+    h+=done.map(x=>`<div class="sub" style="margin-bottom:6px">✅ <b>${esc(PLAN_NAME[x.plan]||x.plan)}</b> payment verified.</div>`).join('');
   }
   const rej=_subMine.filter(x=>x.status==='rejected').slice(0,1);
   if(rej.length){
@@ -324,28 +326,32 @@ function renderPlanBox(){
   }
   if(_subSf&&_subSf.configured){
     const sel=plans.find(p=>p.key===_subPlan)||plans[0];
-    h+=`${subPlanRows(plans)}
-    <div class="sub" style="margin:8px 0">Pay online with card, JazzCash or Easypaisa. Premium activates automatically — no waiting, no approval.</div>
-    <button class="btn-go" style="width:100%" onclick="payWithSafepay()">Pay Rs ${esc(sel.amountRs)} — ${esc(sel.key==='monthly'?'Basic':sel.key==='halfyearly'?'Pro':'Premium')}</button>`;
+    h+=`${planCardsHtml(plans)}
+    <div style="font-size:17px;font-weight:800;margin:16px 0 8px">What you get</div>${GET_HTML}
+    <div class="sub" style="margin:12px 0 8px">Pay online with card, JazzCash or Easypaisa. Premium activates automatically — no waiting, no approval.</div>
+    <button class="btn-subscribe" onclick="payWithSafepay()">Pay Rs ${esc(sel.amountRs)} — ${esc(PLAN_NAME[sel.key]||'')}</button>`;
   } else if(!cfg){
     h+=`<div class="sub">Loading payment details…</div>`;
   } else if(!cfg.configured){
     h+=`<div class="sub">Subscription payments are being set up. Please check back soon.</div>`;
   } else {
-    const planRows=subPlanRows(plans);
+    const planRows=planCardsHtml(plans);
     const mlist=(cfg.methods&&cfg.methods.length)?cfg.methods:([['jazzcash','JazzCash',cfg.jazzcash],['easypaisa','Easypaisa',cfg.easypaisa]].filter(x=>x[2]).map(x=>({key:x[0],label:x[1],number:x[2].number,title:x[2].title})));
-    const numRow=m=>`<div class="mrow" style="align-items:center;margin:4px 0"><div style="flex:1"><div class="sub">${esc(m.label)}</div><b style="font-size:16px">${esc(m.number)}</b> <span class="sub">${esc(m.title||'')}</span></div><button class="btn-ghost" onclick="copyTxt('${esc(m.number)}')">Copy</button></div>`;
+    const numRow=m=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #f7f9fb"><div style="flex:1;min-width:0"><div class="sub" style="margin:0">${esc(m.label)}</div><b style="font-size:16px">${esc(m.number)}</b> <span class="sub">${esc(m.title||'')}</span></div><button class="copy-chip" onclick="copyTxt('${esc(m.number)}')">Copy</button></div>`;
     const QR_FOR={jazzcash:'img/pay-qr-jazzcash.jpg',bank:'img/pay-qr-bank.jpg'};
     const qrHtml=mlist.filter(m=>QR_FOR[m.key]).map(m=>`<div style="text-align:center;margin:8px 0"><div class="sub" style="margin-bottom:4px">${esc(m.label)} — scan to pay</div><img src="${QR_FOR[m.key]}" alt="${esc(m.label)} QR code" loading="lazy" onerror="this.parentNode.style.display='none'" onclick="window.open(this.src)" style="width:210px;max-width:82%;border-radius:10px;border:1px solid #e3e8f2;cursor:pointer"></div>`).join('');
+    const selP=plans.find(p=>p.key===_subPlan)||plans[0];
     h+=`${planRows}
-    <div class="sub" style="margin:8px 0 2px">Send the plan amount to any one of these:</div>
+    <div style="font-size:17px;font-weight:800;margin:16px 0 8px">What you get</div>${GET_HTML}
+    <div class="pay-card">
+    <div class="sub" style="margin:0 0 4px">Send <b style="color:#14213d">Rs ${esc(selP.amountRs)}</b> to any one of these:</div>
     ${mlist.map(numRow).join('')}${qrHtml}
-    <div class="sub" style="margin:8px 0">After sending, enter the <b>Transaction ID</b> from your payment app:</div>
+    <div class="sub" style="margin:10px 0 6px">After sending, enter the <b>Transaction ID</b> from your payment app:</div>
     <select id="sub-method" style="width:100%;margin-bottom:6px">${mlist.map(m=>`<option value="${esc(m.key)}">${esc(m.label)}</option>`).join('')}</select>
     <input id="sub-txn" placeholder="Transaction ID" autocapitalize="characters" style="width:100%;margin-bottom:6px">
     <input id="sub-sname" placeholder="Your name (optional)" style="width:100%;margin-bottom:6px">
-    <input id="sub-snum" placeholder="Your mobile number (optional)" inputmode="tel" style="width:100%;margin-bottom:8px">
-    <button class="btn-go" style="width:100%" onclick="submitSubPayment()">Submit payment</button>`;
+    <input id="sub-snum" placeholder="Your mobile number (optional)" inputmode="tel" style="width:100%;margin-bottom:10px">
+    <button class="btn-subscribe" onclick="submitSubPayment()">Submit payment</button></div>`;
   }
   box.innerHTML=h;
 }
@@ -559,8 +565,10 @@ $('btn-profile').onclick=()=>{
     <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">⬇️</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="editProfile()"><span class="ic">✏️</span> Edit business name<span class="arw">›</span></div>
     <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
+    ${(window.PaperAuth&&PaperAuth.getToken())?`<div class="menu-row" onclick="doLogout()"><span class="ic">↪️</span> <span style="color:#b3261e;font-weight:700">Sign out</span></div>`:''}
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
   try{ refreshUpdateBadge(); }catch(e){}
+  try{ if(window.PaperAuth&&PaperAuth.getToken()) PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; _cachePkg(); const pel=$('pkg-pill'); if(pel){ const pn=_activePkgName(); if(pn) pel.textContent=pn; } }).catch(()=>{}); }catch(e){}
 };
 $('btn-backup').onclick=()=>{ openCloudSheet(); };
 window.openCloudSheet=()=>{

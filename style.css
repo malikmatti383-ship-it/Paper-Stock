@@ -641,3 +641,30 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .sf-btns{display:flex;gap:10px;margin-top:20px}
 .sf-cancel{flex:1;border:2px solid #e2e8f0;background:#fff;border-radius:16px;padding:14px;font-weight:800;letter-spacing:1.5px;font-size:15px;cursor:pointer;color:#1c2733}
 .sf-apply{flex:1;border:none;background:linear-gradient(135deg,var(--teal-d),var(--teal));color:#fff;border-radius:16px;padding:14px;font-weight:800;letter-spacing:1.5px;font-size:15px;cursor:pointer;box-shadow:0 6px 16px rgba(14,134,184,.35)}
+
+/* --- v191: clean subscription sheet (BusinessX-inspired) --- */
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 2px}
+.plan-card{border:1.5px solid #e3e8f2;border-radius:18px;padding:14px;background:#fff;cursor:pointer;position:relative;display:flex;flex-direction:column;color:#14213d}
+.plan-card .pc-name{font-size:13px;color:#5b6b83;font-weight:700}
+.plan-card .pc-price{font-size:23px;font-weight:800;margin-top:auto;padding-top:18px;white-space:nowrap}
+.plan-card .pc-per{font-size:12px;color:#5b6b83;margin-top:2px}
+.plan-card .pc-check{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:#0077BE;color:#fff;display:none;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.plan-card.sel{border-color:#0077BE;box-shadow:0 4px 14px rgba(0,119,190,.18)}
+.plan-card.sel .pc-check{display:flex}
+.pc-a{grid-column:1;grid-row:1}.pc-b{grid-column:1;grid-row:2}
+.plan-hero{grid-column:2;grid-row:1/span 2;background:linear-gradient(160deg,#0090d8,#005f92);color:#fff;border:none}
+.plan-hero .pc-name{color:#d6efff}.plan-hero .pc-per{color:#d6efff}
+.plan-hero .pc-badge{align-self:flex-start;background:#1a9e54;color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;margin-bottom:8px}
+.plan-hero .pc-check{background:#fff;color:#0077BE}
+.get-card{border:1.5px solid #e9edf3;border-radius:18px;padding:4px 14px;background:#fff}
+.get-row{display:flex;gap:12px;padding:12px 0;border-top:1px solid #f0f3f7;align-items:flex-start}
+.get-row:first-child{border-top:none}
+.get-ic{width:42px;height:42px;border-radius:12px;background:#e3f2fb;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.get-row b{font-size:15px;color:#14213d}
+.get-row .sub{font-size:12.5px;line-height:1.45;margin-top:1px}
+.pay-card{border:1.5px solid #e9edf3;border-radius:18px;padding:12px 14px;background:#fff;margin-top:14px}
+.copy-chip{background:#eef3f7;border:none;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;color:#14213d;flex-shrink:0}
+.btn-subscribe{background:linear-gradient(180deg,#11456e,#0a2f4e);color:#fff;width:100%;border:none;border-radius:999px;padding:15px;font-size:17px;font-weight:800;letter-spacing:.4px;cursor:pointer;box-shadow:0 5px 14px rgba(10,47,78,.35)}
+.btn-subscribe:active{transform:scale(.98)}
+.pkg-pill{display:inline-block;background:#e3f2fb;color:#0077BE;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;vertical-align:middle}
+.pkg-pill.free{background:#eef1f6;color:#5b6b83}
