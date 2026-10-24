@@ -337,8 +337,9 @@
 if('serviceWorker' in navigator){ var _swt0=Date.now();
   function _swCheck(){ try{ navigator.serviceWorker.getRegistration().then(function(r){ if(r){ try{r.update()}catch(e){} } }); }catch(e){} _swt0=Date.now(); }
   document.addEventListener('visibilitychange',function(){ if(!document.hidden) _swCheck(); });
-  navigator.serviceWorker.addEventListener('controllerchange',function(){
-    if(Date.now()-_swt0<15000) window.location.reload(); }); }
+  /* v221: controllerchange par kabhi reload NAHI. Pehle naya SW aate hi page
+     reload ho jata tha — beech kaam me app reset ho jati thi aur taps nahi
+     lagte thay. Ab naya SW khamoshi se agle load ke liye takeover karta hai. */ }
 </script>
 </body>
 </html>
