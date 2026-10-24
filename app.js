@@ -795,25 +795,29 @@ window.openThemePicker=()=>{
 $('btn-profile').onclick=()=>{
   const p=DB.profile, init=(p.name||'P').slice(0,1).toUpperCase();
   const av=p.logo?`<img src="${p.logo}">`:esc(init);
-  openSheet(`${authSection()}<div class="profile-top"><div class="pav-wrap"><div class="pavatar">${av}</div>
+  openSheet(`${authSection()}<div class="prof-head"><h3>Profile</h3><button class="prof-done" onclick="closeSheet()">Done</button></div>
+    <div class="profile-top"><div class="pav-wrap"><div class="pavatar">${av}</div>
     <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">${IC_CAM}</button></div>
     <div><b style="font-size:19px">${esc(p.name||'ReamBook')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">${IC_EDIT}</button><div class="sub">${esc(p.email||'')}</div></div></div>
     <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
-    <div class="menu-row" onclick="openShops()"><span class="ic">${IC_SHOP}</span> Switch shop <span class="sub">${esc(curShopName())}</span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="shareApp()"><span class="ic">${IC_SHARE}</span> Share app <span class="sub">Send to friends & groups</span><span class="arw">›</span></div>
-    <div class="lbl" style="margin:10px 0">YOUR DATA</div>
-    <div class="mrow" style="margin-bottom:6px">
-      <button class="btn-ghost" onclick="cloudBackup()"><span class="big-ic">${IC_UL}</span><br><b>Back up</b><br><small>Download file</small></button>
-      <button class="btn-ghost" onclick="$('import-file').click()"><span class="big-ic">${IC_FOLDER}</span><br><b>Restore</b><br><small>From file</small></button>
-    </div>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importBackup(this)">
-    <div class="menu-row" onclick="openThemePicker()"><span class="ic">${IC_THEME}</span> Colors Theme <span class="sub">${themeName(curTheme())}</span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="openSettings()"><span class="ic">${IC_SET}</span> Settings<span class="arw">›</span></div>
-    <div class="menu-row" onclick="checkAppUpdate()"><span class="ic">${IC_UPD}</span> Update <span id="upd-dot" style="display:none;width:9px;height:9px;border-radius:50%;background:#22c55e"></span><span class="sub" id="upd-txt"></span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="exportCSV('sales')"><span class="ic">${IC_DL}</span> Export data <span class="sub">Sales / inventory CSV</span><span class="arw">›</span></div>
-    <div class="menu-row" onclick="editProfile()"><span class="ic">${IC_EDIT}</span> Edit business name<span class="arw">›</span></div>
-    <div class="menu-row danger-t" onclick="resetAll()"><span class="ic">${TRASH}</span> Delete all data<span class="arw">›</span></div>
-    ${(window.PaperAuth&&PaperAuth.getToken())?`<div class="menu-row" onclick="confirmLogout()"><span class="ic ic-red">${IC_OUT}</span> <span style="color:#b3261e;font-weight:700">Sign out</span></div>`:''}
+    <div class="prof-row" onclick="openShops()"><span class="prof-ic">${IC_SHOP}</span><span class="prof-lbl">Switch shop</span><span class="prof-val">${esc(curShopName())}</span><span class="arw">›</span></div>
+    <div class="prof-row" onclick="shareApp()"><span class="prof-ic">${IC_SHARE}</span><span class="prof-lbl">Share app</span><span class="arw">›</span></div>
+    ${(window.PaperAuth&&PaperAuth.getToken())?`<div class="prof-row" onclick="confirmLogout()"><span class="prof-ic ic-red">${IC_OUT}</span><span class="prof-lbl" style="color:#b3261e">Sign out</span></div>`:''}
+    <div class="prof-sec">Shop</div>
+    <div class="prof-row" onclick="editProfile()"><span class="prof-ic">${IC_EDIT}</span><span class="prof-lbl">Shop name</span><span class="prof-val">${esc(p.name||'ReamBook')}</span><span class="arw">›</span></div>
+    <div class="prof-row" style="cursor:default"><span class="prof-ic">Rs</span><span class="prof-lbl">Currency</span><span class="prof-val">Rs · Pakistan</span></div>
+    <div class="prof-row" onclick="openCloudSheet()"><span class="prof-ic">${IC_UL}</span><span class="prof-lbl">Multi-device sharing</span><span class="prof-val">1 account</span><span class="arw">›</span></div>
+    <div class="prof-sec">Your data</div>
+    <div class="prof-cards">
+      <div class="prof-card" onclick="cloudBackup()"><span class="prof-ic lg">${IC_UL}</span><b>Back up</b><small>${lastBackupTxt()}</small></div>
+      <div class="prof-card" onclick="$('import-file').click()"><span class="prof-ic lg">${IC_FOLDER}</span><b>Restore</b><small>Bring back your latest data</small></div>
+    </div>
+    <div class="prof-row" onclick="exportCSV('sales')"><span class="prof-ic">${IC_DL}</span><span class="prof-lbl">Export data</span><span class="prof-val">Sales CSV</span><span class="arw">›</span></div>
+    <div class="prof-row" onclick="openThemePicker()"><span class="prof-ic">${IC_THEME}</span><span class="prof-lbl">Colors Theme</span><span class="prof-val">${themeName(curTheme())}</span><span class="arw">›</span></div>
+    <div class="prof-row" onclick="openSettings()"><span class="prof-ic">${IC_SET}</span><span class="prof-lbl">Settings</span><span class="arw">›</span></div>
+    <div class="prof-row" onclick="checkAppUpdate()"><span class="prof-ic">${IC_UPD}</span><span class="prof-lbl">Update</span><span class="prof-val"><span id="upd-dot" style="display:none;width:9px;height:9px;border-radius:50%;background:#22c55e"></span><span id="upd-txt"></span></span><span class="arw">›</span></div>
+    <div class="prof-row" onclick="resetAll()"><span class="prof-ic ic-red">${TRASH}</span><span class="prof-lbl" style="color:#b3261e">Delete all data</span></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
   try{ refreshUpdateBadge(); }catch(e){}
   try{ if(window.PaperAuth&&PaperAuth.getToken()) PaperAuth.api('/api/pay/manual/mine').then(r=>{ _subMine=(r&&r.payments)||[]; _cachePkg(); const pel=$('pkg-pill'); if(pel){ const pn=_activePkgName(); if(pn) pel.textContent=pn; } }).catch(()=>{}); }catch(e){}
@@ -828,10 +832,15 @@ window.cloudSyncNow=()=>{
   enableCloudSync();
   if(syncCtl){ try{ syncCtl.push(); syncCtl.pull(); }catch(e){} toast('☁️ Syncing…'); }
 };
+function lastBackupKey(){ try{ const em=curEmail(); const reg=em?ensureReg(em):null; return 'ps_lb_'+(em||'anon')+'_'+(reg?reg.active:'main'); }catch(e){ return 'ps_lb_anon_main'; } }
+function lastBackupTxt(){ try{ const t=parseInt(localStorage.getItem(lastBackupKey())||'0'); if(!t) return 'Download file';
+  const m=Math.round((Date.now()-t)/60000); if(m<1) return 'Last saved just now'; if(m<60) return 'Last saved '+m+' min ago';
+  const h=Math.round(m/60); if(h<24) return 'Last saved '+h+' h ago'; return 'Last saved '+Math.round(h/24)+' d ago'; }catch(e){ return 'Download file'; } }
 window.cloudBackup=()=>{
   const blob=new Blob([JSON.stringify(DB,null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='paper-stock-backup-'+dstr()+'.json'; a.click(); URL.revokeObjectURL(a.href);
+  try{ localStorage.setItem(lastBackupKey(), String(Date.now())); }catch(e){}
   toast('✅ Backup downloaded!');
 };
 window.importBackup=function(inp){
