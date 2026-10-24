@@ -323,7 +323,9 @@ function initAuth(){
   // then start sync only for Premium users; free users get the red lock.
   PaperAuth.api('/api/me').then(me=>{ try{ localStorage.setItem('ps_user',JSON.stringify(me)); }catch(e){}
     if(fresh&&me&&me.email){ try{ claimLegacyFor(me.email); _lsSet('ps_active_email', String(me.email).toLowerCase().trim()); }catch(e){}
-      if(DB_KEY_CUR!==slotKey(me.email)){ location.reload(); return; } }
+      /* v224: slot-rebind reload sirf aik dafa — warna har login ke baad
+         page reload hota rehta tha aur tap kabhi lagta hi nahi tha. */
+      if(DB_KEY_CUR!==slotKey(me.email)){ try{ if(!sessionStorage.getItem('ps_rebind_done')){ sessionStorage.setItem('ps_rebind_done','1'); location.reload(); return; } }catch(e){} } }
     else if(me&&me.email&&!_lsGet('ps_active_email')){ _lsSet('ps_active_email', String(me.email).toLowerCase().trim()); }
     refreshCloudGate(); }).catch(()=>{ refreshCloudGate(); });
   refreshCloudGate();
