@@ -358,6 +358,7 @@ function clBack(ids){
 }
 const GATE_IDS={email:'gate-email',code:'gate-code',stepEmail:'gate-step-email',stepCode:'gate-step-code',sendBtn:'gate-send-btn',verifyBtn:'gate-verify-btn',msg:'gate-msg',note:'gate-code-note'};
 window.gateSendCode=function(){ clSend(GATE_IDS); };
+window.gateGoogle=function(){ if(window.PaperAuth&&PaperAuth.googleLogin) PaperAuth.googleLogin(); };
 window.gateVerifyCode=function(){ clVerify(GATE_IDS); };
 window.gateBack=function(){ clBack(GATE_IDS); };
 const CL_IDS={email:'cl-email',code:'cl-code',stepEmail:'cl-step-email',stepCode:'cl-step-code',sendBtn:'cl-send-btn',verifyBtn:'cl-verify-btn',msg:'cl-msg',note:'cl-code-note'};

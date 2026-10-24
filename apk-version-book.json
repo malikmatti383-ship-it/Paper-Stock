@@ -1,1 +1,6 @@
-{"apkUrl":"https://paper-stock-server.onrender.com/app/ReamBook.apk","notes":"New: Share APK — share the ReamBook app itself with your message, straight from Profile > Share app. Sale, Stock, Credit & Reports.","versionCode":9,"versionName":"1.3.5"}
+{
+  "versionCode": 10,
+  "versionName": "1.3.6",
+  "apkUrl": "https://paper-stock-server.onrender.com/app/ReamBook.apk",
+  "notes": "New: Continue with Google — one-tap sign-in on the login screen (email code login is still there). Plus a safer update download."
+}
