@@ -22,6 +22,12 @@
       try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
       return tok || null;
     }
+    if (h.indexOf('#auth=error') === 0) {
+      var m = /why=([a-z]+)/.exec(h), why = m ? m[1] : '1';
+      try { sessionStorage.setItem('ps_auth_err', why); } catch (e) {}
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      return null;
+    }
     return null;
   }
 

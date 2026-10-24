@@ -318,6 +318,7 @@ function initGate(){
   const g=$('login-gate'); if(!g) return;
   const need=!!(window.PaperAuth&&PaperAuth.isConfigured()&&!PaperAuth.getToken());
   g.style.display=need?'flex':'none';
+  if(need){ try{ const ae=sessionStorage.getItem('ps_auth_err'); if(ae){ sessionStorage.removeItem('ps_auth_err'); const m=$('gate-msg'); if(m) m.textContent='Google login did not finish'+(ae!=='1'?' (error: '+ae+')':'')+'. Please use the email code below.'; } }catch(e){} }
 }
 /* ---------- Email-code login (gate + profile) ---------- */
 let clEmail='';
