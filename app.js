@@ -121,7 +121,7 @@ function claimLegacyFor(em){
   let em=_lsGet('ps_active_email')||'';
   const tok=window.PaperAuth&&PaperAuth.getToken&&PaperAuth.getToken();
   if(!em&&tok){ try{ const u=JSON.parse(_lsGet('ps_user')||'null'); if(u&&u.email) em=String(u.email).toLowerCase().trim(); }catch(e){} if(em) _lsSet('ps_active_email',em); }
-  if(tok&&em){ const reg=ensureReg(em); DB_KEY_CUR=shopDataKey(em, reg.active); }
+  if(tok&&em){ const reg=ensureReg(em); DB_KEY_CUR=shopDataKey(em, reg.active); DB_SHOP_ID=reg.active; }
 })();
 /* v207: MULTI-SHOP — aik hi Gmail me kai stores. Har shop ka data alag key
    par, bilkul fresh. Pehli (main) shop kabhi delete nahi hoti; baqi shops
@@ -146,7 +146,10 @@ window.openShops=(lockMsg)=>{
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 window.shopLockMsg=()=>{ openShops(true); };
-window.switchShop=id=>{ const em=curEmail(); const reg=ensureReg(em); if(id===reg.active){ $('btn-profile').click(); return; } reg.active=id; writeReg(em,reg); toast('Switching shop…'); setTimeout(()=>location.reload(),250); };
+window.switchShop=id=>{ const em=curEmail(); const reg=ensureReg(em); if(id===reg.active){ $('btn-profile').click(); return; } reg.active=id; writeReg(em,reg); markDirty(); toast('Switching shop…');
+  /* reload se pehle switch cloud par pohnch jaye (warna reload push ko
+     beech me kaat deta tha aur switch wapas palat jata tha) */
+  const p=(syncCtl?syncCtl.push():Promise.resolve()); Promise.race([p,new Promise(r=>setTimeout(r,1500))]).then(()=>location.reload()); };
 window.addShop=()=>{
   openSheet(`<h3>＋ Add a shop</h3>
   <div class="sub" style="margin:2px 0 8px">The new shop starts completely fresh — its own stock, sales and credit.</div>
@@ -160,8 +163,9 @@ window.saveNewShop=()=>{
   const reg=ensureReg(em); const id='s'+Date.now().toString(36);
   const d=defDB(); d.profile.name=name;
   _lsSet(shopDataKey(em,id), JSON.stringify(d));
-  reg.shops.push({id, name}); reg.active=id; writeReg(em,reg);
-  toast('✅ Shop created — opening it…'); setTimeout(()=>location.reload(),300);
+  reg.shops.push({id, name}); reg.active=id; writeReg(em,reg); markDirty();
+  toast('✅ Shop created — opening it…');
+  const p=(syncCtl?syncCtl.push():Promise.resolve()); Promise.race([p,new Promise(r=>setTimeout(r,1500))]).then(()=>location.reload());
 };
 window.renameShop=id=>{
   const em=curEmail(); const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id); if(!s) return;
@@ -174,6 +178,7 @@ window.saveShopName=id=>{
   const name=($('rs-name').value||'').trim(); if(!name){ toast('Enter a shop name'); return; }
   s.name=name; writeReg(em,reg);
   try{ if(id===reg.active){ DB.profile.name=name; save(); renderStoreName(); } else { const dk=shopDataKey(em,id); const d=JSON.parse(_lsGet(dk)||'null'); if(d){ d.profile.name=name; _lsSet(dk, JSON.stringify(d)); } } }catch(e){}
+  markDirty(); if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
   toast('✅ Shop renamed'); openShops();
 };
 window.deleteShop=id=>{
@@ -181,7 +186,7 @@ window.deleteShop=id=>{
   if(!s||id==='main'||id===reg.active) return;
   confirmDlg('Delete shop?','Delete "'+s.name+'" and ALL its data (stock, sales, credit)? This cannot be undone.','DELETE',()=>{
     _lsDel(shopDataKey(em,id));
-    reg.shops=reg.shops.filter(x=>x.id!==id); writeReg(em,reg);
+    reg.shops=reg.shops.filter(x=>x.id!==id); writeReg(em,reg); markDirty(); if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
     toast('Shop deleted'); openShops();
   });
 };
@@ -200,7 +205,14 @@ function save(){ localStorage.setItem(DB_KEY_CUR,JSON.stringify(DB)); }
 let syncCtl=null, applyingRemote=false, syncedAt=0;
 try{ syncedAt=+(localStorage.getItem('ps_synced_at')||0); }catch(e){}
 const _saveLocal=save;
-save=function(){ _saveLocal(); if(syncCtl&&!applyingRemote){ syncCtl.schedulePush(); setSyncPill('backing'); } };
+let DB_SHOP_ID='main';
+/* v219: 'dirty' = local tabdeeli jo abhi cloud par NAHI gayi. Jab tak ye
+   hai, cloud ki copy local ko kabhi nahi mitayegi (pehle waja yahi thi:
+   switch/rename cloud ki purani copy se reset ho jate thay) */
+function markDirty(){ try{ localStorage.setItem('ps_dirty','1'); }catch(e){} }
+function clearDirty(){ try{ localStorage.removeItem('ps_dirty'); }catch(e){} }
+function isDirty(){ try{ return !!localStorage.getItem('ps_dirty'); }catch(e){ return false; } }
+save=function(){ _saveLocal(); markDirty(); if(syncCtl&&!applyingRemote){ syncCtl.schedulePush(); setSyncPill('backing'); } };
 function setSyncPill(mode){
   // v180: status badge on the header cloud (backup) button — spinning circle
   // while backing up, green tick when synced; no badge when logged out.
@@ -218,7 +230,7 @@ function syncBundleOut(){
   try{
     const em=curEmail(); if(!em) return DB;
     const reg=readReg(em); if(!reg||reg.shops.length<=1){ fixShopName(DB); return DB; }
-    const shops={}; reg.shops.forEach(s=>{ if(s.id===reg.active) shops[s.id]=DB; else { try{ const d=JSON.parse(_lsGet(shopDataKey(em,s.id))||'null'); if(d) shops[s.id]=d; }catch(e){} } });
+    const shops={}; reg.shops.forEach(s=>{ if(s.id===DB_SHOP_ID) shops[s.id]=DB; else { try{ const d=JSON.parse(_lsGet(shopDataKey(em,s.id))||'null'); if(d) shops[s.id]=d; }catch(e){} } });
     Object.keys(shops).forEach(id=>fixShopName(shops[id]));
     const regOut={ shops:reg.shops.map(s=>(s.id==='main'&&s.name==='Paper Store')?{id:s.id,name:'ReamBook'}:s), active:reg.active };
     return { __shops:1, reg:regOut, shops };
@@ -229,19 +241,24 @@ function syncBundleOut(){
 function fixShopName(d){ if(d&&d.profile&&d.profile.name==='Paper Store') d.profile.name='ReamBook'; }
 function applyRemote(data,updatedAt){
   if(!data||!updatedAt||updatedAt<=syncedAt) return;
+  /* v219: local tabdeeli abhi cloud par nahi gayi to cloud ki copy ruk jaye —
+     pehle local jayega, phir agli sync par cloud milega */
+  if(isDirty()) return;
   const em=curEmail();
   /* v207: multi-shop bundle — har shop ka data us ki apni key par jata hai */
   if(data.__shops&&data.shops&&em){
     applyingRemote=true;
     try{
-      const localActive=ensureReg(em).active;
-      const remoteReg={ shops:data.reg.shops||ensureReg(em).shops, active:data.reg.active||localActive };
-      (remoteReg.shops||[]).forEach(s=>{ if(s.id==='main'&&s.name==='Paper Store') s.name='ReamBook'; });
+      const localReg=ensureReg(em);
+      const localActive=localReg.active;
+      /* v219: Shops ki list, naam aur khuli hui shop LOCAL faislay hain —
+         cloud se sirf wo shops ati hain jo yahan hain hi nahi. Active shop
+         aur mojooda naam cloud KABHI nahi badalta; badalna hai to user khud */
+      ((data.reg&&data.reg.shops)||[]).forEach(rs=>{ if(rs&&rs.id&&!localReg.shops.some(s=>s.id===rs.id)) localReg.shops.push({id:rs.id, name:(rs.name==='Paper Store'?'ReamBook':(rs.name||'Shop'))}); });
+      writeReg(em, localReg);
       Object.keys(data.shops).forEach(id=>{ fixShopName(data.shops[id]); _lsSet(shopDataKey(em,id), JSON.stringify(data.shops[id])); });
-      writeReg(em, remoteReg);
       syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){}
-      if(remoteReg.active!==localActive){ toast('☁️ Cloud synced — reopening on the synced shop'); setTimeout(()=>location.reload(),700); return; }
-      DB=data.shops[remoteReg.active]||DB;
+      DB=data.shops[localActive]||DB; DB_SHOP_ID=localActive;
       if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
       _saveLocal();
       renderStoreName(); applyTheme(curTheme());
@@ -282,7 +299,7 @@ window.doLogout=()=>{ if(!window.PaperAuth) return;
      bekaar lagta tha. Ab: server ko peechay se batao, local sab foran saaf
      karke reload — aik hi tap, foran reaction. */
   try{ PaperAuth.logout(); }catch(e){}
-  try{ localStorage.removeItem('ps_token'); localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); localStorage.removeItem('ps_active_email'); localStorage.removeItem('ps_paycfg'); }catch(e){}
+  try{ localStorage.removeItem('ps_token'); localStorage.removeItem('ps_user'); localStorage.removeItem('ps_synced_at'); localStorage.removeItem('ps_active_email'); localStorage.removeItem('ps_paycfg'); localStorage.removeItem('ps_dirty'); }catch(e){}
   location.reload();
 };
 window.confirmLogout=()=>{
@@ -318,7 +335,8 @@ function refreshCloudGate(){
 function enableCloudSync(){
   if(!window.PaperAuth||!PaperAuth.getToken()) return;
   if(!syncCtl){
-    syncCtl=PaperAuth.startAutoSync(syncBundleOut, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} setSyncPill('synced'); });
+    syncCtl=PaperAuth.startAutoSync(syncBundleOut, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} clearDirty(); setSyncPill('synced'); });
+    if(isDirty()){ try{ syncCtl.push(); }catch(e){} }
   }
   setSyncPill('synced');
 }
@@ -850,6 +868,7 @@ window.saveProfile=()=>{ DB.profile.name=$('pf-name').value.trim()||'ReamBook'; 
   /* v218: shop ka naam aik hi hai — profile se badlo to Shops list aur
      Switch wali jagah bhi wahi naam ajaye (registry bhi sath update) */
   try{ const em=curEmail(); if(em){ const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active); if(s&&s.name!==DB.profile.name){ s.name=DB.profile.name; writeReg(em,reg); } } }catch(e){}
+  if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
   renderStoreName(); closeSheet(); toast('✅ Saved'); };
 window.resetAll=()=>{
   confirmDlg('Delete ALL data?','This will erase everything in the app. Are you sure?','DELETE',()=>{
