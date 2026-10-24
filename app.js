@@ -131,7 +131,7 @@ function shopsRegKey(em){ return slotKey(em)+':shops'; }
 function shopDataKey(em,id){ return id==='main' ? slotKey(em) : slotKey(em)+':shop:'+id; }
 function readReg(em){ try{ const r=JSON.parse(_lsGet(shopsRegKey(em))||'null'); if(r&&r.shops&&r.shops.length) return r; }catch(e){} return null; }
 function writeReg(em,reg){ _lsSet(shopsRegKey(em), JSON.stringify(reg)); }
-function peekShopName(em,id){ try{ const d=JSON.parse(_lsGet(shopDataKey(em,id))||_lsGet(DB_KEY)||'null'); if(d&&d.profile&&d.profile.name) return d.profile.name; }catch(e){} return 'ReamBook'; }
+function peekShopName(em,id){ try{ const d=JSON.parse(_lsGet(shopDataKey(em,id))||_lsGet(DB_KEY)||'null'); if(d&&d.profile&&d.profile.name) return d.profile.name==='Paper Store'?'ReamBook':d.profile.name; }catch(e){} return 'ReamBook'; }
 function ensureReg(em){ let reg=readReg(em); if(!reg){ reg={ shops:[{id:'main', name:peekShopName(em,'main')}], active:'main' }; writeReg(em,reg); } if(!reg.shops.some(s=>s.id===reg.active)) reg.active=reg.shops[0].id; return reg; }
 function curShopName(){ try{ const em=curEmail(); if(!em) return ''; const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active); return s?s.name:''; }catch(e){ return ''; } }
 window.openShops=(lockMsg)=>{
@@ -214,11 +214,16 @@ function setSyncPill(mode){
 function syncBundleOut(){
   try{
     const em=curEmail(); if(!em) return DB;
-    const reg=readReg(em); if(!reg||reg.shops.length<=1) return DB;
+    const reg=readReg(em); if(!reg||reg.shops.length<=1){ fixShopName(DB); return DB; }
     const shops={}; reg.shops.forEach(s=>{ if(s.id===reg.active) shops[s.id]=DB; else { try{ const d=JSON.parse(_lsGet(shopDataKey(em,s.id))||'null'); if(d) shops[s.id]=d; }catch(e){} } });
-    return { __shops:1, reg:{shops:reg.shops, active:reg.active}, shops };
+    Object.keys(shops).forEach(id=>fixShopName(shops[id]));
+    const regOut={ shops:reg.shops.map(s=>(s.id==='main'&&s.name==='Paper Store')?{id:s.id,name:'ReamBook'}:s), active:reg.active };
+    return { __shops:1, reg:regOut, shops };
   }catch(e){ return DB; }
 }
+/* v217: purana default naam jahan bhi mile (local ya cloud se aya hua) use
+   ReamBook kar do — cloud wali copy har sync par purana naam wapas la rahi thi */
+function fixShopName(d){ if(d&&d.profile&&d.profile.name==='Paper Store') d.profile.name='ReamBook'; }
 function applyRemote(data,updatedAt){
   if(!data||!updatedAt||updatedAt<=syncedAt) return;
   const em=curEmail();
@@ -228,7 +233,8 @@ function applyRemote(data,updatedAt){
     try{
       const localActive=ensureReg(em).active;
       const remoteReg={ shops:data.reg.shops||ensureReg(em).shops, active:data.reg.active||localActive };
-      Object.keys(data.shops).forEach(id=>{ _lsSet(shopDataKey(em,id), JSON.stringify(data.shops[id])); });
+      (remoteReg.shops||[]).forEach(s=>{ if(s.id==='main'&&s.name==='Paper Store') s.name='ReamBook'; });
+      Object.keys(data.shops).forEach(id=>{ fixShopName(data.shops[id]); _lsSet(shopDataKey(em,id), JSON.stringify(data.shops[id])); });
       writeReg(em, remoteReg);
       syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){}
       if(remoteReg.active!==localActive){ toast('☁️ Cloud synced — reopening on the synced shop'); setTimeout(()=>location.reload(),700); return; }
@@ -242,9 +248,10 @@ function applyRemote(data,updatedAt){
     return;
   }
   /* purana single-shop remote: agar koi aur shop khuli hai to data main shop me rakho */
-  if(em){ const reg=readReg(em); if(reg&&reg.active!=='main'){ _lsSet(slotKey(em), JSON.stringify(data)); syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} return; } }
+  if(em){ const reg=readReg(em); if(reg&&reg.active!=='main'){ fixShopName(data); _lsSet(slotKey(em), JSON.stringify(data)); syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} return; } }
   applyingRemote=true;
   try{
+    fixShopName(data);
     DB=data; if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
     _saveLocal();
     syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){}
