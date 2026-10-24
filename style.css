@@ -179,6 +179,16 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .bar-chart{display:flex;align-items:flex-end;gap:4px;height:130px;margin-top:10px}
 .bar{flex:1;background:var(--teal);border-radius:6px 6px 0 0;min-height:4px;position:relative}
 .bar span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--sub)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-grid .white-card{margin-bottom:0;padding:13px}
+.stat-num{font-size:20px;font-weight:800;margin:4px 0}
+.stat-sub{font-size:12px;font-weight:600}
+.teal-num{color:var(--teal-d)}
+.trend-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin:2px 0 4px}
+.trend-arrow{background:#eef1f6;border:none;width:30px;height:30px;border-radius:50%;font-size:20px;line-height:1;color:var(--teal-d);cursor:pointer}
+.chart-wrap{display:flex;gap:6px}
+.chart-wrap .bar-chart{flex:1}
+.chart-axis{display:flex;flex-direction:column;justify-content:space-between;height:130px;margin-top:10px;font-size:10px;color:var(--sub)}
 .hist-row{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
 .hist-row .d{font-weight:700;font-size:16px}
 .hist-row .p{color:var(--green);font-weight:600;font-size:14px}

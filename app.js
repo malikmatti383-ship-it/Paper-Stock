@@ -1908,7 +1908,7 @@ window.delProduct=id=>{ const p=DB.products.find(x=>x.id===id);
     DB.products=DB.products.filter(x=>x.id!==id); save(); closeSheet(); renderStock(); toast('Deleted'); }); };
 
 /* ================= REPORT ================= */
-let repY=new Date().getFullYear(), repM=new Date().getMonth(), chartMode='sales', repShowAll=false;
+let repY=new Date().getFullYear(), repM=new Date().getMonth(), chartMode='sales', repShowAll=false, repHalf=0;
 const MNAME=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function renderReport(){
   $('period-txt').textContent=MNAME[repM].slice(0,3)+' '+repY;
@@ -1916,22 +1916,35 @@ function renderReport(){
   const prev=DB.sales.filter(s=>{ const d=new Date(s.ts); let pm=repM-1,py=repY; if(pm<0){pm=11;py--;} return d.getFullYear()===py&&d.getMonth()===pm; });
   const st=sales.reduce((a,s)=>a+s.total,0), pt=prev.reduce((a,s)=>a+s.total,0);
   const gross=sales.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*((i.price||0)-(i.cost||0)),0),0);
+  const pgross=prev.reduce((a,s)=>a+s.items.reduce((x,i)=>x+i.qty*((i.price||0)-(i.cost||0)),0),0);
   const pexp=DB.expenses.filter(e=>{ const d=new Date(e.ts); return d.getFullYear()===repY&&d.getMonth()===repM; }).reduce((a,e)=>a+e.amount,0);
-  const profit=gross-pexp;
+  const ppexp=DB.expenses.filter(e=>{ const d=new Date(e.ts); let pm=repM-1,py=repY; if(pm<0){pm=11;py--;} return d.getFullYear()===py&&d.getMonth()===pm; }).reduce((a,e)=>a+e.amount,0);
+  const profit=gross-pexp, prevProfit=pgross-ppexp;
+  const prevShort=MNAME[(repM+11)%12].slice(0,3);
+  const pct=(a,b)=>{ if(!b) return ''; const p=Math.round((a-b)/b*100); return (p>=0?'+':'')+p+'%'; };
+  const setVs=(id,txt,up)=>{ const el=$(id); el.textContent=txt; el.classList.toggle('green-num',!!txt&&up); el.classList.toggle('red-num',!!txt&&!up); };
+  // summary cards
   $('r-sales').textContent=pkr(st);
+  const sv=pct(st,pt); setVs('r-vs',sv?sv+' vs '+prevShort:'',st>=pt);
   $('r-exp').textContent=pexp>0?pkrMinus(pexp):pkr(0);
   rProfitNp=Math.round(profit*100)/100; paintReportProfit();
   $('r-margin').textContent=st>0?Math.round(profit/st*100)+'% margin':'';
-  $('r-vs').textContent=pt>0?Math.round((st-pt)/pt*100)+'% vs '+MNAME[(repM+11)%12].slice(0,3):'';
-  $('r-avg').textContent='Avg / day: PKR '+Math.round(st/30).toLocaleString()+' · '+new Set(sales.map(s=>s.date)).size+' working days';
-  // chart
-  $('chart-month').textContent=MNAME[repM]+' '+repY;
+  const pv=pct(profit,prevProfit); setVs('r-vs-profit',pv&&prevProfit>0?pv+' vs '+prevShort:'',profit>=prevProfit);
+  const wdays=new Set(sales.map(s=>s.date)).size;
+  $('r-avg-num').textContent=pkr(wdays>0?Math.round(st/wdays*100)/100:0);
+  $('r-avg-sub').textContent=sales.length+' sales · '+wdays+' working days';
+  // trends chart (half-month)
   const dim=new Date(repY,repM+1,0).getDate();
+  const d0=repHalf?16:1, d1=repHalf?dim:Math.min(15,dim);
+  $('chart-month').textContent=MNAME[repM].slice(0,3)+' '+d0+' – '+d1+', '+repY;
   const byDay={}; sales.forEach(s=>{ const d=new Date(s.ts).getDate(); byDay[d]=byDay[d]||{s:0,p:0}; byDay[d].s+=s.total; byDay[d].p+=s.items.reduce((x,i)=>x+i.qty*((i.price||0)-(i.cost||0)),0); });
-  const max=Math.max(1,...Object.values(byDay).map(v=>chartMode==='sales'?v.s:v.p));
-  let bars=''; for(let d=1;d<=Math.min(dim,31);d++){ const v=byDay[d]; const h=v?Math.max(4,Math.round((chartMode==='sales'?v.s:v.p)/max*110)):4;
+  const vals=[]; for(let d=d0;d<=d1;d++) vals.push(byDay[d]?((chartMode==='sales'?byDay[d].s:byDay[d].p)):0);
+  const max=Math.max(1,...vals);
+  const fmtK=v=>v>=1000?(Math.round(v/100)/10).toString().replace(/\.0$/,'')+'K':Math.round(v).toString();
+  let bars=''; for(let d=d0;d<=d1;d++){ const v=byDay[d]; const val=v?(chartMode==='sales'?v.s:v.p):0; const h=Math.max(4,Math.round(val/max*110));
     bars+=`<div class="bar" style="height:${h}px"><span>${d}</span></div>`; }
   $('bar-chart').innerHTML=bars;
+  $('chart-axis').innerHTML=`<span>${fmtK(max)}</span><span>${fmtK(max/2)}</span><span>0</span>`;
   // history by day
   const days={}; sales.forEach(s=>{ days[s.date]=days[s.date]||{total:0,profit:0}; days[s.date].total+=s.total; days[s.date].profit+=saleProfit(s); });
   const arr=Object.keys(days).sort().reverse();
@@ -1943,7 +1956,12 @@ function renderReport(){
 }
 $('ch-sales').onclick=()=>{ chartMode='sales'; $('ch-sales').classList.add('active'); $('ch-profit').classList.remove('active'); renderReport(); };
 $('ch-profit').onclick=()=>{ chartMode='profit'; $('ch-profit').classList.add('active'); $('ch-sales').classList.remove('active'); renderReport(); };
-$('rep-show-all').onclick=()=>{ repShowAll=!repShowAll; $('rep-show-all').textContent=repShowAll?'Show less':'Show all'; renderReport(); };
+const toggleHistAll=()=>{ repShowAll=!repShowAll; $('rep-show-all').textContent=repShowAll?'Show less':'Show all'; renderReport(); const h=$('rep-history'); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); };
+$('rep-show-all').onclick=toggleHistAll;
+$('trend-detail').onclick=toggleHistAll;
+window.trendNav=dir=>{ if(dir<0){ if(repHalf===1) repHalf=0; else{ repM--; if(repM<0){repM=11;repY--;} repHalf=1; } } else{ if(repHalf===0) repHalf=1; else{ repM++; if(repM>11){repM=0;repY++;} repHalf=0; } } renderReport(); };
+$('trend-prev').onclick=()=>trendNav(-1);
+$('trend-next').onclick=()=>trendNav(1);
 $('btn-period').onclick=()=>{
   const months=MNAME.map((m,i)=>`<option value="${i}" ${i===repM?'selected':''}>${m}</option>`).join('');
   let years=''; for(let y=repY-3;y<=repY+1;y++) years+=`<option ${y===repY?'selected':''}>${y}</option>`;
@@ -1951,7 +1969,7 @@ $('btn-period').onclick=()=>{
     <div style="display:flex;gap:10px"><select id="pp-m">${months}</select><select id="pp-y">${years}</select></div>
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">CANCEL</button><button class="btn-go" onclick="applyPeriod()">APPLY</button></div>`);
 };
-window.applyPeriod=()=>{ repM=parseInt($('pp-m').value); repY=parseInt($('pp-y').value); repShowAll=false; $('rep-show-all').textContent='Show all'; closeSheet(); renderReport(); };
+window.applyPeriod=()=>{ repM=parseInt($('pp-m').value); repY=parseInt($('pp-y').value); repHalf=0; repShowAll=false; $('rep-show-all').textContent='Show all'; closeSheet(); renderReport(); };
 window.dayDetail=ds=>{
   const list=DB.sales.filter(s=>s.date===ds).reverse();
   openSheet(`<h3>${fmtDate(ds)} — ${list.length} sales</h3>`+list.map(s=>`
