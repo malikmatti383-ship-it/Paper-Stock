@@ -141,7 +141,7 @@ window.openShops=(lockMsg)=>{
   const prem=_subPremiumActive(_subUser());
   openSheet(`<h3>🏬 Shops</h3>
   <div class="sub" style="margin:2px 0 8px">The app reopens on the shop you pick. Every shop has its own fresh, separate data — nothing mixes.</div>
-  ${reg.shops.map(s=>{ const act=s.id===reg.active; return `<div class="menu-row" onclick="switchShop('${s.id}')"><span class="radio${act?' on':''}"></span><div style="flex:1;min-width:0"><div>${esc(s.name)}${s.id==='main'?' <span class="sub" style="color:var(--pp-teal-d)">· Main shop</span>':''}</div><div class="sub">${act?'Current shop':'Tap to switch'}</div></div><button class="mini-pdf" onclick="event.stopPropagation();shopBackup('${s.id}')">⬇️ Backup</button><button class="mini-pdf" onclick="event.stopPropagation();renameShop('${s.id}')">✏️ Rename</button>${(!act&&s.id!=='main')?`<button class="mini-pdf" style="color:#d7263d" onclick="event.stopPropagation();deleteShop('${s.id}')">🗑 Delete</button>`:''}</div>`; }).join('')}
+  ${reg.shops.map(s=>{ const act=s.id===reg.active; return `<div class="menu-row" onclick="switchShop('${s.id}')">${act?'<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 3px #dcfce7;flex-shrink:0" title="Open now"></span>':'<span class="radio"></span>'}<div style="flex:1;min-width:0"><div>${esc(s.name)}${s.id==='main'?' <span class="sub" style="color:var(--pp-teal-d)">· Main shop</span>':''}</div><div class="sub">${act?'Current shop':'Tap to switch'}</div></div><button class="mini-pdf" onclick="event.stopPropagation();renameShop('${s.id}')">✏️ Rename</button>${(!act&&s.id!=='main')?`<button class="mini-pdf" style="color:#d7263d;background:#fdecec;padding:6px 10px;font-size:14px" onclick="event.stopPropagation();deleteShop('${s.id}')" title="Delete shop">🗑</button>`:''}</div>`; }).join('')}
   ${lockMsg?`<div style="background:#fdecec;color:#b3261e;border:1.5px solid #f0b4b4;border-radius:12px;padding:12px 14px;font-weight:700;text-align:center;margin-top:12px">Please Buy The Subscription To Add Multiple Stores Or Manage Your Products. Thank You (⌒‿⌒)</div><button class="btn-go" style="width:100%;margin-top:10px" onclick="openCloudSheet()">⭐ Buy subscription</button>`:''}
   <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="${prem?'addShop()':'shopLockMsg()'}">${prem?'':'🔒 '}＋ Add a shop</button>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
@@ -187,20 +187,6 @@ window.deleteShop=id=>{
     reg.shops=reg.shops.filter(x=>x.id!==id); writeReg(em,reg); markDirty(); if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
     toast('Shop deleted'); openShops();
   });
-};
-/* Har shop ka apna alag backup file — file ke naam me shop ka naam + tareekh.
-   Restore ke liye pehle us shop par switch karein, phir Profile > Restore. */
-window.shopBackup=id=>{
-  const em=curEmail(); if(!em){ toast('Login first'); return; }
-  const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id); if(!s) return;
-  let d=null;
-  try{ d=(id===reg.active)?DB:JSON.parse(_lsGet(shopDataKey(em,id))||'null'); }catch(e){}
-  if(!d||!d.products||!d.seq){ toast('❌ No data for this shop'); return; }
-  const safe=String(s.name||'shop').replace(/[^a-zA-Z0-9-_]+/g,'-').replace(/-+/g,'-').slice(0,30)||'shop';
-  const blob=new Blob([JSON.stringify(d,null,1)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='ReamBook-Backup-'+safe+'-'+dstr()+'.json'; a.click(); URL.revokeObjectURL(a.href);
-  toast('✅ Backup downloaded: '+s.name);
 };
 function load(){ let raw=null; try{ raw=localStorage.getItem(DB_KEY_CUR); if(!raw&&!legacyHardClaimed()) raw=localStorage.getItem(DB_KEY); DB=JSON.parse(raw)||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
   /* v210: purana default naam 'Paper Store' tha — app ka naam ReamBook hai.
