@@ -826,12 +826,18 @@ window.editProfile=()=>{
     <input id="pf-email" value="${esc(DB.profile.email||'')}" placeholder="Email" inputmode="email">
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Cancel</button><button class="btn-go" onclick="saveProfile()">Save</button></div>`);
 };
-window.saveProfile=()=>{ DB.profile.name=$('pf-name').value.trim()||'ReamBook'; DB.profile.phone=$('pf-phone').value.trim(); DB.profile.address=$('pf-addr').value.trim(); DB.profile.email=$('pf-email').value.trim(); save();
+window.saveProfile=()=>{ let ok=true;
+  /* Pehle: save ke doran koi error aata to sheet wahin atak jaati thi — na
+     band hoti thi, na message aata tha, is liye screen jaam lagti thi aur
+     naam bhi save nahi hota tha. Ab sheet hamesha band hogi aur sahi
+     message aaye ga. */
+  try{ DB.profile.name=$('pf-name').value.trim()||'ReamBook'; DB.profile.phone=$('pf-phone').value.trim(); DB.profile.address=$('pf-addr').value.trim(); DB.profile.email=$('pf-email').value.trim(); save(); }catch(e){ ok=false; }
   /* v218: shop ka naam aik hi hai — profile se badlo to Shops list aur
      Switch wali jagah bhi wahi naam ajaye (registry bhi sath update) */
   try{ const em=curEmail(); if(em){ const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active); if(s&&s.name!==DB.profile.name){ s.name=DB.profile.name; writeReg(em,reg); } } }catch(e){}
   if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
-  renderStoreName(); closeSheet(); toast('✅ Saved'); };
+  try{ renderStoreName(); }catch(e){}
+  closeSheet(); toast(ok?'✅ Saved':'⚠️ Save nahi hua — dobara try karein'); };
 window.resetAll=()=>{
   confirmDlg('Delete ALL data?','This will erase everything in the app. Are you sure?','DELETE',()=>{
     confirmDlg('Final warning','Really delete everything? This cannot be undone.','YES, DELETE',()=>{
