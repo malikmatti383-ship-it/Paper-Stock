@@ -146,7 +146,10 @@ window.openShops=(lockMsg)=>{
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
 };
 window.shopLockMsg=()=>{ openShops(true); };
-window.switchShop=id=>{ const em=curEmail(); const reg=ensureReg(em); if(id===reg.active){ $('btn-profile').click(); return; } reg.active=id; writeReg(em,reg); markDirty(); if(syncCtl){ try{ syncCtl.push(); }catch(e){} } toast('Switching shop…'); setTimeout(()=>location.reload(),250); };
+window.switchShop=id=>{ const em=curEmail(); const reg=ensureReg(em); if(id===reg.active){ $('btn-profile').click(); return; } reg.active=id; writeReg(em,reg); markDirty(); toast('Switching shop…');
+  /* v222: reload se pehle switch cloud par pohnch jaye (warna reload push
+     ko beech me kaat deta tha aur naam/switch wapas palat jata tha) */
+  const p=(syncCtl?syncCtl.push():Promise.resolve()); Promise.race([p,new Promise(r=>setTimeout(r,1500))]).then(()=>location.reload()); };
 window.addShop=()=>{
   openSheet(`<h3>＋ Add a shop</h3>
   <div class="sub" style="margin:2px 0 8px">The new shop starts completely fresh — its own stock, sales and credit.</div>
@@ -160,8 +163,9 @@ window.saveNewShop=()=>{
   const reg=ensureReg(em); const id='s'+Date.now().toString(36);
   const d=defDB(); d.profile.name=name;
   _lsSet(shopDataKey(em,id), JSON.stringify(d));
-  reg.shops.push({id, name}); reg.active=id; writeReg(em,reg); markDirty(); if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
-  toast('✅ Shop created — opening it…'); setTimeout(()=>location.reload(),300);
+  reg.shops.push({id, name}); reg.active=id; writeReg(em,reg); markDirty();
+  toast('✅ Shop created — opening it…');
+  const p=(syncCtl?syncCtl.push():Promise.resolve()); Promise.race([p,new Promise(r=>setTimeout(r,1500))]).then(()=>location.reload());
 };
 window.renameShop=id=>{
   const em=curEmail(); const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id); if(!s) return;
