@@ -93,7 +93,7 @@
     }
     opts.headers = headers;
     return fetch(base() + path, opts).then(function (res) {
-      if (res.status === 401) { clearToken(); throw new Error('session expired'); }
+      if (res.status === 401) { clearToken(); try{ if(window.AndroidApp&&AndroidApp.clearToken) AndroidApp.clearToken(); }catch(e){} throw new Error('session expired'); }
       if (!res.ok) return res.json().catch(function () { return {}; }).then(function (j) {
         var e = new Error('API ' + res.status);
         e.detail = (j && (j.detail || j.error)) || '';

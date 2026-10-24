@@ -209,7 +209,8 @@ let DB_SHOP_ID='main';
 /* v219: 'dirty' = local tabdeeli jo abhi cloud par NAHI gayi. Jab tak ye
    hai, cloud ki copy local ko kabhi nahi mitayegi (pehle waja yahi thi:
    switch/rename cloud ki purani copy se reset ho jate thay) */
-function markDirty(){ try{ localStorage.setItem('ps_dirty','1'); }catch(e){} }
+let dirtyGen=0;
+function markDirty(){ dirtyGen++; try{ localStorage.setItem('ps_dirty','1'); }catch(e){} }
 function clearDirty(){ try{ localStorage.removeItem('ps_dirty'); }catch(e){} }
 function isDirty(){ try{ return !!localStorage.getItem('ps_dirty'); }catch(e){ return false; } }
 save=function(){ _saveLocal(); markDirty(); if(syncCtl&&!applyingRemote){ syncCtl.schedulePush(); setSyncPill('backing'); } };
@@ -336,6 +337,11 @@ function enableCloudSync(){
   if(!window.PaperAuth||!PaperAuth.getToken()) return;
   if(!syncCtl){
     syncCtl=PaperAuth.startAutoSync(syncBundleOut, applyRemote, ts=>{ syncedAt=ts||Date.now(); try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} clearDirty(); setSyncPill('synced'); });
+    /* v223: push ke doran nayi tabdeeli aaye to dirty dobara lagao — warna
+       purani snapshot ke complete hone par nayi tabdeeli "synced" mark ho
+       jati thi halanke upload hui hi nahi thi (rename ke foran baad add). */
+    const rawPush=syncCtl.push.bind(syncCtl);
+    syncCtl.push=function(){ const g=dirtyGen; const r=rawPush(); if(r&&r.then) r.then(function(){ if(g!==dirtyGen) markDirty(); }); return r; };
     if(isDirty()){ try{ syncCtl.push(); }catch(e){} }
   }
   setSyncPill('synced');
