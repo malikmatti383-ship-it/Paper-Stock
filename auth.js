@@ -22,35 +22,12 @@
       try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
       return tok || null;
     }
-    if (h.indexOf('#auth=error') === 0) {
-      var m = /why=([a-z]+)/.exec(h), why = m ? m[1] : '1';
-      try { sessionStorage.setItem('ps_auth_err', why); } catch (e) {}
-      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-      return null;
-    }
     return null;
   }
 
   function login(){
     if(!isConfigured()) return;
     location.href = base() + '/auth/google';
-  }
-
-  /* Google tap-login: inside the Android app the native bridge opens the
-     sign-in in the phone's browser (Google sign-in cannot run inside a
-     WebView) and the app receives the session back; in a normal browser
-     the plain redirect flow above is used. Email-code login stays as the
-     always-available backup — the gate shows both. */
-  function googleLogin(){
-    if (window.AndroidApp) {
-      if (AndroidApp.googleLogin) { try { AndroidApp.googleLogin(); return; } catch (e) {} }
-      /* Old app shell: Google sign-in cannot run inside the app window —
-         point the user to the email code instead of a broken page. */
-      var m = document.getElementById('gate-msg');
-      if (m) m.textContent = 'Google login needs the latest ReamBook update — please use the email code below for now.';
-      return;
-    }
-    login();
   }
 
   /* Email-code login: works inside the Android wrapper, where the Google
@@ -137,7 +114,7 @@
 
   window.PaperAuth = {
     isConfigured: isConfigured, getToken: getToken, handleAuthRedirect: handleAuthRedirect,
-    login: login, googleLogin: googleLogin, logout: logout, api: api, startAutoSync: startAutoSync,
+    login: login, logout: logout, api: api, startAutoSync: startAutoSync,
     requestCode: requestCode, verifyCode: verifyCode,
     setServerUrl: function (u) { PAPER_SERVER_URL = u; }
   };
