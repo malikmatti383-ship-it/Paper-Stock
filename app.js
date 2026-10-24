@@ -134,38 +134,16 @@ function writeReg(em,reg){ _lsSet(shopsRegKey(em), JSON.stringify(reg)); }
 function peekShopName(em,id){ try{ const d=JSON.parse(_lsGet(shopDataKey(em,id))||_lsGet(DB_KEY)||'null'); if(d&&d.profile&&d.profile.name) return d.profile.name==='Paper Store'?'ReamBook':d.profile.name; }catch(e){} return 'ReamBook'; }
 function ensureReg(em){ let reg=readReg(em); if(!reg){ reg={ shops:[{id:'main', name:peekShopName(em,'main')}], active:'main' }; writeReg(em,reg); } if(!reg.shops.some(s=>s.id===reg.active)) reg.active=reg.shops[0].id; return reg; }
 function curShopName(){ try{ const em=curEmail(); if(!em) return ''; const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active); return s?s.name:''; }catch(e){ return ''; } }
-window.openShops=(lockMsg)=>{
+/* Single store only (user order 2026-10-24): no switching, no adding, no
+   deleting shops. The open shop is the only shop. Other shops' data stays
+   saved on the phone, untouched. */
+window.openShops=()=>{
   const em=curEmail(); if(!em){ toast('Login first'); return; }
-  const reg=ensureReg(em);
-  const prem=_subPremiumActive(_subUser());
-  openSheet(`<h3>🏬 Shops</h3>
-  <div class="sub" style="margin:2px 0 8px">The app reopens on the shop you pick. Every shop has its own fresh, separate data — nothing mixes.</div>
-  ${reg.shops.map(s=>{ const act=s.id===reg.active; return `<div class="menu-row" onclick="switchShop('${s.id}')"><span class="radio${act?' on':''}"></span><div style="flex:1;min-width:0"><div>${esc(s.name)}${s.id==='main'?' <span class="sub" style="color:var(--pp-teal-d)">· Main shop</span>':''}</div><div class="sub">${act?'Current shop':'Tap to switch'}</div></div><button class="mini-pdf" onclick="event.stopPropagation();renameShop('${s.id}')">✏️ Rename</button>${(!act&&s.id!=='main')?`<button class="mini-pdf" style="color:#d7263d" onclick="event.stopPropagation();deleteShop('${s.id}')">🗑 Delete</button>`:''}</div>`; }).join('')}
-  ${lockMsg?`<div style="background:#fdecec;color:#b3261e;border:1.5px solid #f0b4b4;border-radius:12px;padding:12px 14px;font-weight:700;text-align:center;margin-top:12px">Please Buy The Subscription To Add Multiple Stores Or Manage Your Products. Thank You (⌒‿⌒)</div><button class="btn-go" style="width:100%;margin-top:10px" onclick="openCloudSheet()">⭐ Buy subscription</button>`:''}
-  <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="${prem?'addShop()':'shopLockMsg()'}">${prem?'':'🔒 '}＋ Add a shop</button>
+  const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===reg.active)||reg.shops[0];
+  openSheet(`<h3>🏬 My store</h3>
+  <div class="sub" style="margin:2px 0 8px">This app keeps one store only.</div>
+  <div class="menu-row"><div style="flex:1;min-width:0"><div>${esc(s?s.name:'ReamBook')}</div><div class="sub">Current store</div></div><button class="mini-pdf" onclick="event.stopPropagation();renameShop('${s.id}')">✏️ Rename</button></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
-};
-window.shopLockMsg=()=>{ openShops(true); };
-window.switchShop=id=>{ const em=curEmail(); const reg=ensureReg(em); if(id===reg.active){ $('btn-profile').click(); return; } reg.active=id; writeReg(em,reg); markDirty(); toast('Switching shop…');
-  /* reload se pehle switch cloud par pohnch jaye (warna reload push ko
-     beech me kaat deta tha aur switch wapas palat jata tha) */
-  const p=(syncCtl?syncCtl.push():Promise.resolve()); Promise.race([p,new Promise(r=>setTimeout(r,1500))]).then(()=>location.reload()); };
-window.addShop=()=>{
-  openSheet(`<h3>＋ Add a shop</h3>
-  <div class="sub" style="margin:2px 0 8px">The new shop starts completely fresh — its own stock, sales and credit.</div>
-  <div class="fld"><span class="fld-lbl">Shop name</span><div class="fld-in"><input id="ns-name" placeholder="e.g. City Branch"></div></div>
-  <div class="mrow"><button class="btn-ghost" onclick="openShops()">Back</button><button class="btn-go" onclick="saveNewShop()">Create shop</button></div>`);
-  setTimeout(()=>{ const i=$('ns-name'); if(i) i.focus(); },80);
-};
-window.saveNewShop=()=>{
-  if(!_subPremiumActive(_subUser())){ openShops(true); return; }
-  const em=curEmail(); const name=($('ns-name').value||'').trim(); if(!name){ toast('Enter a shop name'); return; }
-  const reg=ensureReg(em); const id='s'+Date.now().toString(36);
-  const d=defDB(); d.profile.name=name;
-  _lsSet(shopDataKey(em,id), JSON.stringify(d));
-  reg.shops.push({id, name}); reg.active=id; writeReg(em,reg); markDirty();
-  toast('✅ Shop created — opening it…');
-  const p=(syncCtl?syncCtl.push():Promise.resolve()); Promise.race([p,new Promise(r=>setTimeout(r,1500))]).then(()=>location.reload());
 };
 window.renameShop=id=>{
   const em=curEmail(); const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id); if(!s) return;
@@ -180,15 +158,6 @@ window.saveShopName=id=>{
   try{ if(id===reg.active){ DB.profile.name=name; save(); renderStoreName(); } else { const dk=shopDataKey(em,id); const d=JSON.parse(_lsGet(dk)||'null'); if(d){ d.profile.name=name; _lsSet(dk, JSON.stringify(d)); } } }catch(e){}
   markDirty(); if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
   toast('✅ Shop renamed'); openShops();
-};
-window.deleteShop=id=>{
-  const em=curEmail(); const reg=ensureReg(em); const s=reg.shops.find(x=>x.id===id);
-  if(!s||id==='main'||id===reg.active) return;
-  confirmDlg('Delete shop?','Delete "'+s.name+'" and ALL its data (stock, sales, credit)? This cannot be undone.','DELETE',()=>{
-    _lsDel(shopDataKey(em,id));
-    reg.shops=reg.shops.filter(x=>x.id!==id); writeReg(em,reg); markDirty(); if(syncCtl){ try{ syncCtl.push(); }catch(e){} }
-    toast('Shop deleted'); openShops();
-  });
 };
 function load(){ let raw=null; try{ raw=localStorage.getItem(DB_KEY_CUR); if(!raw&&!legacyHardClaimed()) raw=localStorage.getItem(DB_KEY); DB=JSON.parse(raw)||defDB(); }catch(e){ DB=defDB(); } if(!DB.seq)DB.seq={p:1,s:1,e:1,c:1,item:1}; if(!DB.printQueue)DB.printQueue=[]; if(!DB.profile)DB.profile=defDB().profile; if(!DB.profile.currency)DB.profile.currency=detectCurrency();
   /* v210: purana default naam 'Paper Store' tha — app ka naam ReamBook hai.
@@ -226,15 +195,11 @@ function setSyncPill(mode){
   if(mode==='backing'){ b.classList.add('backing'); b.innerHTML='<span class="spin">↻</span>'; if(btn) btn.title='Backing up…'; }
   else { b.classList.remove('backing'); b.textContent='✓'; if(btn) btn.title='Cloud Backup'; }
 }
+/* Single store only (user order 2026-10-24): sync carries just this store's
+   data — no multi-shop bundle any more. */
 function syncBundleOut(){
-  try{
-    const em=curEmail(); if(!em) return DB;
-    const reg=readReg(em); if(!reg||reg.shops.length<=1){ fixShopName(DB); return DB; }
-    const shops={}; reg.shops.forEach(s=>{ if(s.id===DB_SHOP_ID) shops[s.id]=DB; else { try{ const d=JSON.parse(_lsGet(shopDataKey(em,s.id))||'null'); if(d) shops[s.id]=d; }catch(e){} } });
-    Object.keys(shops).forEach(id=>fixShopName(shops[id]));
-    const regOut={ shops:reg.shops.map(s=>(s.id==='main'&&s.name==='Paper Store')?{id:s.id,name:'ReamBook'}:s), active:reg.active };
-    return { __shops:1, reg:regOut, shops };
-  }catch(e){ return DB; }
+  try{ fixShopName(DB); }catch(e){}
+  return DB;
 }
 /* v217: purana default naam jahan bhi mile (local ya cloud se aya hua) use
    ReamBook kar do — cloud wali copy har sync par purana naam wapas la rahi thi */
@@ -267,8 +232,6 @@ function applyRemote(data,updatedAt){
     toast('☁️ Cloud synced');
     return;
   }
-  /* purana single-shop remote: agar koi aur shop khuli hai to data main shop me rakho */
-  if(em){ const reg=readReg(em); if(reg&&reg.active!=='main'){ fixShopName(data); _lsSet(slotKey(em), JSON.stringify(data)); syncedAt=updatedAt; try{ localStorage.setItem('ps_synced_at',syncedAt); }catch(e){} return; } }
   applyingRemote=true;
   try{
     fixShopName(data);
@@ -812,7 +775,6 @@ $('btn-profile').onclick=()=>{
     <button class="pav-cam" onclick="$('logo-file').click()" title="Store photo">${IC_CAM}</button></div>
     <div><b style="font-size:19px">${esc(p.name||'ReamBook')}</b><button class="pname-edit" onclick="editProfile()" title="Rename">${IC_EDIT}</button><div class="sub">${esc(p.email||'')}</div></div></div>
     <input type="file" id="logo-file" accept="image/*" class="hidden" onchange="setStoreLogo(this)">
-    <div class="menu-row" onclick="openShops()"><span class="ic">${IC_SHOP}</span> Switch shop <span class="sub">${esc(curShopName())}</span><span class="arw">›</span></div>
     <div class="menu-row" onclick="shareApp()"><span class="ic">${IC_SHARE}</span> Share app <span class="sub">Send to friends & groups</span><span class="arw">›</span></div>
     <div class="lbl" style="margin:10px 0">YOUR DATA</div>
     <div class="mrow" style="margin-bottom:6px">
