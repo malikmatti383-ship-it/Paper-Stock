@@ -1985,9 +1985,15 @@ window.dayDetail=ds=>{
     <div class="kv"><span>${esc(s.name)} × ${s.qty}${s.customer?' · '+esc(s.customer):''}</span><b>${pkr(s.total)}</b></div>`).join('')+
     `<div class="mrow"><button class="btn-go" onclick="closeSheet()">Close</button></div>`);
 };
+function csvText(rows){
+  return rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
+}
+function csvDataUrl(rows){
+  return 'data:text/csv;base64,'+btoa(unescape(encodeURIComponent(csvText(rows))));
+}
 function downloadCSV(name,rows){
-  const csv=rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=name; a.click();
+  if(window.AndroidApp&&AndroidApp.saveFile){ try{ AndroidApp.saveFile(csvDataUrl(rows),name); return; }catch(e){} }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csvText(rows)],{type:'text/csv'})); a.download=name; a.click();
 }
 window.exportCSV=kind=>{
   if(kind==='sales') downloadCSV('sales-'+dstr()+'.csv',[['Date','Item','Qty','Total','Customer'],...DB.sales.map(s=>[s.date,s.name,s.qty,s.total,s.customer||''])]);
@@ -2042,7 +2048,7 @@ window.exRerun=i=>{
   if(e.kind==='sales'){ $('ex-range').value=e.range||'month'; if(e.range==='custom'){ $('ex-from').value=e.from||''; $('ex-to').value=e.to||''; } }
   exRefresh(); exDownload();
 };
-function exPdf(title,cols,rows,total){
+function exPdfDoc(title,cols,rows,total){
   const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'}); let y=18;
   doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text(title,14,y); y+=8;
   doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.text('ReamBook · '+curShopName(),14,y); y+=10;
@@ -2051,7 +2057,11 @@ function exPdf(title,cols,rows,total){
   doc.setFont('helvetica','normal'); doc.setFontSize(10);
   rows.forEach(r=>{ if(y>275){ doc.addPage(); y=18; } x=14; r.forEach((v,ci)=>{ const w=cols[ci].w; const s=String(v==null?'':v); doc.text(doc.splitTextToSize(s,w-3).slice(0,2),x,y); x+=w; }); y+=6; });
   if(total!=null){ y+=4; doc.setFont('helvetica','bold'); doc.text('Total: '+total,14,y); }
-  doc.save(title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.pdf');
+  return doc;
+}
+function exSavePdf(doc,fname){
+  if(window.AndroidApp&&AndroidApp.sharePdf){ try{ AndroidApp.sharePdf(doc.output('datauristring'),fname); return; }catch(e){} }
+  doc.save(fname);
 }
 window.exDownload=()=>{
   const kind=$('ex-kind').value, fmt=$('ex-fmt').value, rg=exRange();
@@ -2062,8 +2072,8 @@ window.exDownload=()=>{
     else downloadCSV('inventory-'+dstr()+'.csv',[['ID','Brand','Item','Qty','Unit','Cost','Sell'],...list.map(p=>[p.itemId,p.brand,p.name,p.qty,p.unit,p.cost,p.sell])]);
   } else {
     if(!window.jspdf){ toast('PDF not available right now, try CSV'); return; }
-    if(kind==='sales') exPdf('Sales Report '+rg.label,[{t:'Date',w:26},{t:'Item',w:80},{t:'Qty',w:20},{t:'Total',w:40}],list.map(s=>[s.date,s.name,s.qty,pkr(s.total)]),pkr(list.reduce((a,s)=>a+(s.total||0),0)));
-    else exPdf('Inventory Report',[{t:'ID',w:30},{t:'Item',w:80},{t:'Qty',w:25},{t:'Sell',w:35}],list.map(p=>[p.itemId,p.name,p.qty,pkr(p.sell)]),null);
+    if(kind==='sales') exSavePdf(exPdfDoc('Sales Report '+rg.label,[{t:'Date',w:26},{t:'Item',w:80},{t:'Qty',w:20},{t:'Total',w:40}],list.map(s=>[s.date,s.name,s.qty,pkr(s.total)]),pkr(list.reduce((a,s)=>a+(s.total||0),0))),'sales-report-'+rg.from+'_to_'+rg.to+'.pdf');
+    else exSavePdf(exPdfDoc('Inventory Report',[{t:'ID',w:30},{t:'Item',w:80},{t:'Qty',w:25},{t:'Sell',w:35}],list.map(p=>[p.itemId,p.name,p.qty,pkr(p.sell)]),null),'inventory-report.pdf');
   }
   exPushRecent({kind,fmt,range:kind==='sales'?$('ex-range').value:'all',from:rg.from,to:rg.to,label:kind==='sales'?rg.label:'Full stock list',count:list.length,when:dstr()});
   toast('⬇ Exported!'); exRefresh();
