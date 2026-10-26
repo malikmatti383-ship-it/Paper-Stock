@@ -1997,7 +1997,7 @@ function downloadCSV(name,rows){
 }
 window.exportCSV=kind=>{
   if(kind==='sales'){ const rows=exSalesRows(DB.sales); downloadCSV('sales-'+dstr()+'.csv',[['Date','Time','Product','Name','Size','Qty','Sold At','Cost/Unit','Profit','Customer','Payment'],...rows.map(r=>[r.date,r.time,r.product,r.name,r.size,r.qty,r.sold,r.cost,r.profit,r.customer,r.payment])]); }
-  else downloadCSV('inventory-'+dstr()+'.csv',[['ID','Brand','Item','Qty','Unit','Cost','Sell'],...DB.products.map(p=>[p.itemId,p.brand,p.name,p.qty,p.unit,p.cost,p.sell])]);
+  else { const rows=DB.products; downloadCSV('inventory-'+dstr()+'.csv',[['ID','Name','Size','Group','Quantity','Cost Price','Selling Price','Tax %','Inventory Cost','Inventory Value'],...rows.map(p=>[p.itemId,p.name,'','',p.qty,p.cost,p.sell,0,exR2((p.qty||0)*(p.cost||0)),exR2((p.qty||0)*(p.sell||0))])]); }
   toast('⬇ Exported!');
 };
 $('btn-export-csv').onclick=()=>exportCSV('sales');
@@ -2066,6 +2066,44 @@ function exSalesPdfDoc(rows,from,to){
   for(let i=1;i<=pages;i++){ doc.setPage(i); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('Page '+i+' of '+pages,R,290,{align:'right'}); }
   return doc;
 }
+/* INVENTORY REPORT FORMAT (v220) - reference layout */
+function exMoney(n){ return n<0?('- Rs '+Math.abs(n)):('Rs '+n); }
+function exInvPdfDoc(list){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
+  const L=10, R=200;
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text(curShopName().toUpperCase(),L,18);
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(13,148,136); doc.text('Inventory Report',L,26); doc.setTextColor(0,0,0);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100,100,100);
+  doc.text('Current inventory snapshot',L,33);
+  doc.text('Generated '+exFmtGen(new Date()),L,39); doc.setTextColor(0,0,0);
+  const cols=[{t:'ID',w:16},{t:'Name',w:34},{t:'Size',w:10},{t:'Group',w:14},{t:'Quantity',w:14},{t:'Cost Price',w:20},{t:'Selling Price',w:20},{t:'Tax %',w:12},{t:'Inventory Cost',w:24},{t:'Inventory Value',w:24}];
+  const drawHead=y=>{
+    doc.setFillColor(219,234,254); doc.rect(L,y-5,R-L,7,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); let x=L;
+    cols.forEach(c=>{ doc.text(c.t,x,y); x+=c.w; });
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  };
+  let y=48; drawHead(y); y+=7;
+  list.forEach((p,ri)=>{
+    if(y>278){ doc.addPage(); y=16; drawHead(y); y+=7; }
+    if(ri%2===1){ doc.setFillColor(243,244,246); doc.rect(L,y-4.5,R-L,6,'F'); }
+    const qty=p.qty||0, cost=p.cost||0, sell=p.sell||0;
+    const vals=[String(p.itemId==null?'':p.itemId),p.name||'','','',String(qty),exMoney(cost),exMoney(sell),'0',exMoney(exR2(qty*cost)),exMoney(exR2(qty*sell))];
+    let x=L;
+    vals.forEach((v,ci)=>{
+      if(ci>=4) doc.text(String(v),x+cols[ci].w-1,y,{align:'right'});
+      else { const s=doc.splitTextToSize(String(v==null?'':v),cols[ci].w-1)[0]||''; doc.text(s,x,y); }
+      x+=cols[ci].w;
+    });
+    y+=6;
+  });
+  const totCost=exR2(list.reduce((a,p)=>a+(p.qty||0)*(p.cost||0),0)), totVal=exR2(list.reduce((a,p)=>a+(p.qty||0)*(p.sell||0),0));
+  y+=4; doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text('Total Inventory Cost: '+exMoney(totCost)+'  ·  Total Inventory Value: '+exMoney(totVal),L,y);
+  const pages=doc.getNumberOfPages();
+  for(let i=1;i<=pages;i++){ doc.setPage(i); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('Page '+i+' of '+pages,R,290,{align:'right'}); }
+  return doc;
+}
 function exKey(){ try{ const em=curEmail(); const reg=em?ensureReg(em):null; return 'ps_rex_'+(em||'anon')+'_'+(reg?reg.active:'main'); }catch(e){ return 'ps_rex_anon_main'; } }
 function exRecent(){ try{ return JSON.parse(localStorage.getItem(exKey())||'[]'); }catch(e){ return []; } }
 function exPushRecent(en){ try{ const l=exRecent(); l.unshift(en); localStorage.setItem(exKey(),JSON.stringify(l.slice(0,8))); }catch(e){} }
@@ -2124,11 +2162,11 @@ window.exDownload=()=>{
   const rows=kind==='sales'?exSalesRows(list):null;
   if(fmt==='CSV'){
     if(kind==='sales') downloadCSV('sales-'+rg.from+'_to_'+rg.to+'.csv',[['Date','Time','Product','Name','Size','Qty','Sold At','Cost/Unit','Profit','Customer','Payment'],...rows.map(r=>[r.date,r.time,r.product,r.name,r.size,r.qty,r.sold,r.cost,r.profit,r.customer,r.payment])]);
-    else downloadCSV('inventory-'+dstr()+'.csv',[['ID','Brand','Item','Qty','Unit','Cost','Sell'],...list.map(p=>[p.itemId,p.brand,p.name,p.qty,p.unit,p.cost,p.sell])]);
+    else downloadCSV('inventory-'+dstr()+'.csv',[['ID','Name','Size','Group','Quantity','Cost Price','Selling Price','Tax %','Inventory Cost','Inventory Value'],...list.map(p=>[p.itemId,p.name,'','',p.qty,p.cost,p.sell,0,exR2((p.qty||0)*(p.cost||0)),exR2((p.qty||0)*(p.sell||0))])]);
   } else {
     if(!window.jspdf){ toast('PDF not available right now, try CSV'); return; }
     if(kind==='sales') exSavePdf(exSalesPdfDoc(rows,rg.from,rg.to),'sales-report-'+rg.from+'_to_'+rg.to+'.pdf');
-    else exSavePdf(exPdfDoc('Inventory Report',[{t:'ID',w:30},{t:'Item',w:80},{t:'Qty',w:25},{t:'Sell',w:35}],list.map(p=>[p.itemId,p.name,p.qty,pkr(p.sell)]),null),'inventory-report.pdf');
+    else exSavePdf(exInvPdfDoc(list),'inventory-report.pdf');
   }
   exPushRecent({kind,fmt,range:kind==='sales'?$('ex-range').value:'all',from:rg.from,to:rg.to,label:kind==='sales'?rg.label:'Full stock list',count:kind==='sales'?rows.length:list.length,when:dstr()});
   toast('⬇ Exported!'); exRefresh();
