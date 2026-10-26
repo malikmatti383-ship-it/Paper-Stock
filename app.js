@@ -813,7 +813,7 @@ $('btn-profile').onclick=()=>{
       <div class="prof-card" onclick="cloudBackup()"><span class="prof-ic lg">${IC_UL}</span><b>Back up</b><small>${lastBackupTxt()}</small></div>
       <div class="prof-card" onclick="$('import-file').click()"><span class="prof-ic lg">${IC_FOLDER}</span><b>Restore</b><small>Bring back your latest data</small></div>
     </div>
-    <div class="prof-row" onclick="exportCSV('sales')"><span class="prof-ic">${IC_DL}</span><span class="prof-lbl">Export data</span><span class="prof-val">Sales CSV</span><span class="arw">›</span></div>
+    <div class="prof-row" onclick="openExportScreen()"><span class="prof-ic">${IC_DL}</span><span class="prof-lbl">Export data</span><span class="prof-val">CSV / PDF</span><span class="arw">›</span></div>
     <div class="prof-row" onclick="openThemePicker()"><span class="prof-ic">${IC_THEME}</span><span class="prof-lbl">Colors Theme</span><span class="prof-val">${themeName(curTheme())}</span><span class="arw">›</span></div>
     <div class="prof-row" onclick="openSettings()"><span class="prof-ic">${IC_SET}</span><span class="prof-lbl">Settings</span><span class="arw">›</span></div>
     <div class="prof-row" onclick="checkAppUpdate()"><span class="prof-ic">${IC_UPD}</span><span class="prof-lbl">Update</span><span class="prof-val"><span id="upd-dot" style="display:none;width:9px;height:9px;border-radius:50%;background:#22c55e"></span><span id="upd-txt"></span></span><span class="arw">›</span></div>
@@ -1995,6 +1995,79 @@ window.exportCSV=kind=>{
   toast('⬇ Exported!');
 };
 $('btn-export-csv').onclick=()=>exportCSV('sales');
+
+/* ================= EXPORT REPORT SCREEN (v217) ================= */
+function exRange(){
+  const r=$('ex-range').value, t=dstr(), d=new Date();
+  if(r==='month') return {from:t.slice(0,8)+'01', to:t, label:'This month'};
+  if(r==='last3'){ const dd=new Date(d.getFullYear(),d.getMonth()-2,1); return {from:dstr(dd), to:t, label:'Last 3 months'}; }
+  if(r==='year') return {from:d.getFullYear()+'-01-01', to:t, label:'This year'};
+  const f=$('ex-from').value, to=$('ex-to').value;
+  return {from:f||t, to:to||t, label:'Custom'};
+}
+function exSalesList(){ const rg=exRange(); return DB.sales.filter(s=>{ const ds=(s.date||'').slice(0,10); return ds>=rg.from&&ds<=rg.to; }); }
+function exKey(){ try{ const em=curEmail(); const reg=em?ensureReg(em):null; return 'ps_rex_'+(em||'anon')+'_'+(reg?reg.active:'main'); }catch(e){ return 'ps_rex_anon_main'; } }
+function exRecent(){ try{ return JSON.parse(localStorage.getItem(exKey())||'[]'); }catch(e){ return []; } }
+function exPushRecent(en){ try{ const l=exRecent(); l.unshift(en); localStorage.setItem(exKey(),JSON.stringify(l.slice(0,8))); }catch(e){} }
+window.exRefresh=()=>{
+  const kind=$('ex-kind').value, rg=exRange();
+  $('ex-range-row').style.display=kind==='sales'?'':'none';
+  $('ex-custom-row').style.display=(kind==='sales'&&$('ex-range').value==='custom')?'':'none';
+  $('ex-note').textContent=kind==='sales'?'':'Inventory is always the full stock list.';
+  const n=kind==='sales'?exSalesList().length:DB.products.length;
+  $('ex-count').textContent=n?n+' records':'No records in this range';
+  const rec=exRecent();
+  $('ex-recent').innerHTML=rec.length?rec.map((e,i)=>`<div class="menu-row" onclick="exRerun(${i})"><span class="ic">↺</span><span>${e.kind==='sales'?'Sales':'Inventory'} · ${e.fmt}<div class="sub" style="font-weight:400">${e.label} · ${e.count} records · ${e.when}</div></span><span class="arw">›</span></div>`).join(''):'<p class="note">No recent exports yet</p>';
+};
+window.openExportScreen=()=>{
+  openSheet(`<h3 style="text-align:center">Export Report</h3>
+    <div style="font-weight:700;margin:10px 0 4px">What to export</div>
+    <select id="ex-kind" onchange="exRefresh()"><option value="sales">Sales</option><option value="inventory">Inventory</option></select>
+    <div style="font-weight:700;margin:10px 0 4px">Format</div>
+    <select id="ex-fmt"><option value="CSV">CSV (opens in Excel)</option><option value="PDF">PDF</option></select>
+    <div id="ex-range-row"><div style="font-weight:700;margin:10px 0 4px">Date range</div>
+    <select id="ex-range" onchange="exRefresh()"><option value="month">This month</option><option value="last3">Last 3 months</option><option value="year">This year</option><option value="custom">Custom</option></select></div>
+    <div id="ex-custom-row" style="display:none"><div style="display:flex;gap:10px;margin-top:10px"><input type="date" id="ex-from" onchange="exRefresh()"><input type="date" id="ex-to" onchange="exRefresh()"></div></div>
+    <div id="ex-count" style="text-align:center;font-weight:700;margin:14px 0 2px"></div>
+    <div id="ex-note" class="note" style="text-align:center"></div>
+    <div class="mrow"><button class="btn-go" onclick="exDownload()">⬇ Download</button></div>
+    <div style="font-weight:700;margin:16px 0 4px">Recent exports</div>
+    <div id="ex-recent"></div>
+    <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">Close</button></div>`);
+  exRefresh();
+};
+window.exRerun=i=>{
+  const e=exRecent()[i]; if(!e) return;
+  $('ex-kind').value=e.kind; $('ex-fmt').value=e.fmt;
+  if(e.kind==='sales'){ $('ex-range').value=e.range||'month'; if(e.range==='custom'){ $('ex-from').value=e.from||''; $('ex-to').value=e.to||''; } }
+  exRefresh(); exDownload();
+};
+function exPdf(title,cols,rows,total){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'}); let y=18;
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text(title,14,y); y+=8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.text('ReamBook · '+curShopName(),14,y); y+=10;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  let x=14; cols.forEach(c=>{ doc.text(c.t,x,y); x+=c.w; }); y+=7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  rows.forEach(r=>{ if(y>275){ doc.addPage(); y=18; } x=14; r.forEach((v,ci)=>{ const w=cols[ci].w; const s=String(v==null?'':v); doc.text(doc.splitTextToSize(s,w-3).slice(0,2),x,y); x+=w; }); y+=6; });
+  if(total!=null){ y+=4; doc.setFont('helvetica','bold'); doc.text('Total: '+total,14,y); }
+  doc.save(title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.pdf');
+}
+window.exDownload=()=>{
+  const kind=$('ex-kind').value, fmt=$('ex-fmt').value, rg=exRange();
+  const list=kind==='sales'?exSalesList():DB.products;
+  if(!list.length){ toast('No records in this range'); return; }
+  if(fmt==='CSV'){
+    if(kind==='sales') downloadCSV('sales-'+rg.from+'_to_'+rg.to+'.csv',[['Date','Item','Qty','Total','Customer'],...list.map(s=>[s.date,s.name,s.qty,s.total,s.customer||''])]);
+    else downloadCSV('inventory-'+dstr()+'.csv',[['ID','Brand','Item','Qty','Unit','Cost','Sell'],...list.map(p=>[p.itemId,p.brand,p.name,p.qty,p.unit,p.cost,p.sell])]);
+  } else {
+    if(!window.jspdf){ toast('PDF not available right now, try CSV'); return; }
+    if(kind==='sales') exPdf('Sales Report '+rg.label,[{t:'Date',w:26},{t:'Item',w:80},{t:'Qty',w:20},{t:'Total',w:40}],list.map(s=>[s.date,s.name,s.qty,pkr(s.total)]),pkr(list.reduce((a,s)=>a+(s.total||0),0)));
+    else exPdf('Inventory Report',[{t:'ID',w:30},{t:'Item',w:80},{t:'Qty',w:25},{t:'Sell',w:35}],list.map(p=>[p.itemId,p.name,p.qty,pkr(p.sell)]),null);
+  }
+  exPushRecent({kind,fmt,range:kind==='sales'?$('ex-range').value:'all',from:rg.from,to:rg.to,label:kind==='sales'?rg.label:'Full stock list',count:list.length,when:dstr()});
+  toast('⬇ Exported!'); exRefresh();
+};
 
 /* ================= CREDIT ================= */
 let creditQ='', creditFilter='record', creditSort='medium';
