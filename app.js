@@ -1996,7 +1996,7 @@ function downloadCSV(name,rows){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csvText(rows)],{type:'text/csv'})); a.download=name; a.click();
 }
 window.exportCSV=kind=>{
-  if(kind==='sales') downloadCSV('sales-'+dstr()+'.csv',[['Date','Item','Qty','Total','Customer'],...DB.sales.map(s=>[s.date,s.name,s.qty,s.total,s.customer||''])]);
+  if(kind==='sales'){ const rows=exSalesRows(DB.sales); downloadCSV('sales-'+dstr()+'.csv',[['Date','Time','Product','Name','Size','Qty','Sold At','Cost/Unit','Profit','Customer','Payment'],...rows.map(r=>[r.date,r.time,r.product,r.name,r.size,r.qty,r.sold,r.cost,r.profit,r.customer,r.payment])]); }
   else downloadCSV('inventory-'+dstr()+'.csv',[['ID','Brand','Item','Qty','Unit','Cost','Sell'],...DB.products.map(p=>[p.itemId,p.brand,p.name,p.qty,p.unit,p.cost,p.sell])]);
   toast('⬇ Exported!');
 };
@@ -2012,6 +2012,60 @@ function exRange(){
   return {from:f||t, to:to||t, label:'Custom'};
 }
 function exSalesList(){ const rg=exRange(); return DB.sales.filter(s=>{ const ds=(s.date||'').slice(0,10); return ds>=rg.from&&ds<=rg.to; }); }
+/* SALES REPORT FORMAT (v219) - one row per sold item, reference layout */
+const EX_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function exFmtDate(ds){ const p=(ds||'').split('-'); if(p.length!==3) return ds||''; return p[2]+' '+EX_MONTHS[(parseInt(p[1])||1)-1]+' '+p[0]; }
+function exFmtGen(d){ let h=d.getHours(); const ap=h>=12?'PM':'AM'; h=h%12||12; return d.getDate()+' '+EX_MONTHS[d.getMonth()]+' '+d.getFullYear()+', '+h+':'+String(d.getMinutes()).padStart(2,'0')+' '+ap; }
+function exHHMM(ts){ const d=new Date(ts||0); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function exR2(n){ return Math.round(n*100)/100; }
+function exSalesRows(list){
+  const rows=[];
+  (list||[]).forEach(s=>{
+    const items=(s.items&&s.items.length)?s.items:[{productId:s.productId,name:s.name,qty:s.qty,price:(s.qty?(s.total/s.qty):0),cost:0}];
+    items.forEach(it=>{
+      const pr=it.productId?DB.products.find(p=>p.id===it.productId):null;
+      const qty=it.qty||0, price=it.price||0, cost=it.cost||0;
+      rows.push({date:(s.date||'').slice(0,10), time:exHHMM(s.ts), product:(pr&&pr.brand)||s.brand||'', name:it.name||'', size:'', qty, sold:exR2(qty*price), cost, profit:exR2(qty*(price-cost)), customer:s.customer||'', payment:s.unpaid?'Unpaid':'Paid'});
+    });
+  });
+  return rows;
+}
+function exSalesPdfDoc(rows,from,to){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
+  const L=10, R=200;
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text(curShopName().toUpperCase(),L,18);
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(13,148,136); doc.text('Sales Report',L,26); doc.setTextColor(0,0,0);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100,100,100);
+  doc.text(exFmtDate(from)+' - '+exFmtDate(to),L,33);
+  doc.text('Generated '+exFmtGen(new Date()),L,39); doc.setTextColor(0,0,0);
+  const cols=[{t:'Date',w:20},{t:'Time',w:12},{t:'Product',w:18},{t:'Name',w:30},{t:'Size',w:10},{t:'Qty',w:10},{t:'Sold At',w:18},{t:'Cost/Unit',w:18},{t:'Profit',w:18},{t:'Customer',w:16},{t:'Payment',w:14}];
+  const numCol=ci=>ci===5||ci===6||ci===7||ci===8;
+  const drawHead=y=>{
+    doc.setFillColor(219,234,254); doc.rect(L,y-5,R-L,7,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); let x=L;
+    cols.forEach(c=>{ doc.text(c.t,x,y); x+=c.w; });
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  };
+  let y=48; drawHead(y); y+=7;
+  rows.forEach((r,ri)=>{
+    if(y>278){ doc.addPage(); y=16; drawHead(y); y+=7; }
+    if(ri%2===1){ doc.setFillColor(243,244,246); doc.rect(L,y-4.5,R-L,6,'F'); }
+    const vals=[r.date,r.time,r.product,r.name,r.size,String(r.qty),'Rs '+r.sold,'Rs '+r.cost,'Rs '+r.profit,r.customer,r.payment];
+    let x=L;
+    vals.forEach((v,ci)=>{
+      if(numCol(ci)) doc.text(String(v),x+cols[ci].w-1,y,{align:'right'});
+      else { const s=doc.splitTextToSize(String(v==null?'':v),cols[ci].w-1)[0]||''; doc.text(s,x,y); }
+      x+=cols[ci].w;
+    });
+    y+=6;
+  });
+  const totSold=exR2(rows.reduce((a,r)=>a+r.sold,0)), totProf=exR2(rows.reduce((a,r)=>a+r.profit,0));
+  y+=4; doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text('Total: Rs '+totSold+'  ·  Profit: Rs '+totProf,L,y);
+  const pages=doc.getNumberOfPages();
+  for(let i=1;i<=pages;i++){ doc.setPage(i); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('Page '+i+' of '+pages,R,290,{align:'right'}); }
+  return doc;
+}
 function exKey(){ try{ const em=curEmail(); const reg=em?ensureReg(em):null; return 'ps_rex_'+(em||'anon')+'_'+(reg?reg.active:'main'); }catch(e){ return 'ps_rex_anon_main'; } }
 function exRecent(){ try{ return JSON.parse(localStorage.getItem(exKey())||'[]'); }catch(e){ return []; } }
 function exPushRecent(en){ try{ const l=exRecent(); l.unshift(en); localStorage.setItem(exKey(),JSON.stringify(l.slice(0,8))); }catch(e){} }
@@ -2020,7 +2074,7 @@ window.exRefresh=()=>{
   $('ex-range-row').style.display=kind==='sales'?'':'none';
   $('ex-custom-row').style.display=(kind==='sales'&&$('ex-range').value==='custom')?'':'none';
   $('ex-note').textContent=kind==='sales'?'':'Inventory is always the full stock list.';
-  const n=kind==='sales'?exSalesList().length:DB.products.length;
+  const n=kind==='sales'?exSalesRows(exSalesList()).length:DB.products.length;
   $('ex-count').textContent=n?n+' records':'No records in this range';
   const rec=exRecent();
   $('ex-recent').innerHTML=rec.length?rec.map((e,i)=>`<div class="menu-row" onclick="exRerun(${i})"><span class="ic">↺</span><span>${e.kind==='sales'?'Sales':'Inventory'} · ${e.fmt}<div class="sub" style="font-weight:400">${e.label} · ${e.count} records · ${e.when}</div></span><span class="arw">›</span></div>`).join(''):'<p class="note">No recent exports yet</p>';
@@ -2067,15 +2121,16 @@ window.exDownload=()=>{
   const kind=$('ex-kind').value, fmt=$('ex-fmt').value, rg=exRange();
   const list=kind==='sales'?exSalesList():DB.products;
   if(!list.length){ toast('No records in this range'); return; }
+  const rows=kind==='sales'?exSalesRows(list):null;
   if(fmt==='CSV'){
-    if(kind==='sales') downloadCSV('sales-'+rg.from+'_to_'+rg.to+'.csv',[['Date','Item','Qty','Total','Customer'],...list.map(s=>[s.date,s.name,s.qty,s.total,s.customer||''])]);
+    if(kind==='sales') downloadCSV('sales-'+rg.from+'_to_'+rg.to+'.csv',[['Date','Time','Product','Name','Size','Qty','Sold At','Cost/Unit','Profit','Customer','Payment'],...rows.map(r=>[r.date,r.time,r.product,r.name,r.size,r.qty,r.sold,r.cost,r.profit,r.customer,r.payment])]);
     else downloadCSV('inventory-'+dstr()+'.csv',[['ID','Brand','Item','Qty','Unit','Cost','Sell'],...list.map(p=>[p.itemId,p.brand,p.name,p.qty,p.unit,p.cost,p.sell])]);
   } else {
     if(!window.jspdf){ toast('PDF not available right now, try CSV'); return; }
-    if(kind==='sales') exSavePdf(exPdfDoc('Sales Report '+rg.label,[{t:'Date',w:26},{t:'Item',w:80},{t:'Qty',w:20},{t:'Total',w:40}],list.map(s=>[s.date,s.name,s.qty,pkr(s.total)]),pkr(list.reduce((a,s)=>a+(s.total||0),0))),'sales-report-'+rg.from+'_to_'+rg.to+'.pdf');
+    if(kind==='sales') exSavePdf(exSalesPdfDoc(rows,rg.from,rg.to),'sales-report-'+rg.from+'_to_'+rg.to+'.pdf');
     else exSavePdf(exPdfDoc('Inventory Report',[{t:'ID',w:30},{t:'Item',w:80},{t:'Qty',w:25},{t:'Sell',w:35}],list.map(p=>[p.itemId,p.name,p.qty,pkr(p.sell)]),null),'inventory-report.pdf');
   }
-  exPushRecent({kind,fmt,range:kind==='sales'?$('ex-range').value:'all',from:rg.from,to:rg.to,label:kind==='sales'?rg.label:'Full stock list',count:list.length,when:dstr()});
+  exPushRecent({kind,fmt,range:kind==='sales'?$('ex-range').value:'all',from:rg.from,to:rg.to,label:kind==='sales'?rg.label:'Full stock list',count:kind==='sales'?rows.length:list.length,when:dstr()});
   toast('⬇ Exported!'); exRefresh();
 };
 
