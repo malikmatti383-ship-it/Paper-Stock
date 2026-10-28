@@ -1992,6 +1992,7 @@ function csvDataUrl(rows){
   return 'data:text/csv;base64,'+btoa(unescape(encodeURIComponent(csvText(rows))));
 }
 function downloadCSV(name,rows){
+  if(window.AndroidApp&&AndroidApp.downloadAndShare){ try{ AndroidApp.downloadAndShare(csvDataUrl(rows),name); return; }catch(e){} }
   if(window.AndroidApp&&AndroidApp.saveFile){ try{ AndroidApp.saveFile(csvDataUrl(rows),name); return; }catch(e){} }
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csvText(rows)],{type:'text/csv'})); a.download=name; a.click();
 }
@@ -2152,6 +2153,7 @@ function exPdfDoc(title,cols,rows,total){
   return doc;
 }
 function exSavePdf(doc,fname){
+  if(window.AndroidApp&&AndroidApp.downloadAndShare){ try{ AndroidApp.downloadAndShare(doc.output('datauristring'),fname); return; }catch(e){} }
   if(window.AndroidApp&&AndroidApp.sharePdf){ try{ AndroidApp.sharePdf(doc.output('datauristring'),fname); return; }catch(e){} }
   doc.save(fname);
 }
