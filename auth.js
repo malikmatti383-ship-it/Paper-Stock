@@ -106,9 +106,13 @@
       if (pushTimer) clearTimeout(pushTimer);
       pushTimer = setTimeout(pushNow, 15000);
     }
-    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') pushNow(); });
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') pushNow(); else pull(); });
     window.addEventListener('pagehide', function () { pushNow(); });
     pull();
+    // v223 auto-sync: while the app is open, pull every 20 seconds so other
+    // devices' changes appear without reopening the app or tapping Sync now.
+    // Pulls are safe: applyRemote ignores older data and unsynced local edits.
+    setInterval(function () { if (document.visibilityState === 'visible') pull(); }, 20000);
     return { pull: pull, push: pushNow, schedulePush: schedulePush };
   }
 
