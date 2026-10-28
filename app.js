@@ -601,14 +601,18 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) sfPollPe
 /* ---------- App update (APK) ---------- */
 let _apkInfo=null;
 function _installedVc(){ try{ return (window.AndroidApp&&AndroidApp.getVersionCode)?AndroidApp.getVersionCode():0; }catch(e){ return 0; } }
+const _VC_NAMES={11:'1.3.7',12:'1.3.8',13:'1.3.9'};
+function _installedName(){ const vc=_installedVc(); if(!vc) return ''; return _VC_NAMES[vc]||('v'+vc); }
 function _fetchApkInfo(){ return fetch('./apk-version-book.json?t='+Date.now()).then(r=>r.json()).then(j=>{ _apkInfo=j; return j; }); }
+/* v222: Update row shows the installed version, and old -> new when an update is available */
 function refreshUpdateBadge(){
   _fetchApkInfo().then(j=>{
     const mine=_installedVc(), dot=$('upd-dot'), txt=$('upd-txt');
     if(!dot) return;
-    if(j&&j.versionCode&&mine&&j.versionCode>mine){ dot.style.display='inline-block'; if(txt)txt.textContent='New: v'+(j.versionName||''); }
-    else { dot.style.display='none'; if(txt)txt.textContent=''; }
-  }).catch(()=>{});
+    const name=_installedName();
+    if(j&&j.versionCode&&mine&&j.versionCode>mine){ dot.style.display='inline-block'; if(txt)txt.textContent=(name?name+' → ':'')+(j.versionName||''); }
+    else { dot.style.display='none'; if(txt)txt.textContent=name; }
+  }).catch(()=>{ const dot=$('upd-dot'), txt=$('upd-txt'); if(dot)dot.style.display='none'; if(txt)txt.textContent=_installedName(); });
 }
 window.checkAppUpdate=()=>{
   const go=j=>{
@@ -652,7 +656,20 @@ window.openSettings=()=>{
   <div class="menu-row" onclick="openAlarmSounds()"><span class="ic">${IC_MUSIC}</span><div><div>Alarm sound</div><div class="sub">${alarmSoundName()} — tap to change &amp; hear</div></div><span class="arw">›</span></div>
   <div class="lbl" style="margin:8px 0 2px">NAVIGATION</div>
   <div class="menu-row" onclick="openTabOrder()"><span class="ic">${IC_LAYERS}</span><div><div>Tab order</div><div class="sub">${tabOrder().map(k=>TAB_LABEL[k]).join(', ')} — tap to change</div></div><span class="arw">›</span></div>
+  <div class="lbl" style="margin:8px 0 2px">ABOUT</div>
+  <div class="menu-row" onclick="openAbout()"><span class="ic">${IC_INFO}</span><div><div>About ReamBook</div><div class="sub">Version ${_installedName()||'—'} — tap for details</div></div><span class="arw">›</span></div>
   <div class="mrow"><button class="btn-ghost" onclick="$('btn-profile').click()">Back</button></div>`);
+};
+window.openAbout=(tried)=>{
+  if(!_apkInfo&&!tried){ _fetchApkInfo().then(()=>openAbout(true)).catch(()=>openAbout(true)); return; }
+  const mine=_installedVc(), name=_installedName(), j=_apkInfo;
+  const updAvailable=j&&j.versionCode&&mine&&j.versionCode>mine;
+  openSheet(`<h3>ℹ️ About ReamBook</h3>
+  <div class="menu-row"><div><div>ReamBook</div><div class="sub">Sale, Stock, Credit &amp; Reports</div></div></div>
+  <div class="menu-row"><div><div>Installed version</div><div class="sub">${name||'Browser — no APK installed'}</div></div></div>
+  ${updAvailable?`<div class="menu-row"><div><div>New version available</div><div class="sub">${name} → ${j.versionName} — tap Download to update</div></div></div>
+  <div class="mrow"><button class="btn-go" onclick="checkAppUpdate()">Download ${j.versionName}</button></div>`:j?`<div class="menu-row"><div><div>Update status</div><div class="sub">You are on the latest version</div></div></div>`:`<div class="menu-row"><div><div>Update status</div><div class="sub">Could not check — connect to the internet and reopen</div></div></div>`}
+  <div class="mrow"><button class="btn-ghost" onclick="openSettings()">Back</button></div>`);
 };
 window.openTabOrder=()=>{
   const cur=DB.profile.tabOrder||0;
@@ -708,6 +725,7 @@ const IC_ALARM=_svg('<circle cx="12" cy="13" r="7"/><polyline points="12 10 12 1
 const IC_MUSIC=_svg('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>');
 const IC_WARN=_svg('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>');
 const IC_LAYERS=_svg('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>');
+const IC_INFO=_svg('<circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>');
 const IC_SHOP=_svg('<path d="M3 9.5 4.6 4h14.8L21 9.5"/><path d="M4 9.5V20h16V9.5"/><path d="M9.5 20v-5.5h5V20"/><path d="M3 9.5c.6 1.2 1.7 2 3 2s2.4-.8 3-2c.6 1.2 1.7 2 3 2s2.4-.8 3-2c.6 1.2 1.7 2 3 2s2.4-.8 3-2"/>');
 const IC_SHARE=_svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4"/><path d="M15.4 6.5l-6.8 4"/>');
 /* v211: Share app — doston/groups ko download link bhejo. Jo pehle se
