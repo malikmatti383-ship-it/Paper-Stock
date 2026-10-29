@@ -828,8 +828,8 @@ $('btn-profile').onclick=()=>{
     <div class="prof-row" onclick="openCloudSheet()"><span class="prof-ic">${IC_UL}</span><span class="prof-lbl">Multi-device sharing</span><span class="prof-val">1 account</span><span class="arw">›</span></div>
     <div class="prof-sec">Your data</div>
     <div class="prof-cards">
-      <div class="prof-card" onclick="cloudBackup()"><span class="prof-ic lg">${IC_UL}</span><b>Back up</b><small>${lastBackupTxt()}</small></div>
-      <div class="prof-card" onclick="$('import-file').click()"><span class="prof-ic lg">${IC_FOLDER}</span><b>Restore</b><small>Bring back your latest data</small></div>
+      <div class="prof-card" onclick="guardBackup()"><span class="prof-ic lg">${IC_UL}</span><b>Back up</b><small>${_bkLocked()?'🔒 Premium':lastBackupTxt()}</small></div>
+      <div class="prof-card" onclick="guardRestore()"><span class="prof-ic lg">${IC_FOLDER}</span><b>Restore</b><small>${_bkLocked()?'🔒 Premium':'Bring back your latest data'}</small></div>
     </div>
     <div class="prof-row" onclick="openExportScreen()"><span class="prof-ic">${IC_DL}</span><span class="prof-lbl">Export data</span><span class="prof-val">CSV / PDF</span><span class="arw">›</span></div>
     <div class="prof-row" onclick="openThemePicker()"><span class="prof-ic">${IC_THEME}</span><span class="prof-lbl">Colors Theme</span><span class="prof-val">${themeName(curTheme())}</span><span class="arw">›</span></div>
@@ -861,6 +861,11 @@ window.cloudBackup=()=>{
   try{ localStorage.setItem(lastBackupKey(), String(Date.now())); }catch(e){}
   toast('✅ Backup downloaded!');
 };
+/* v224: Back up / Restore are Premium-only (owner's rule 2026-10-29) — a free
+   user tapping either gets the subscription sheet instead of a backup file. */
+function _bkLocked(){ return !_subPremiumActive(_subUser()); }
+window.guardBackup=()=>{ if(_bkLocked()) openCloudSheet(); else cloudBackup(); };
+window.guardRestore=()=>{ if(_bkLocked()) openCloudSheet(); else $('import-file').click(); };
 window.importBackup=function(inp){
   const f=inp.files[0]; if(!f) return;
   const r=new FileReader();
