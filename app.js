@@ -602,7 +602,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) sfPollPe
 /* ---------- App update (APK) ---------- */
 let _apkInfo=null;
 function _installedVc(){ try{ return (window.AndroidApp&&AndroidApp.getVersionCode)?AndroidApp.getVersionCode():0; }catch(e){ return 0; } }
-const _VC_NAMES={11:'1.3.7',12:'1.3.8',13:'1.3.9'};
+const _VC_NAMES={11:'1.3.7',12:'1.3.8',13:'1.3.9',14:'1.3.10'};
 function _installedName(){ const vc=_installedVc(); if(!vc) return ''; return _VC_NAMES[vc]||('v'+vc); }
 function _fetchApkInfo(){ return fetch('./apk-version-book.json?t='+Date.now()).then(r=>r.json()).then(j=>{ _apkInfo=j; return j; }); }
 /* v222: Update row shows the installed version, and old -> new when an update is available */
@@ -1559,7 +1559,7 @@ $('day-next').onclick=()=>{ const d=new Date(saleDay+'T12:00'); d.setDate(d.getD
 $('sales-day-title').onclick=()=>openDatePicker('day-jump');
 $('day-jump').onchange=e=>{ if(e.target.value){ saleDay=e.target.value; renderDaySales(); } };
 let expSaleId=null;
-window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); renderDaySales(); };
+window.toggleSaleExp=id=>{ expSaleId=(expSaleId===id?null:id); if(repDetailDate) renderReport(); else renderDaySales(); };
 let expExpId=null;
 window.toggleExp=id=>{ expExpId=(expExpId===id?null:id); renderDaySales(); };
 /* ---- Expense history: edit + return (like sale/wholesale) ---- */
@@ -1610,6 +1610,33 @@ const _fp=$('f-paid'); if(_fp) _fp.onclick=openPaidFilter;
 const _ft=$('f-type'); if(_ft) _ft.onclick=openTypeFilter;
 const _fsb=$('f-search-btn'); if(_fsb) _fsb.onclick=()=>{ const r=$('day-search-row'); r.classList.toggle('hidden'); const i=$('day-search'); if(!r.classList.contains('hidden')) setTimeout(()=>i.focus(),100); else { i.value=''; fQ=''; renderDaySales(); } };
 const _ds=$('day-search'); if(_ds) _ds.oninput=e=>{ fQ=e.target.value.toLowerCase(); renderDaySales(); };
+/* v227: shared sale card (Sales tab day list + Report day detail) */
+function saleCardHtml(s){
+const its=saleItems(s), open=expSaleId===s.id;
+const sub=its.length>1?its.length+' items':'× '+s.qty;
+const lineP=it=>saleLineProfit(s,it,its);
+const hasCost=its.some(it=>it.cost!=null);
+const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
+const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
+const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
+const miniPL=hasCost?((its.some(it=>lineP(it)>0)?'<span class="mpl mp-pos" title="Profit">▲</span>':'')+(its.some(it=>lineP(it)<0)?'<span class="mpl mp-neg" title="Loss">▼</span>':'')):'';
+const det=open?`<div class="sale-det">`+its.map((it,ix)=>{
+  const lp=hasCost?lineP(it):0;
+  return `
+  <div class="sdet-row"><div><b>${esc(it.name||s.name)}</b>${hasCost&&lineP(it)<0?'<span class="loss-tag">▼ LOSS</span>':''}${hasCost&&lineP(it)>0?'<span class="profit-tag">▲ PROFIT</span>':''}<div class="sub">${it.qty} × ${pkr(it.price)}</div></div>
+  <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
+  ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
+  <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
+  (sDisc>0.005?`<div class="sdet-row"><div><b>Total</b></div><div class="sdet-r"><b>${pkr(sCorr)}</b></div></div><div class="sdet-row"><div><b>Discount</b></div><div class="sdet-r"><b style="color:var(--green)">− ${pkr(sDisc)}${(()=>{const dp=discPctLbl(s);return dp?' - '+dp:'';})()}</b></div></div>`:'')+(hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
+  `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
+   ${(s.discount||0)>0.005?(()=>{const dp=discPctLbl(s);return `<div class="disc-badge">🏷️ Discount: ${pkr(s.discount)}${dp?' - '+dp:''}</div>`;})():''}
+  <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
+   <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button><button class="bill-btn bill-img" onclick="event.stopPropagation();shareBillImage(${s.id})"><span class="bi">🖼️</span><span>Send image</span></button></div></div>`:'';
+return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
+  <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.kind==='wholesale'?'<span class="ws-pill">🏪 Wholesale</span>':'<span class="sl-pill">🛒 Sale</span>'}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
+  <div class="sub"><span class="id-box">ID${s.id}</span> ${sub}${s.customer?' · '+esc(s.customer):''}${miniPL}</div></div>
+  <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
+}
 function renderDaySales(){
   paintFPills();
   let list=DB.sales.filter(s=>s.date===saleDay);
@@ -1629,32 +1656,7 @@ function renderDaySales(){
   if(fq) exps=exps.filter(e=>(e.title||'').toLowerCase().includes(fq));
   const dlbl=saleDay===dstr()?'Today':fmtDate(saleDay);
   $('sales-day-title').textContent=dlbl+' · '+list.length+' sales';
-  const saleRows=list.map(s=>{
-    const its=saleItems(s), open=expSaleId===s.id;
-    const sub=its.length>1?its.length+' items':'× '+s.qty;
-    const lineP=it=>saleLineProfit(s,it,its);
-    const hasCost=its.some(it=>it.cost!=null);
-    const posP=hasCost?its.reduce((a,it)=>a+Math.max(0,lineP(it)),0):0;
-    const negL=hasCost?its.reduce((a,it)=>a+Math.max(0,-lineP(it)),0):0;
-    const sDisc=(s.discount||0), sCorr=(s.correctTotal!=null?s.correctTotal:s.total);
-    const miniPL=hasCost?((its.some(it=>lineP(it)>0)?'<span class="mpl mp-pos" title="Profit">▲</span>':'')+(its.some(it=>lineP(it)<0)?'<span class="mpl mp-neg" title="Loss">▼</span>':'')):'';
-    const det=open?`<div class="sale-det">`+its.map((it,ix)=>{
-      const lp=hasCost?lineP(it):0;
-      return `
-      <div class="sdet-row"><div><b>${esc(it.name||s.name)}</b>${hasCost&&lineP(it)<0?'<span class="loss-tag">▼ LOSS</span>':''}${hasCost&&lineP(it)>0?'<span class="profit-tag">▲ PROFIT</span>':''}<div class="sub">${it.qty} × ${pkr(it.price)}</div></div>
-      <div class="sdet-r"><div style="text-align:right"><b>${pkr(it.qty*it.price)}</b>
-      ${hasCost&&lp!==0?`<div class="${lp>0?'lp-pos':'lp-neg'}">${lp>0?'+':'\u2212'} ${pkr(Math.abs(lp))}</div>`:''}</div>
-      <button class="ret-one" onclick="event.stopPropagation();returnItem(${s.id},${ix})" title="Return item">⤺</button></div></div>`;}).join('')+
-      (sDisc>0.005?`<div class="sdet-row"><div><b>Total</b></div><div class="sdet-r"><b>${pkr(sCorr)}</b></div></div><div class="sdet-row"><div><b>Discount</b></div><div class="sdet-r"><b style="color:var(--green)">− ${pkr(sDisc)}${(()=>{const dp=discPctLbl(s);return dp?' - '+dp:'';})()}</b></div></div>`:'')+(hasCost?`<div class="pl-row"><span class="pl-pos${posP>0?'':' dim'}">💰 Profit: ${pkr(posP)}</span><span class="pl-neg${negL>0?'':' dim'}">📉 Loss: ${pkr(negL)}</span></div>`:'')+
-      `<button class="edit-sale-btn" onclick="event.stopPropagation();editSale(${s.id})">✏️ Edit sale</button>
-   ${(s.discount||0)>0.005?(()=>{const dp=discPctLbl(s);return `<div class="disc-badge">🏷️ Discount: ${pkr(s.discount)}${dp?' - '+dp:''}</div>`;})():''}
-      <button class="return-bundle" onclick="event.stopPropagation();returnSale(${s.id})">Return Bundle</button>
-       <div class="bill-btns"><button class="bill-btn bill-print" onclick="event.stopPropagation();printSale(${s.id})"><span class="bi">🖨️</span><span>Print</span></button><button class="bill-btn bill-pdf" onclick="event.stopPropagation();shareBillPDF(${s.id})"><span class="bi">📄</span><span>PDF bill</span></button><button class="bill-btn bill-img" onclick="event.stopPropagation();shareBillImage(${s.id})"><span class="bi">🖼️</span><span>Send image</span></button></div></div>`:'';
-    return `<div class="sale-card${open?' open':''}"><div class="sale-top" onclick="toggleSaleExp(${s.id})">
-      <div style="flex:1;min-width:0"><div class="d">${esc(s.name)}${s.kind==='wholesale'?'<span class="ws-pill">🏪 Wholesale</span>':'<span class="sl-pill">🛒 Sale</span>'}${s.unpaid?`<span class="unpaid-pill" onclick="event.stopPropagation();unmarkPaid(${s.id})">Unpaid</span>`:''}<span class="t">${hhmm(s.ts)}</span></div>
-      <div class="sub"><span class="id-box">ID${s.id}</span> ${sub}${s.customer?' · '+esc(s.customer):''}${miniPL}</div></div>
-      <div class="a">${pkr(s.total)}</div><div class="xarw">${open?'▲':'▼'}</div></div>${det}</div>`;
-  }).join('');
+  const saleRows=list.map(saleCardHtml).join('');
   const expRows=exps.map(e=>{
     const open=expExpId===e.id;
     const det=open?`<div class="sale-det">
@@ -1941,9 +1943,12 @@ window.delProduct=id=>{ const p=DB.products.find(x=>x.id===id);
     DB.products=DB.products.filter(x=>x.id!==id); save(); closeSheet(); renderStock(); toast('Deleted'); }); };
 
 /* ================= REPORT ================= */
-let repY=new Date().getFullYear(), repM=new Date().getMonth(), chartMode='sales', repShowAll=false, repHalf=0;
+let repY=new Date().getFullYear(), repM=new Date().getMonth(), chartMode='sales', repShowAll=false, repHalf=0, repDetailDate=null;
 const MNAME=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function renderReport(){
+  /* v227: day-detail mode — the day's sales open INSIDE Report, not the Sales tab */
+  if(repDetailDate){ renderRepDetail(); return; }
+  $('rep-main').classList.remove('hidden'); $('rep-detail').classList.add('hidden');
   $('period-txt').textContent=MNAME[repM].slice(0,3)+' '+repY;
   const sales=DB.sales.filter(s=>{ const d=new Date(s.ts); return d.getFullYear()===repY&&d.getMonth()===repM; });
   const prev=DB.sales.filter(s=>{ const d=new Date(s.ts); let pm=repM-1,py=repY; if(pm<0){pm=11;py--;} return d.getFullYear()===py&&d.getMonth()===pm; });
@@ -1998,7 +2003,25 @@ function histCardHtml(ds,info,yds){
     +`<div class="hist-right"><div class="a">${pkr(info.total)}</div><div class="p">+ ${pkr(info.profit)} profit</div></div>`
     +`<div class="hist-chev">›</div></div>`;
 }
-window.openHistDay=ds=>{ saleDay=ds; showView('view-sales'); };
+window.openHistDay=ds=>{ repDetailDate=ds; expSaleId=null; renderReport(); };
+window.closeHistDay=()=>{ repDetailDate=null; renderReport(); };
+/* v227: day detail inside Report — same sale cards as the Sales tab (expand,
+   items, profit/loss, return, edit, bills) via the shared saleCardHtml. */
+function renderRepDetail(){
+  $('rep-main').classList.add('hidden');
+  const box=$('rep-detail'); box.classList.remove('hidden');
+  const ds=repDetailDate;
+  const list=DB.sales.filter(s=>s.date===ds).sort((a,b)=>b.id-a.id);
+  const tot=list.reduce((a,s)=>a+s.total,0);
+  const prof=list.reduce((a,s)=>a+saleProfit(s),0);
+  const cards=list.map(saleCardHtml).join('')||'<p class="note">No sales this day</p>';
+  box.innerHTML=`<div class="repdet-top"><button class="back-btn" onclick="closeHistDay()">‹</button>`
+    +`<div><h3 style="margin:0">Sales history</h3><div class="sub">${fmtDate(ds)}</div></div></div>`
+    +`<div class="white-card repdet-sum"><div class="lbl">${list.length} SALE${list.length===1?'':'S'}</div>`
+    +`<div class="repdet-nums"><b class="teal-num">${pkr(tot)}</b><span class="green-num">+ ${pkr(prof)} profit</span></div></div>`
+    +cards;
+  window.scrollTo(0,0);
+}
 $('ch-sales').onclick=()=>{ chartMode='sales'; $('ch-sales').classList.add('active'); $('ch-profit').classList.remove('active'); renderReport(); };
 $('ch-profit').onclick=()=>{ chartMode='profit'; $('ch-profit').classList.add('active'); $('ch-sales').classList.remove('active'); renderReport(); };
 const toggleHistAll=()=>{ repShowAll=!repShowAll; $('rep-show-all').textContent=repShowAll?'Show less':'Show all'; renderReport(); const h=$('rep-history'); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); };
