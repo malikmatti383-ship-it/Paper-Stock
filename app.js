@@ -432,6 +432,7 @@ const GET_HTML=`<div class="get-card">
   <div class="get-row"><div class="get-ic">☁️</div><div><b>Cloud backup</b><div class="sub">Saved automatically, so it's never lost.</div></div></div>
   <div class="get-row"><div class="get-ic">🔄</div><div><b>Multi-device sync</b><div class="sub">Same login — your data on up to 5 devices.</div></div></div>
   <div class="get-row"><div class="get-ic">⬇️</div><div><b>Backup &amp; restore</b><div class="sub">Download a copy anytime, restore it on a new phone.</div></div></div>
+  <div class="get-row"><div class="get-ic">📄</div><div><b>Monthly reports</b><div class="sub">Download your monthly sales &amp; stock record as PDF or CSV.</div></div></div>
   <div class="get-row"><div class="get-ic">📴</div><div><b>Works offline</b><div class="sub">Syncs by itself whenever internet is available.</div></div></div>
   <div class="get-row"><div class="get-ic">✨</div><div><b>No ads</b><div class="sub">A clean app with nothing in your way.</div></div></div>
 </div>`;
@@ -831,7 +832,7 @@ $('btn-profile').onclick=()=>{
       <div class="prof-card" onclick="guardBackup()"><span class="prof-ic lg">${IC_UL}</span><b>Back up</b><small>${_bkLocked()?'🔒 Premium':lastBackupTxt()}</small></div>
       <div class="prof-card" onclick="guardRestore()"><span class="prof-ic lg">${IC_FOLDER}</span><b>Restore</b><small>${_bkLocked()?'🔒 Premium':'Bring back your latest data'}</small></div>
     </div>
-    <div class="prof-row" onclick="openExportScreen()"><span class="prof-ic">${IC_DL}</span><span class="prof-lbl">Export data</span><span class="prof-val">CSV / PDF</span><span class="arw">›</span></div>
+    <div class="prof-row" onclick="openExportScreen()"><span class="prof-ic">${IC_DL}</span><span class="prof-lbl">Export data</span><span class="prof-val">${_bkLocked()?'🔒 Premium':'CSV / PDF'}</span><span class="arw">›</span></div>
     <div class="prof-row" onclick="openThemePicker()"><span class="prof-ic">${IC_THEME}</span><span class="prof-lbl">Colors Theme</span><span class="prof-val">${themeName(curTheme())}</span><span class="arw">›</span></div>
     <div class="prof-row" onclick="openSettings()"><span class="prof-ic">${IC_SET}</span><span class="prof-lbl">Settings</span><span class="arw">›</span></div>
     <div class="prof-row" onclick="checkAppUpdate()"><span class="prof-ic">${IC_UPD}</span><span class="prof-lbl">Update</span><span class="prof-val"><span id="upd-dot" style="display:none;width:9px;height:9px;border-radius:50%;background:#22c55e"></span><span id="upd-txt"></span></span><span class="arw">›</span></div>
@@ -2020,6 +2021,8 @@ function downloadCSV(name,rows){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csvText(rows)],{type:'text/csv'})); a.download=name; a.click();
 }
 window.exportCSV=kind=>{
+  /* v225: REPORT-tab CSV download is Premium-only, same as Export screen. */
+  if(_bkLocked()){ openCloudSheet(); return; }
   if(kind==='sales'){ const rows=exSalesRows(DB.sales); downloadCSV('sales-'+dstr()+'.csv',[['Date','Time','Product','Name','Size','Qty','Sold At','Cost/Unit','Profit','Customer','Payment'],...rows.map(r=>[r.date,r.time,r.product,r.name,r.size,r.qty,r.sold,r.cost,r.profit,r.customer,r.payment])]); }
   else { const rows=DB.products; downloadCSV('inventory-'+dstr()+'.csv',[['ID','Name','Size','Group','Quantity','Cost Price','Selling Price','Tax %','Inventory Cost','Inventory Value'],...rows.map(p=>[p.itemId,p.name,'','',p.qty,p.cost,p.sell,0,exR2((p.qty||0)*(p.cost||0)),exR2((p.qty||0)*(p.sell||0))])]); }
   toast('⬇ Exported!');
@@ -2142,6 +2145,8 @@ window.exRefresh=()=>{
   $('ex-recent').innerHTML=rec.length?rec.map((e,i)=>`<div class="menu-row" onclick="exRerun(${i})"><span class="ic">↺</span><span>${e.kind==='sales'?'Sales':'Inventory'} · ${e.fmt}<div class="sub" style="font-weight:400">${e.label} · ${e.count} records · ${e.when}</div></span><span class="arw">›</span></div>`).join(''):'<p class="note">No recent exports yet</p>';
 };
 window.openExportScreen=()=>{
+  /* v225: Export is Premium-only — free users get the subscription sheet. */
+  if(_bkLocked()){ openCloudSheet(); return; }
   openSheet(`<h3 style="text-align:center">Export Report</h3>
     <div style="font-weight:700;margin:10px 0 4px">What to export</div>
     <select id="ex-kind" onchange="exRefresh()"><option value="sales">Sales</option><option value="inventory">Inventory</option></select>
