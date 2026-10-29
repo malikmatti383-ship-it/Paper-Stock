@@ -1978,15 +1978,27 @@ function renderReport(){
     bars+=`<div class="bar" style="height:${h}px"><span>${d}</span></div>`; }
   $('bar-chart').innerHTML=bars;
   $('chart-axis').innerHTML=`<span>${fmtK(max)}</span><span>${fmtK(max/2)}</span><span>0</span>`;
-  // history by day
-  const days={}; sales.forEach(s=>{ days[s.date]=days[s.date]||{total:0,profit:0}; days[s.date].total+=s.total; days[s.date].profit+=saleProfit(s); });
+  // history by day — v226: rich day cards; tap jumps to the Sales tab day view
+  const days={}; sales.forEach(s=>{ days[s.date]=days[s.date]||{total:0,profit:0,n:0}; days[s.date].total+=s.total; days[s.date].profit+=saleProfit(s); days[s.date].n++; });
   const arr=Object.keys(days).sort().reverse();
   const show=repShowAll?arr:arr.slice(0,8);
-  $('rep-history').innerHTML=show.map(ds=>{ const d=new Date(ds+'T12:00');
-    const lbl=ds===dstr()?'Today · ':'';
-    return `<div class="hist-row" onclick="dayDetail('${ds}')"><div><div class="d">${lbl}${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div>
-    <div class="p">+ ${pkr(days[ds].profit)} profit</div></div><div class="a">${pkr(days[ds].total)}</div></div>`; }).join('')||'<p class="note" style="color:#fff">No sales this period</p>';
+  const _yds=dstr(new Date(Date.now()-86400000));
+  $('rep-history').innerHTML=show.map(ds=>histCardHtml(ds,days[ds],_yds)).join('')||'<p class="note" style="color:#fff">No sales this period</p>';
 }
+/* v226: one sales-history day card (pure builder, tested). Tap opens that day
+   in the Sales tab, which already has the expandable sale rows, item detail,
+   profit/loss and return actions. */
+function histCardHtml(ds,info,yds){
+  const d=new Date(ds+'T12:00');
+  const rel=ds===dstr()?'Today · ':(ds===yds?'Yesterday · ':'');
+  const dlbl=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+  return `<div class="hist-card" onclick="openHistDay('${ds}')">`
+    +`<div class="hist-badge"><b>${d.getDate()}</b><span>${d.toLocaleDateString('en-GB',{month:'short'})}</span></div>`
+    +`<div class="hist-mid"><div class="d">${rel}${dlbl}</div><div class="sub">${info.n} sale${info.n>1?'s':''}</div></div>`
+    +`<div class="hist-right"><div class="a">${pkr(info.total)}</div><div class="p">+ ${pkr(info.profit)} profit</div></div>`
+    +`<div class="hist-chev">›</div></div>`;
+}
+window.openHistDay=ds=>{ saleDay=ds; showView('view-sales'); };
 $('ch-sales').onclick=()=>{ chartMode='sales'; $('ch-sales').classList.add('active'); $('ch-profit').classList.remove('active'); renderReport(); };
 $('ch-profit').onclick=()=>{ chartMode='profit'; $('ch-profit').classList.add('active'); $('ch-sales').classList.remove('active'); renderReport(); };
 const toggleHistAll=()=>{ repShowAll=!repShowAll; $('rep-show-all').textContent=repShowAll?'Show less':'Show all'; renderReport(); const h=$('rep-history'); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); };
@@ -2003,12 +2015,7 @@ $('btn-period').onclick=()=>{
     <div class="mrow"><button class="btn-ghost" onclick="closeSheet()">CANCEL</button><button class="btn-go" onclick="applyPeriod()">APPLY</button></div>`);
 };
 window.applyPeriod=()=>{ repM=parseInt($('pp-m').value); repY=parseInt($('pp-y').value); repHalf=0; repShowAll=false; $('rep-show-all').textContent='Show all'; closeSheet(); renderReport(); };
-window.dayDetail=ds=>{
-  const list=DB.sales.filter(s=>s.date===ds).reverse();
-  openSheet(`<h3>${fmtDate(ds)} — ${list.length} sales</h3>`+list.map(s=>`
-    <div class="kv"><span>${esc(s.name)} × ${s.qty}${s.customer?' · '+esc(s.customer):''}</span><b>${pkr(s.total)}</b></div>`).join('')+
-    `<div class="mrow"><button class="btn-go" onclick="closeSheet()">Close</button></div>`);
-};
+/* v226: dayDetail removed — history cards now jump to the Sales tab day view */
 function csvText(rows){
   return rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
 }

@@ -205,10 +205,18 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .chart-wrap{display:flex;gap:6px}
 .chart-wrap .bar-chart{flex:1}
 .chart-axis{display:flex;flex-direction:column;justify-content:space-between;height:130px;margin-top:10px;font-size:10px;color:var(--sub)}
-.hist-row{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-.hist-row .d{font-weight:700;font-size:16px}
-.hist-row .p{color:var(--green);font-weight:600;font-size:14px}
-.hist-row .a{font-weight:800;font-size:17px}
+/* v226: sales-history day cards (unique ReamBook style — date badge, not a copy) */
+.hist-card{background:#fff;border-radius:16px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 1px 3px rgba(0,60,90,.08)}
+.hist-badge{width:46px;height:52px;border-radius:12px;background:linear-gradient(160deg,#0b8ac2,#0077BE);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.hist-badge b{font-size:19px;line-height:1.1}
+.hist-badge span{font-size:11px;opacity:.92}
+.hist-mid{flex:1;min-width:0}
+.hist-mid .d{font-weight:800;font-size:16px}
+.hist-mid .sub{color:#8a94a6;font-size:13px;margin-top:2px}
+.hist-right{text-align:right;flex-shrink:0}
+.hist-right .a{font-weight:800;font-size:17px}
+.hist-right .p{color:var(--green);font-weight:700;font-size:13px;margin-top:2px}
+.hist-chev{color:#b9c2d0;font-size:22px;font-weight:700;flex-shrink:0}
 
 /* Credit */
 .cust-card{background:#fff;border-radius:var(--radius);padding:14px;margin-bottom:10px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12)}
