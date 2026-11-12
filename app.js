@@ -602,7 +602,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) sfPollPe
 /* ---------- App update (APK) ---------- */
 let _apkInfo=null;
 function _installedVc(){ try{ return (window.AndroidApp&&AndroidApp.getVersionCode)?AndroidApp.getVersionCode():0; }catch(e){ return 0; } }
-const _VC_NAMES={11:'1.3.7',12:'1.3.8',13:'1.3.9',14:'1.3.10'};
+const _VC_NAMES={11:'1.3.7',12:'1.3.8',13:'1.3.9',14:'1.3.10',15:'1.3.11'};
 function _installedName(){ const vc=_installedVc(); if(!vc) return ''; return _VC_NAMES[vc]||('v'+vc); }
 function _fetchApkInfo(){ return fetch('./apk-version-book.json?t='+Date.now()).then(r=>r.json()).then(j=>{ _apkInfo=j; return j; }); }
 /* v222: Update row shows the installed version, and old -> new when an update is available */
@@ -1943,7 +1943,7 @@ window.delProduct=id=>{ const p=DB.products.find(x=>x.id===id);
     DB.products=DB.products.filter(x=>x.id!==id); save(); closeSheet(); renderStock(); toast('Deleted'); }); };
 
 /* ================= REPORT ================= */
-let repY=new Date().getFullYear(), repM=new Date().getMonth(), chartMode='sales', repShowAll=false, repHalf=0, repDetailDate=null;
+let repY=new Date().getFullYear(), repM=new Date().getMonth(), chartMode='sales', repShowAll=false, repHalf=0, repDetailDate=null, repDetailRange='day';
 const MNAME=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function renderReport(){
   /* v227: day-detail mode — the day's sales open INSIDE Report, not the Sales tab */
@@ -2003,20 +2003,40 @@ function histCardHtml(ds,info,yds){
     +`<div class="hist-right"><div class="a">${pkr(info.total)}</div><div class="p">+ ${pkr(info.profit)} profit</div></div>`
     +`<div class="hist-chev">›</div></div>`;
 }
-window.openHistDay=ds=>{ repDetailDate=ds; expSaleId=null; renderReport(); };
+window.openHistDay=ds=>{ repDetailDate=ds; repDetailRange='day'; expSaleId=null; renderReport(); };
 window.closeHistDay=()=>{ repDetailDate=null; renderReport(); };
+window.setRepRange=r=>{ repDetailRange=r; expSaleId=null; renderReport(); };
+/* v228: dates for the detail range pills (pure, tested) */
+function repRangeDates(ds,rg){
+  const n=rg==='7d'?7:rg==='15d'?15:1;
+  const out=[], d0=new Date(ds+'T12:00');
+  for(let i=0;i<n;i++){ const d=new Date(d0); d.setDate(d.getDate()-i); out.push(dstr(d)); }
+  return out;
+}
 /* v227: day detail inside Report — same sale cards as the Sales tab (expand,
-   items, profit/loss, return, edit, bills) via the shared saleCardHtml. */
+   items, profit/loss, return, edit, bills) via the shared saleCardHtml.
+   v228: range pills (day / 7 days / 15 days), sales grouped under date headers. */
 function renderRepDetail(){
   $('rep-main').classList.add('hidden');
   const box=$('rep-detail'); box.classList.remove('hidden');
-  const ds=repDetailDate;
-  const list=DB.sales.filter(s=>s.date===ds).sort((a,b)=>b.id-a.id);
+  const ds=repDetailDate, rg=repDetailRange;
+  const all=repRangeDates(ds,rg);
+  const dates=all.filter(dt=>DB.sales.some(s=>s.date===dt));
+  const list=DB.sales.filter(s=>dates.indexOf(s.date)>=0);
   const tot=list.reduce((a,s)=>a+s.total,0);
   const prof=list.reduce((a,s)=>a+saleProfit(s),0);
-  const cards=list.map(saleCardHtml).join('')||'<p class="note">No sales this day</p>';
+  const sub=rg==='day'?fmtDate(ds):fmtDate(all[all.length-1])+' – '+fmtDate(all[0]);
+  const pill=(v,lbl)=>`<button class="rpg-pill${rg===v?' sel':''}" onclick="setRepRange('${v}')">${lbl}</button>`;
+  const dayLbl=new Date(ds+'T12:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+  let groups='';
+  dates.forEach(dt=>{
+    const sl=list.filter(s=>s.date===dt).sort((a,b)=>b.id-a.id);
+    groups+=`<div class="repdet-date">${fmtDate(dt)} · ${sl.length} sale${sl.length===1?'':'s'}</div>`+sl.map(saleCardHtml).join('');
+  });
+  const cards=groups||'<p class="note" style="color:#fff">No sales in this period</p>';
   box.innerHTML=`<div class="repdet-top"><button class="back-btn" onclick="closeHistDay()">‹</button>`
-    +`<div><h3 style="margin:0">Sales history</h3><div class="sub">${fmtDate(ds)}</div></div></div>`
+    +`<div><h3 style="margin:0">Sales history</h3><div class="sub">${sub}</div></div></div>`
+    +`<div class="rpg-row">${pill('day',dayLbl)}${pill('7d','7 days')}${pill('15d','15 days')}</div>`
     +`<div class="white-card repdet-sum"><div class="lbl">${list.length} SALE${list.length===1?'':'S'}</div>`
     +`<div class="repdet-nums"><b class="teal-num">${pkr(tot)}</b><span class="green-num">+ ${pkr(prof)} profit</span></div></div>`
     +cards;

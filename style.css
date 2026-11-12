@@ -224,6 +224,13 @@ h3{font-size:18px;margin:4px 0 8px;color:#fff}
 .repdet-nums{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
 .repdet-nums b{font-size:24px}
 .repdet-nums span{font-weight:700}
+/* v228: range pills inside the report day-detail */
+.rpg-row{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.rpg-pill{flex-shrink:0;border:none;background:#fff;color:#0077BE;font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px;cursor:pointer;box-shadow:0 1px 3px rgba(0,60,90,.12)}
+.rpg-pill.sel{background:#0077BE;color:#fff}
+.repdet-date{font-weight:800;font-size:14px;color:#fff;margin:14px 0 8px;opacity:.95}
+/* v228: View in detail / Show all as white pills (unique style) */
+#trend-detail,#rep-show-all{background:#fff!important;color:#0077BE!important;border-radius:999px;padding:7px 16px;font-weight:800;box-shadow:0 2px 6px rgba(0,40,70,.18)}
 
 /* Credit */
 .cust-card{background:#fff;border-radius:var(--radius);padding:14px;margin-bottom:10px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12)}
@@ -748,3 +755,76 @@ body[data-theme="blackgold"]{--pp-grad:linear-gradient(165deg,#0c0a06 0%,#241c0c
 .plan-grid .plan-card:not(.plan-hero) .pc-was{display:block;margin:3px 0 0}
 .bill-btn.bill-img{background:#e7f6ee;border-color:#bfe6cf;color:#177245}
 .msg-btn.img{background:#0e7490;color:#fff}
+
+/* ================= v229: ReamBook Ledger — our own signature look =================
+   Flat solid colour + ruled ledger lines (paper-book feel), an attached
+   bottom tab bar (no floating glass pill), a solid header band, squared
+   cards and buttons. The layout language is ReamBook's own; every colour
+   theme keeps its colours — only the shapes and structure change.
+   No function or behaviour changes. */
+:root{--radius:14px}
+body,#app{background-color:var(--pp-teal-dd);background-image:repeating-linear-gradient(180deg,rgba(255,255,255,.030) 0,rgba(255,255,255,.030) 1px,transparent 1px,transparent 30px)}
+
+/* Header: solid band, squared icon buttons */
+.topbar{background:var(--pp-teal-dd);border-bottom:1px solid rgba(255,255,255,.16);box-shadow:0 2px 10px rgba(0,0,0,.14);padding:12px 16px 10px}
+.icon-btn{border-radius:12px}
+
+/* Bottom nav: attached solid bar (was a floating glass pill) */
+.toptabs{bottom:0;left:0;right:0;max-width:480px;border-radius:0;border:none;border-top:1px solid #e2e8f0;background:#fff;box-shadow:0 -4px 16px rgba(4,40,70,.10);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.tt{border-radius:12px;padding:8px 2px 7px}
+.tt.active{background:var(--pp-soft);color:var(--pp-teal-d);box-shadow:inset 0 3px 0 var(--pp-teal);transform:none}
+.tt.active span{color:var(--pp-teal-d)}
+.view{padding-bottom:96px}
+.toast{bottom:104px}
+
+/* Cards: squared corners, thin border, soft shadow */
+.white-card,.form-card{border-radius:14px;border:1px solid rgba(10,35,66,.07);box-shadow:0 2px 8px rgba(4,40,70,.10)}
+.stock-card{border-radius:14px;border:1px solid rgba(10,35,66,.06)}
+.sale-card{border-radius:12px}
+.prof-row{border-radius:12px}
+.prof-card{border-radius:14px}
+.photo-card{border-radius:14px}
+.sum-line{border-radius:12px}
+.sum-sub{border-radius:0 0 14px 14px}
+.plan-card{border-radius:14px}
+.get-card,.pay-card{border-radius:14px}
+.period-btn,.export-btn{border-radius:12px}
+.photo-row .photo-pick{border-radius:14px}
+.hist-card{border-radius:12px}
+.ret-card,.remind-card{border-radius:12px}
+.cart-box{border-radius:12px}
+.pick-item{border-radius:10px}
+.sheet-box{border-radius:16px 16px 0 0}
+.sheet.center .sheet-box{border-radius:16px}
+
+/* Buttons and controls: squared, primary buttons flat (no gradient) */
+.btn-go{background:var(--pp-teal);border-radius:12px;box-shadow:0 5px 14px rgba(0,0,0,.22)}
+.btn-save{border-radius:12px}
+.btn-save.blue{background:var(--pp-teal);box-shadow:0 6px 16px rgba(4,40,70,.25)}
+.btn-outline{border-radius:12px}
+.btn-ghost{border-radius:12px}
+.btn-subscribe{background:var(--pp-teal);border-radius:14px}
+.sf-apply{background:var(--pp-teal);border-radius:12px}
+.bill-btn{border-radius:12px}
+.bill-btn.bill-pdf{background:var(--pp-teal);box-shadow:0 5px 14px -4px rgba(4,40,70,.4)}
+.plan-card.sel,.plan-card.hero{background:var(--pp-teal)}
+.hist-badge{background:#0077BE}
+.seg{border-radius:14px}
+.seg-btn{border-radius:10px}
+.chip{border-radius:10px}
+.rpg-pill{border-radius:12px}
+#trend-detail,#rep-show-all{border-radius:12px}
+.f-pill{border-radius:12px}
+.date-pill{border-radius:12px}
+.id-pill{border-radius:10px}
+.form-card input,.form-card select,.white-card input,.white-card select,.sheet-box input,.sheet-box select{border-radius:10px}
+.search-wrap{border-radius:10px}
+.btn-addmore,.btn-disc{border-radius:12px}
+.btn-unpaid,.btn-paid{border-radius:12px}
+.btn-return{border-radius:12px}
+.btn-cancel-red{border-radius:12px}
+.dlg-cancel,.dlg-ok{border-radius:12px}
+.sf-cancel{border-radius:12px}
+.price-toggle{border-radius:12px}
+.edit-banner{border-radius:12px}
+.bun-head{border-radius:12px}
